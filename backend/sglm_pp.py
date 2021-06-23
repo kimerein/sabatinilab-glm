@@ -2,6 +2,10 @@ import numpy as np
 import pandas as pd
 import scipy.signal
 
+
+### Still very much in Alpha Phase (uncommented / undocumented / untested for now)
+
+
 def timeshift(X, y_name=None, time_step_begin=1, time_step_end=2):
 
     df_raw = pd.DataFrame(X)
