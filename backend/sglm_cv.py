@@ -1,7 +1,8 @@
 import numpy as np
 import sglm
+import itertools
 
-def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, fit_kwargs):
+def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs):
     """
     Runs cross-validation on GLM for a single set of parameters.
 
@@ -19,9 +20,7 @@ def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, fit_kwargs):
     model_name : str
         The type of GLM to construct ('Normal', 'Gaussian', 'Poisson', 'Tweedie', 'Gamma', 'Logistic', or 'Multinomial')
     glm_kwargs : dict
-        f
-    fit_kwargs : dict
-        f
+        Keyword arguments to pass to the GLM constructor
     """
 
     n_coefs = X.shape[1]
@@ -39,7 +38,7 @@ def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, fit_kwargs):
         y_test = y[idx_test]
 
         glm = sglm.GLM(model_name, **glm_kwargs)
-        glm.fit(X_train, y_train, **fit_kwargs)
+        glm.fit(X_train, y_train)
 
         cv_coefs[:, iter_cv] = glm.model.coef_
         cv_intercepts[iter_cv] = glm.model.intercept_
@@ -50,22 +49,21 @@ def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, fit_kwargs):
 
 
 
-def cv_glm_mult_params(X, y, cv_idx, glm_kwargs, fit_kwargs, cv_kwargs, rolls=[0]):
+def cv_glm_mult_params(X, y, cv_idx, glm_kwarg_lst):
+    resp = list()
+    for kwarg in glm_kwarg_lst:
+        
+        model_name = kwarg['model_name'] if 'model_name' in kwarg else 'Gaussian'
+        roll = kwarg['roll'] if 'roll' in kwarg else 0
+        y_rolled = np.roll(y.reshape(-1), roll)
+
+        resp.append(cv_glm_single_params(X, y_rolled, cv_idx, model_name, glm_kwarg_lst))
     
-    for kwarg in cv_kwargs:
-        # if key[:4] == 'glm_':
-        #     key = key[4:]
-        #     glm_params[key] = cv_params[key]
-        # elif key[:4] == 'fit_':
-        #     key = key[4:]
-        #     fit_params[key] = cv_params[key]
-        # else:
-        #     ext_params[key] = cv_params[key]
-        pass
-
-    return
+    return resp
 
 
-
-
+def generate_mult_params(kwargs, kwarg_lists):
+    fliped_dict_list = [kwargs] + [[{key:_} for _ in kwarg_lists[key]] for key in kwarg_lists]
+    cart_prod = list(itertools.product(*fliped_dict_list))
+    return [{_key:dct[_key] for dct in cart_prod[i] for _key in dct} for i in range(len(cart_prod))]
 
