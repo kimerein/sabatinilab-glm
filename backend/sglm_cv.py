@@ -2,6 +2,8 @@ import numpy as np
 import sglm
 import itertools
 
+# TODO: Multidimensional Array -- paramgrid and output grid
+
 def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs):
     """
     Runs cross-validation on GLM for a single set of parameters.
@@ -26,6 +28,9 @@ def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs):
     n_coefs = X.shape[1]
     n_idx = len(cv_idx)
 
+    roll = glm_kwargs.pop('roll', 0)
+    y_rolled = np.roll(y.reshape(-1), roll)
+
     cv_coefs = np.zeros((n_coefs, n_idx))
     cv_intercepts = np.zeros(n_idx)
     cv_scores_train = np.zeros(n_idx)
@@ -33,9 +38,9 @@ def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs):
 
     for iter_cv, (idx_train, idx_test) in enumerate(cv_idx):
         X_train = X[idx_train,:]
-        y_train = y[idx_train]
+        y_train = y_rolled[idx_train]
         X_test = X[idx_test,:]
-        y_test = y[idx_test]
+        y_test = y_rolled[idx_test]
 
         glm = sglm.GLM(model_name, **glm_kwargs)
         glm.fit(X_train, y_train)
@@ -49,7 +54,7 @@ def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs):
 
 
 
-def cv_glm_mult_params(X, y, cv_idx, glm_kwarg_lst):
+def cv_glm_mult_params(X, y, cv_idx, model_name, glm_kwarg_lst):
     """
     Runs cross-validation on GLM over a list of possible parameters.
 
@@ -64,22 +69,20 @@ def cv_glm_mult_params(X, y, cv_idx, glm_kwarg_lst):
         for a different run. Each entry in the outer list should 
         contain 2 lists, the first one containing the training 
         indices, and the second one containing the test indices.
+    model_name : str
+        The type of GLM to construct ('Normal', 'Gaussian', 'Poisson', 'Tweedie', 'Gamma', 'Logistic', or 'Multinomial')
     glm_kwarg_lst : list(dict(GLM parameters))
         A list of all kwarg parameters for the GLM through which
-        the crossvalidation function should iterate. ('model_name'
-        and 'roll' should be specified here if desired where
-        'model_name' corresponds to the type of GLM and 'roll'
-        corresponds to the amount of 1D index shifts that should be applied)
+        the crossvalidation function should iterate. ('roll' should be
+        specified here if desired where 'roll' corresponds to the amount
+        of 1D index shifts that should be applied)
     """
 
     resp = list()
-    for kwarg in glm_kwarg_lst:
+    for glm_kwargs in glm_kwarg_lst:
 
-        model_name = kwarg.pop('model_name', 'Gaussian')
-        roll = kwarg.pop('roll', 0)
-        y_rolled = np.roll(y.reshape(-1), roll)
-
-        resp.append(cv_glm_single_params(X, y_rolled, cv_idx, model_name, glm_kwarg_lst))
+        model_name = glm_kwargs.pop('model_name', 'Gaussian')
+        resp.append(cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs))
     
     return resp
 
@@ -97,8 +100,9 @@ def generate_mult_params(kwarg_lists, kwargs=None):
         Dictionary of fixed keyword arguments that should remain the same across all CV trials.
     """
 
-    base_list = [kwargs] if kwargs else []
-    fliped_dict_list = base_list + [[{key:_} for _ in kwarg_lists[key]] for key in kwarg_lists]
-    cart_prod = list(itertools.product(*fliped_dict_list))
+    base_list = [[kwargs]] if kwargs else []
+    flipped_dict_list = base_list + [[{key:_} for _ in kwarg_lists[key]] for key in kwarg_lists]
+    cart_prod = list(itertools.product(*flipped_dict_list))
+
     return [{_key:dct[_key] for dct in cart_prod[i] for _key in dct} for i in range(len(cart_prod))]
 

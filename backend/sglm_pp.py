@@ -4,6 +4,16 @@ import scipy.signal
 
 # TODO: Write testcases & check validity
 
+# Revise pandas implementation to make it more generalizable (to ndarrays)
+# np.concatenate(np.zeros((n, x.shape[1]), x[n:], axis=1)
+# np.ascontiguousarray
+
+# TODO: Include train/test split - by 2 min segmentation
+# TODO: Include diff
+
+# Replace deconvolve with https://github.com/agiovann/constrained_foopsi_python
+
+
 def timeshift(X, shift_names=[], ignore_names=[], max_bwd_shift=1, max_fwd_shift=1):
     """
     Shift the "shift_names" columns of X backward by 1-max_bwd_shift steps and forward by 1-max_fwd_shift steps
@@ -67,4 +77,33 @@ def deconvolve(X, divisor):
 
 
 
+def cvt_to_contiguous(x):
+    return x
+
+
+# """
+# Credit: Rich Hakim
+# """
+# @njit(parallel=True)
+# def var_numba(X):
+#     Y = np.zeros(X.shape[0], dtype=X.dtype)
+#     for ii in prange(X.shape[0]):
+#         Y[ii] = np.var(X[ii,:])
+#     return Y
+
+
+# @njit(parallel=True)
+# def min_numba(X):
+#     output = np.zeros(X.shape[0])
+#     for ii in prange(X.shape[0]):
+#         output[ii] = np.min(X[ii])
+#     return output
+
+
+# @njit(parallel=True)
+# def max_numba(X):
+#     output = np.zeros(X.shape[0])
+#     for ii in prange(X.shape[0]):
+#         output[ii] = np.max(X[ii])
+#     return output
 

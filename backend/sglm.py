@@ -1,7 +1,7 @@
 import sklearn.linear_model
 
-# TODO:
-# Include train/test split - by 2 min segmentation
+# TODO: Change underlying code from SKLearn to pyglmnet
+# http://glm-tools.github.io/pyglmnet/api.html?highlight=glmcv#pyglmnet.GLMCV
 
 class GLM():
     """
