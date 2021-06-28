@@ -14,39 +14,77 @@ import scipy.signal
 # Replace deconvolve with https://github.com/agiovann/constrained_foopsi_python
 
 
-def timeshift(X, shift_names=[], ignore_names=[], max_bwd_shift=1, max_fwd_shift=1):
+def timeshift(X, shift_inx=[], shift_amt=1, keep_non_inx=False):
     """
-    Shift the "shift_names" columns of X backward by 1-max_bwd_shift steps and forward by 1-max_fwd_shift steps
+    Shift the column indicies "shift_inx" forward by shift_amt steps (backward if shift_amt < 0)
 
     Parameters
     ----------
-    X : np.ndarray or pd.DataFrame
+    X : np.ndarray (preferably contiguous array)
         Array of all variables
-    shift_names : list(str) or list(int)
-        Column names to shift forward/backward (if X is np.ndarray, should be column number integers)
-    ignore_names : list(str) or list(int)
-        Column names to not shift forward/backward (if X is np.ndarray, should be column number integers)
-    max_bwd_shift : int
-        Maximum number of shifts backward to include in the data
-    max_fwd_shift : int
-        Maximum number of shifts forward to include in the data
+    shift_inx : list(int)
+        Column indices to shift forward/backward
+    shift_amt : int
+        Amount by which to shift forward the columns in question (backward if shift_amt < 0)
+    keep_non_inx : bool
+        If True, data from all columns (shifted or not) will be returned from the function. If False,
+        only shifted columns are returned.
     """
 
-    df_raw = pd.DataFrame(X)
-    df = df_raw.copy()
-
-    if not shift_names:
-        shift_names = [_ for _ in df_raw.columns if _ not in ignore_names]
+    if type(X) == pd.DataFrame:
+        npX = X.values
     else:
-        shift_names = [_ for _ in shift_names if _ not in ignore_names]
-
-    for shift_size in range(-max_bwd_shift, max_fwd_shift+1):
-        if shift_size == 0:
-            continue
-        dir_str = 'b' if shift_size < 0 else 'f'
-        df[[_ + '_' + dir_str + str(shift_size) for _ in shift_names]] = df_raw[shift_names].shift(shift_size)
+        npX = X
     
-    return df
+    shift_inx = shift_inx if shift_inx else range(npX.shape[1])
+    X_to_shift = npX[:, shift_inx]
+
+    append_vals = np.zeros((np.abs(shift_amt), X_to_shift.shape[1]))
+    if shift_amt > 0:
+        shifted_X = np.concatenate([append_vals, X_to_shift], axis=0)
+        shifted_X = shifted_X[:-np.abs(shift_amt), :]
+    elif shift_amt < 0:
+        shifted_X = np.concatenate([X_to_shift, append_vals], axis=0)
+        shifted_X = shifted_X[np.abs(shift_amt):, :]
+    else:
+        shifted_X = X_to_shift
+    
+    if type(X) == pd.DataFrame:
+        return_setup = X.copy()
+        return_setup.iloc[:, shift_inx] = shifted_X
+        if not keep_non_inx:
+            return_setup = return_setup.iloc[:, shift_inx]
+    else:
+        if keep_non_inx:
+            return_setup = npX.copy()
+            return_setup[:, shift_inx] = shifted_X
+        else:
+            return_setup = shifted_X.copy()
+
+    return return_setup
+
+def timeshift_multiple(X, shift_inx=[], shift_amt_list=[-1,0,1], unshifted_keep_all=True):
+    """
+    Collect all forward/backward shifts of columns shift_inx as columns in the returned array
+
+    Parameters
+    ----------
+    X : np.ndarray (preferably contiguous array)
+        Array of all variables
+    shift_inx : list(int)
+        Column indices to shift forward/backward
+    shift_amt_list : list(int)
+        List of amounts by which to shift forward the columns in question (backward where list elements are < 0)
+    unshifted_keep_all : bool
+        Whether or not to keep all unshifted columns in the returned array
+    """
+
+    shifted_list = []
+    for shift_amt in shift_amt_list:
+        shifted = timeshift(X, shift_inx=shift_inx, shift_amt=shift_amt, keep_non_inx=(shift_amt == 0 and unshifted_keep_all))
+        shifted_list.append(shifted)
+    
+    return np.concatenate(shifted_list, axis=1)
 
 
 def zscore(X):
