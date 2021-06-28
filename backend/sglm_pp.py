@@ -4,9 +4,9 @@ import scipy.signal
 
 # TODO: Write testcases & check validity
 
-# Revise pandas implementation to make it more generalizable (to ndarrays)
-# np.concatenate(np.zeros((n, x.shape[1]), x[n:], axis=1)
-# np.ascontiguousarray
+# TODO: Revise pandas implementation to make it more generalizable (to ndarrays)
+# TODO: np.concatenate(np.zeros((n, x.shape[1]), x[n:], axis=1)
+# TODO: np.ascontiguousarray
 
 # TODO: Include train/test split - by 2 min segmentation
 # TODO: Include diff

@@ -45,8 +45,8 @@ def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs):
         glm = sglm.GLM(model_name, **glm_kwargs)
         glm.fit(X_train, y_train)
 
-        cv_coefs[:, iter_cv] = glm.model.coef_
-        cv_intercepts[iter_cv] = glm.model.intercept_
+        cv_coefs[:, iter_cv] = glm.coef_
+        cv_intercepts[iter_cv] = glm.intercept_
         cv_scores_train[iter_cv] = glm.model.score(X_train, y_train)
         cv_scores_test[iter_cv] = glm.model.score(X_test, y_test)
 

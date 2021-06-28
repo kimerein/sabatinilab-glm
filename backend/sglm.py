@@ -1,7 +1,7 @@
 import sklearn.linear_model
+import pyglmnet
 
-# TODO: Change underlying code from SKLearn to pyglmnet
-# http://glm-tools.github.io/pyglmnet/api.html?highlight=glmcv#pyglmnet.GLMCV
+# TODO: Update documentation for use with the pyglmnet information
 
 class GLM():
     """
@@ -30,7 +30,7 @@ class GLM():
     """
 
     model = None
-    model_name_options = {'Normal', 'Gaussian', 'Poisson', 'Tweedie', 'Gamma', 'Logistic', 'Multinomial'}
+    model_name_options = {'Normal', 'Gaussian', 'Poisson', 'Tweedie', 'Gamma', 'Logistic', 'Binomial', 'Multinomial'}
     tweedie_lookup = {'Normal': 0, 'Gaussian':0, 'Poisson': 1, 'Gamma': 2}
 
     def __init__(self, model_name, *args, **kwargs):
@@ -39,16 +39,22 @@ class GLM():
         """
 
         self.model_name = model_name
-        if model_name in {'Normal', 'Gaussian', 'Poisson', 'Gamma'}:
-            power = self.tweedie_lookup[model_name]
-            kwargs['power'] = power
-            mdl = sklearn.linear_model.TweedieRegressor(*args, **kwargs)
-        elif model_name in {'Tweedie'}:
-            mdl = sklearn.linear_model.TweedieRegressor(*args, **kwargs)
-        elif model_name in {'Logistic', 'Multinomial'}:
-            kwargs['multi_class'] = 'multinomial' if model_name == 'Multinomial' else 'auto'
-            kwargs['n_jobs'] = kwargs['n_jobs'] if 'n_jobs' in kwargs else -1
-            mdl = sklearn.linear_model.LogisticRegression(*args, **kwargs)
+        if model_name in self.model_name_options: #{'Normal', 'Gaussian', 'Poisson', 'Gamma'}:
+            model_name = 'Gaussian' if model_name in {'Normal'} else model_name
+            model_name = 'Binomial' if model_name in {'Logistic', 'Multinomial'} else model_name
+        #     power = self.tweedie_lookup[model_name]
+        #     kwargs['power'] = power
+        #     mdl = sklearn.linear_model.TweedieRegressor(*args, **kwargs)
+
+            kwargs['distr'] = model_name.lower()
+            mdl = pyglmnet.GLM(*args, **kwargs)
+
+        # elif model_name in {'Tweedie'}:
+        #     mdl = sklearn.linear_model.TweedieRegressor(*args, **kwargs)
+        # elif model_name in {'Logistic', 'Multinomial'}:
+        #     kwargs['multi_class'] = 'multinomial' if model_name == 'Multinomial' else 'auto'
+        #     kwargs['n_jobs'] = kwargs['n_jobs'] if 'n_jobs' in kwargs else -1
+        #     mdl = sklearn.linear_model.LogisticRegression(*args, **kwargs)
         else:
             print('Distribution not yet implemented.')
             raise NotYetImplementedError()
@@ -68,3 +74,13 @@ class GLM():
         """
 
         self.model.fit(X, y, *args)
+        # self.coef_ = self.model.coef_ if self.model_name in {'Logistic', 'Multinomial'} else self.model.beta_
+        # self.intercept_ = self.model.intercept_ if self.model_name in {'Logistic', 'Multinomial'} else self.model.beta0_
+
+        # self.coef_ = self.model.coef_
+        # self.intercept_ = self.model.intercept_
+
+        self.coef_ = self.model.beta_
+        self.intercept_ = self.model.beta0_
+
+
