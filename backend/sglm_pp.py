@@ -4,9 +4,7 @@ import scipy.signal
 from numba import njit, jit, prange
 
 import sys
-sys.path.append('./lib/CaImAn/caiman/source_extraction/cnmf')
-
-from deconvolution import constrained_foopsi
+import caiman
 
 # TODO: Write testcases & check validity
 
@@ -106,7 +104,10 @@ def zscore(X):
 
 def deconvolve(*args, **kwargs):
     """
-    Deconvolve using CaImAn implementation of constrained_foopsi. (Documentation follows.)
+    Deconvolve using CaImAn implementation of constrained_foopsi.
+
+    To install, navigate to backend/lib/CaImAn and run 'pip install .'
+
     ---
 
     Infer the most likely discretized spike train underlying a fluorescence trace
@@ -198,7 +199,7 @@ def deconvolve(*args, **kwargs):
     \image: docs/img/evaluationcomponent.png
     """
 
-    return constrained_foopsi(*args, **kwargs)
+    return caiman.constrained_foopsi(*args, **kwargs)
 
 def cvt_to_contiguous(x):
     return x
