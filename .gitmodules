@@ -1,0 +1,3 @@
+[submodule "backend/backend/lib/CaImAn"]
+	path = backend/backend/lib/CaImAn
+	url = https://github.com/flatironinstitute/CaImAn
