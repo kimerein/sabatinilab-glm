@@ -4,14 +4,21 @@ import scipy.signal
 from numba import njit, jit, prange
 
 import sys
-import caiman
+
+
+import caiman 
+# If this causes an error, navigate to backend/lib/CaImAn and run:
+#     pip install .
+#     pip install -r requirements.txt
+
+
+
 
 # TODO: Write testcases & check validity
 
 # TODO: Include train/test split - by 2 min segmentation
 # TODO: Include diff
 
-# TODO: specify np.ascontiguousarray
 
 # Replace deconvolve with https://github.com/agiovann/constrained_foopsi_python
 
@@ -44,10 +51,10 @@ def timeshift(X, shift_inx=[], shift_amt=1, keep_non_inx=False):
     append_vals = np.zeros((np.abs(shift_amt), X_to_shift.shape[1]))
     if shift_amt > 0:
         shifted_X = np.concatenate((append_vals, X_to_shift), axis=0)
-        shifted_X = shifted_X[:-np.abs(shift_amt), :]
+        shifted_X = shifted_X[:-shift_amt, :]
     elif shift_amt < 0:
         shifted_X = np.concatenate((X_to_shift, append_vals), axis=0)
-        shifted_X = shifted_X[np.abs(shift_amt):, :]
+        shifted_X = shifted_X[shift_amt:, :]
     else:
         shifted_X = X_to_shift
     
@@ -101,12 +108,41 @@ def zscore(X):
     """
     return (X - X.mean(axis=0))/X.std(axis=0)
 
+def diff(X, diff_inx=[], n=1, axis=0, prepend=0):
+    """
+    Return the differential between each timestep and the previous timestep
+
+    Parameters
+    ----------
+    X : np.ndarray (preferably contiguous array)
+        Array of all variables (columns should be features, rows should be timesteps)
+    n : int, optional
+        The number of times values are differenced. If zero, the input
+        is returned as-is.
+    axis : int, optional
+        The axis along which the difference is taken, default is the
+        last axis.
+    prepend, append : array_like, optional
+        Values to prepend or append to `a` along axis prior to
+        performing the difference.  Scalar values are expanded to
+        arrays with length 1 in the direction of axis and the shape
+        of the input array in along all other axes.  Otherwise the
+        dimension and shape must match `a` except along axis.
+    """
+
+    if len(X.shape) == 1:
+        X = X.reshape((-1,1))
+
+    diff_inx = diff_inx if diff_inx else range(X.shape[1])
+    return np.diff(X, n=n, axis=axis, prepend=prepend)
 
 def deconvolve(*args, **kwargs):
     """
     Deconvolve using CaImAn implementation of constrained_foopsi.
 
-    To install, navigate to backend/lib/CaImAn and run 'pip install .'
+    To install, navigate to backend/lib/CaImAn and run:
+        pip install .
+        pip install -r requirements.txt
 
     ---
 
@@ -199,7 +235,7 @@ def deconvolve(*args, **kwargs):
     \image: docs/img/evaluationcomponent.png
     """
 
-    return caiman.constrained_foopsi(*args, **kwargs)
+    return caiman.source_extraction.cnmf.deconvolution.constrained_foopsi(*args, **kwargs)
 
 def cvt_to_contiguous(x):
     return x
