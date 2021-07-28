@@ -8,20 +8,15 @@ import sys
 
 import caiman 
 # If this causes an error, navigate to backend/lib/CaImAn and run:
-#     pip install .
 #     pip install -r requirements.txt
-
-
+#     pip install .
+### Suite 2p's regularization / deconvolution
 
 
 # TODO: Write testcases & check validity
-
 # TODO: Include train/test split - by 2 min segmentation
-# TODO: Include diff
-
-
-# Replace deconvolve with https://github.com/agiovann/constrained_foopsi_python
-
+# TODO: Switch to suite2p's convolution
+# TODO: Numba impolementations
 
 def timeshift(X, shift_inx=[], shift_amt=1, keep_non_inx=False):
     """
@@ -48,13 +43,13 @@ def timeshift(X, shift_inx=[], shift_amt=1, keep_non_inx=False):
     shift_inx = shift_inx if shift_inx else range(npX.shape[1])
     X_to_shift = npX[:, shift_inx]
 
-    append_vals = np.zeros((np.abs(shift_amt), X_to_shift.shape[1]))
+    append_vals = np.zeros((np.abs(shift_amt), X_to_shift.shape[1])) * np.nan
     if shift_amt > 0:
         shifted_X = np.concatenate((append_vals, X_to_shift), axis=0)
         shifted_X = shifted_X[:-shift_amt, :]
     elif shift_amt < 0:
         shifted_X = np.concatenate((X_to_shift, append_vals), axis=0)
-        shifted_X = shifted_X[shift_amt:, :]
+        shifted_X = shifted_X[-shift_amt:, :]
     else:
         shifted_X = X_to_shift
     
@@ -94,7 +89,17 @@ def timeshift_multiple(X, shift_inx=[], shift_amt_list=[-1,0,1], unshifted_keep_
         shifted = timeshift(X, shift_inx=shift_inx, shift_amt=shift_amt, keep_non_inx=(shift_amt == 0 and unshifted_keep_all))
         shifted_list.append(shifted)
     
-    return np.concatenate(shifted_list, axis=1)
+    # print(shifted_list)
+
+    if type(X) == pd.DataFrame:
+        ret = pd.DataFrame()
+        for isa, shift_amt in enumerate(shift_amt_list):
+            col_names = shifted_list[isa].columns
+            sft_col_names = [f"{_}_{shift_amt}" for _ in col_names] if shift_amt != 0 else col_names
+            ret[sft_col_names] = shifted_list[isa][col_names]
+        return ret
+    else:
+        return np.concatenate(shifted_list, axis=1)
 
 
 def zscore(X):
@@ -108,9 +113,14 @@ def zscore(X):
     """
     return (X - X.mean(axis=0))/X.std(axis=0)
 
+
 def diff(X, diff_inx=[], n=1, axis=0, prepend=0):
     """
-    Return the differential between each timestep and the previous timestep
+    Return the differential between each timestep and the previous timestep, n times.
+    
+    Documentation adopted from numpy diff.
+
+    ---
 
     Parameters
     ----------
@@ -130,12 +140,25 @@ def diff(X, diff_inx=[], n=1, axis=0, prepend=0):
         dimension and shape must match `a` except along axis.
     """
 
+    if type(X) == pd.DataFrame or type(X) == pd.Series:
+        X_val = X.values
+    else:
+        X_val = X
+    
     if len(X.shape) == 1:
-        X = X.reshape((-1,1))
+        X_val = X_val.reshape((-1,1))
+    
+    diff_inx = diff_inx if diff_inx else list(range(X_val.shape[1]))
+    ret = np.diff(X_val[:,diff_inx], n=n, axis=axis, prepend=prepend)
 
-    diff_inx = diff_inx if diff_inx else range(X.shape[1])
-    return np.diff(X, n=n, axis=axis, prepend=prepend)
+    if type(X) == pd.DataFrame:
+        ret = pd.DataFrame(ret, columns=[f'{_}_diff' for _ in X.columns], index=X.index)
+    elif type(X) == pd.Series:
+        ret = pd.Series(ret.reshape(-1), name=f'{X.name}_diff', index=X.index)
+    
+    return ret
 
+# Replaced scipy deconvolve with https://github.com/agiovann/constrained_foopsi_python
 def deconvolve(*args, **kwargs):
     """
     Deconvolve using CaImAn implementation of constrained_foopsi.
@@ -237,8 +260,37 @@ def deconvolve(*args, **kwargs):
 
     return caiman.source_extraction.cnmf.deconvolution.constrained_foopsi(*args, **kwargs)
 
-def cvt_to_contiguous(x):
-    return x
+# https://github.com/MouseLand/suite2p/blob/main/suite2p/extraction/dcnv.py
+
+# # compute deconvolution
+# from suite2p.extraction import dcnv
+# import numpy as np
+# tau = 1.0 # timescale of indicator
+# fs = 30.0 # sampling rate in Hz
+# neucoeff = 0.7 # neuropil coefficient
+# # for computing and subtracting baseline
+# baseline = 'maximin' # take the running max of the running min after smoothing with gaussian
+# sig_baseline = 10.0 # in bins, standard deviation of gaussian with which to smooth
+# win_baseline = 60.0 # in seconds, window in which to compute max/min filters
+# ops = {'tau': tau, 'fs': fs, 'neucoeff': neucoeff,
+#        'baseline': baseline, 'sig_baseline': sig_baseline, 'win_baseline': win_baseline}
+# # load traces and subtract neuropil
+# F = np.load('F.npy')
+# Fneu = np.load('Fneu.npy')
+# Fc = F - ops['neucoeff'] * Fneu
+# # baseline operation
+# Fc = dcnv.preprocess(
+#      F=Fc,
+#      baseline=ops['baseline'],
+#      win_baseline=ops['win_baseline'],
+#      sig_baseline=ops['sig_baseline'],
+#      fs=ops['fs'],
+#      prctile_baseline=ops['prctile_baseline']
+#  )
+# # get spikes
+# spks = dcnv.oasis(F=Fc, batch_size=ops['batch_size'], tau=ops['tau'], fs=ops['fs'])
+
+
 
 @jit(parallel=True)
 def zscore_numba(array):

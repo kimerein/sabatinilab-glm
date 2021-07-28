@@ -1,7 +1,7 @@
 import sklearn.linear_model
 import pyglmnet
 
-# TODO: Add additional alternatives for different GLM API implementations (SKLearn, etc.)
+# TODO: Potentially add additional alternatives for different GLM API implementations (SKLearn, etc.)
 
 class GLM():
     """
@@ -11,12 +11,12 @@ class GLM():
     ----------
     model_name : str
         GLM distribution name to create ('Normal', 'Gaussian', 'Poisson', 'Tweedie', 'Gamma', 'Logistic', or 'Multinomial')
-    *args : positional arguments
-        See https://glm-tools.github.io/pyglmnet/api.html for relevant arguments.
-    **kwargs : keyword arguments
-        See https://glm-tools.github.io/pyglmnet/api.html for relevant arguments.
     model : sklearn.linear_model.TweedieRegressor or sklearn.linear_model.LogisticRegression
         Underlying pyglmnet model that is built
+    coef_ : 
+        Coefficients (parameters) of the GLM predictors
+    intercept_ : 
+        GLM linear intercept (i.e. bias coefficient)
 
     Methods
     -------
@@ -32,6 +32,13 @@ class GLM():
     def __init__(self, model_name, *args, **kwargs):
         """
         Create the GLM model.
+
+        model_name : str
+            GLM distribution name to create ('Normal', 'Gaussian', 'Poisson', 'Tweedie', 'Gamma', 'Logistic', or 'Multinomial')
+        *args : positional arguments
+            See https://glm-tools.github.io/pyglmnet/api.html for relevant arguments.
+        **kwargs : keyword arguments
+            See https://glm-tools.github.io/pyglmnet/api.html for relevant arguments.
         """
 
         self.model_name = model_name
@@ -82,11 +89,13 @@ class GLM():
 
 
 
+
+
+
 ### Original SKLearn Implementation-related Documentation
 """
     power : float
         Only specify with a 'Tweedie' model_name in order to use fractional powers for Tweedie distribution
-
     *args : positional arguments
         See https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html for Logistic / Multinomial
         See https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.TweedieRegressor.html otherwise

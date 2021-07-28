@@ -3,6 +3,9 @@ import sglm
 import itertools
 
 # TODO: Multidimensional Array -- paramgrid and output grid
+# TODO: Add an OrderedDict implementation for the generate_mult_params version
+
+# TODO: Add a Feature Selection methodology -- to adjust feature selection based on cross-validation 
 
 def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs):
     """
@@ -11,7 +14,7 @@ def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs):
     Parameters
     ----------
     X : np.ndarray
-        The full set of available predictor data.
+        The full set of available predictor data (columns should be features, rows should be timesteps).
     y : np.ndarray
         The full set of corresponding available response data.
     cv_idx : list of pairs of lists
@@ -61,7 +64,7 @@ def cv_glm_mult_params(X, y, cv_idx, model_name, glm_kwarg_lst):
     Parameters
     ----------
     X : np.ndarray
-        The full set of available predictor data.
+        The full set of available predictor data (columns should be features, rows should be timesteps).
     y : np.ndarray
         The full set of corresponding available response data (1D).
     cv_idx : list of pairs of lists
