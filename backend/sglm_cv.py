@@ -7,7 +7,7 @@ import itertools
 
 # TODO: Add a Feature Selection methodology -- to adjust feature selection based on cross-validation 
 
-def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs):
+def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, GLM_CLS=None, verbose=0):
     """
     Runs cross-validation on GLM for a single set of parameters.
 
@@ -45,7 +45,10 @@ def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs):
         X_test = X[idx_test,:]
         y_test = y_rolled[idx_test]
 
-        glm = sglm.GLM(model_name, **glm_kwargs)
+        if GLM_CLS:
+            glm = GLM_CLS(model_name, **glm_kwargs)
+        else:
+            glm = sglm.SKGLM(model_name, **glm_kwargs)
         glm.fit(X_train, y_train)
 
         cv_coefs[:, iter_cv] = glm.coef_
@@ -53,11 +56,22 @@ def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs):
         cv_scores_train[iter_cv] = glm.model.score(X_train, y_train)
         cv_scores_test[iter_cv] = glm.model.score(X_test, y_test)
 
-    return cv_coefs, cv_intercepts, cv_scores_train, cv_scores_test
+    if verbose > 0:
+        print('Completing arguments:', glm_kwargs)
+
+    ret_dict = {
+        'cv_coefs': cv_coefs,
+        'cv_intercepts': cv_intercepts,
+        'cv_scores_train': cv_scores_train,
+        'cv_scores_test': cv_scores_test,
+        'cv_mean_score': np.mean(cv_scores_test)
+    }
+
+    return ret_dict
 
 
 
-def cv_glm_mult_params(X, y, cv_idx, model_name, glm_kwarg_lst):
+def cv_glm_mult_params(X, y, cv_idx, model_name, glm_kwarg_lst, GLM_CLS=None, verbose=0):
     """
     Runs cross-validation on GLM over a list of possible parameters.
 
@@ -81,13 +95,28 @@ def cv_glm_mult_params(X, y, cv_idx, model_name, glm_kwarg_lst):
         of 1D index shifts that should be applied)
     """
 
+    final_results = {}
+    best_score = -np.inf
+    best_params = None
+
     resp = list()
     for glm_kwargs in glm_kwarg_lst:
 
         model_name = glm_kwargs.pop('model_name', 'Gaussian')
-        resp.append(cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs))
+        cv_result = cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, GLM_CLS=GLM_CLS, verbose=verbose)
+        resp.append(cv_result)
+
+        if cv_result['cv_mean_score'] > best_score:
+            best_score = cv_result['cv_mean_score']
+            best_params = glm_kwargs
     
-    return resp
+    final_results = {
+        'best_score': best_score,
+        'best_params': best_params,
+        'full_cv_results': resp,
+    }
+
+    return final_results
 
 
 def generate_mult_params(kwarg_lists, kwargs=None):

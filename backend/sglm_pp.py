@@ -4,7 +4,7 @@ import scipy.signal
 from numba import njit, jit, prange
 
 import sys
-
+import threading
 
 import caiman 
 # If this causes an error, navigate to backend/lib/CaImAn and run:
@@ -18,7 +18,7 @@ import caiman
 # TODO: Switch to suite2p's convolution
 # TODO: Numba impolementations
 
-def timeshift(X, shift_inx=[], shift_amt=1, keep_non_inx=False):
+def timeshift(X, shift_inx=[], shift_amt=1, keep_non_inx=False, dct=None):
     """
     Shift the column indicies "shift_inx" forward by shift_amt steps (backward if shift_amt < 0)
 
@@ -65,7 +65,11 @@ def timeshift(X, shift_inx=[], shift_amt=1, keep_non_inx=False):
         else:
             return_setup = shifted_X.copy()
 
-    return return_setup
+    if dct is None:
+        return return_setup
+    else:
+        dct[shift_amt] = return_setup
+        return
 
 
 def timeshift_multiple(X, shift_inx=[], shift_amt_list=[-1,0,1], unshifted_keep_all=True):
@@ -84,10 +88,24 @@ def timeshift_multiple(X, shift_inx=[], shift_amt_list=[-1,0,1], unshifted_keep_
         Whether or not to keep all unshifted columns in the returned array
     """
 
-    shifted_list = []
-    for shift_amt in shift_amt_list:
-        shifted = timeshift(X, shift_inx=shift_inx, shift_amt=shift_amt, keep_non_inx=(shift_amt == 0 and unshifted_keep_all))
-        shifted_list.append(shifted)
+    shifted_dict = {}
+    threads = []
+    for i,shift_amt in enumerate(shift_amt_list):
+        # shifted = timeshift(X, shift_inx=shift_inx, shift_amt=shift_amt, keep_non_inx=(shift_amt == 0 and unshifted_keep_all))
+        # shifted_dict[shift_amt] = shifted
+
+        threads.append(threading.Thread(target=timeshift, args=(X,), kwargs={'shift_inx':shift_inx,
+                                                                 'shift_amt':shift_amt,
+                                                                 'keep_non_inx':(shift_amt == 0 and unshifted_keep_all),
+                                                                 'dct':shifted_dict
+                                                                 }))
+        threads[i].start()
+
+    for i,shift_amt in enumerate(shift_amt_list):
+        threads[i].join()
+
+    shifted_list = [shifted_dict[_] for _ in shift_amt_list]
+
     
     # print(shifted_list)
 
