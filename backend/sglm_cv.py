@@ -1,3 +1,4 @@
+import pandas as pd
 import numpy as np
 import sglm
 import itertools
@@ -137,4 +138,32 @@ def generate_mult_params(kwarg_lists, kwargs=None):
     cart_prod = list(itertools.product(*flipped_dict_list))
 
     return [{_key:dct[_key] for dct in cart_prod[i] for _key in dct} for i in range(len(cart_prod))]
+
+
+# def execute_backward_selection(X, y, *args, criterion='AIC', **kwargs):
+
+#     """
+#     Generates a list of dictionaries of all possible parameter combinations
+#     from a dictionary of lists.
+
+#     Parameters
+#     ----------
+#     X : np.ndarray
+#         The full set of available predictor data (columns should be features, rows should be timesteps).
+#     y : np.ndarray
+#         The full set of corresponding available response data (1D).
+#     GLM : sglm.GLM or sglm.SKGLM class
+#         GLM model to fit
+#     args : Optional[dict(keywords)]
+#         Positional arguments to GLM that should remain the same across all CV trials.
+#     criterion : str — 'AIC' or 'BIC'
+#         The criterion to use for backward selection (note that these are pseudo-AIC / BIC for now since likelihood varies by link function)
+#     kwargs : Optional[dict(keywords)]
+#         Dictionary of fixed keyword arguments to GLM that should remain the same across all CV trials.
+#     """
+
+#     def calc_criterion(X, y, model, criterion):
+#         score = model.score(X, y)
+#         neg_score = 1 - score
+#         params = 
 

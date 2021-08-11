@@ -1,5 +1,8 @@
 import sklearn.linear_model
+import sklearn.metrics
 import pyglmnet
+import scipy.stats
+import numpy as np
 
 # TODO: Potentially add additional alternatives for different GLM API implementations (SKLearn, etc.)
 # TODO: Potentially add switching it to also allowing pandas DataFrames as the fitting function
@@ -70,9 +73,30 @@ class GLM():
         self.coef_ = self.model.beta_
         self.intercept_ = self.model.beta0_
 
+    def log_likelihood(self, prediction, truth):
 
+        if self.model_name in {'Normal', 'Gaussian'}:
+            resid = truth - prediction
+            std = np.std(resid)
+            loglik = scipy.stats.norm.logpdf(resid, loc=0, scale=std)
+            log_likelihood = np.sum(loglik)
 
+        elif self.model_name in {'Poisson'}:
+            pass 
+            raise NotYetImplementedError()
 
+        elif self.model_name in {'Logistic'}:
+            log_likelihood = -sklearn.metrics.log_loss(truth, prediction)
+
+        elif self.model_name in {'Multinomial'}:
+            pass
+            raise NotYetImplementedError()
+            
+        else:
+            pass
+            raise NotYetImplementedError()
+        
+        return log_likelihood
 
 class SKGLM():
     """
@@ -138,5 +162,27 @@ class SKGLM():
         self.coef_ = self.model.coef_ if self.model_name in {'Logistic', 'Multinomial', 'Gaussian', 'Normal'} else self.model.beta_
         self.intercept_ = self.model.intercept_ if self.model_name in {'Logistic', 'Multinomial', 'Gaussian', 'Normal'} else self.model.beta0_
 
+    def log_likelihood(self, prediction, truth):
 
-### Original SKLearn Implementation-related Documentation
+        if self.model_name in {'Normal', 'Gaussian'}:
+            resid = truth - prediction
+            std = np.std(resid)
+            loglik = scipy.stats.norm.logpdf(resid, loc=0, scale=std)
+            log_likelihood = np.sum(loglik)
+
+        elif self.model_name in {'Poisson'}:
+            pass 
+            raise NotYetImplementedError()
+
+        elif self.model_name in {'Logistic'}:
+            log_likelihood = np.sum(truth * np.log(prediction) + (1-truth)*np.log(1-prediction))
+
+        elif self.model_name in {'Multinomial'}:
+            pass
+            raise NotYetImplementedError()
+            
+        else:
+            pass
+            raise NotYetImplementedError()
+        
+        return log_likelihood
