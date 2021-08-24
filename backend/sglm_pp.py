@@ -1,3 +1,4 @@
+from typing import List, TypeVar, Optional, Union, List
 import numpy as np
 import pandas as pd
 import scipy.signal
@@ -20,57 +21,37 @@ import caiman
 
 def timeshift(X, shift_inx=[], shift_amt=1, keep_non_inx=False, dct=None):
     """
-    Shift the column indicies "shift_inx" forward by shift_amt steps (backward if shift_amt < 0)
+    Shift columns in shift_inx up or down by shift_amt (down if shift_amt > 0, up if shift_amt < 0)
 
     Parameters
     ----------
-    X : np.ndarray (preferably contiguous array)
+    X : np.ndarray or pd.DataFrame
         Array of all variables (columns should be features, rows should be timesteps)
     shift_inx : list(int)
         Column indices to shift forward/backward
     shift_amt : int
-        Amount by which to shift forward the columns in question (backward if shift_amt < 0)
+        Amount by which to shift the columns in question up or down (down if shift_amt > 0, up if shift_amt < 0)
     keep_non_inx : bool
-        If True, data from all columns (shifted or not) will be returned from the function. If False,
-        only shifted columns are returned.
+        If True, data from all columns (shifted or not) will be returned from the function.
+        If False, only shifted columns are returned.
     """
-
-    if type(X) == pd.DataFrame:
-        npX = X.values
-    else:
-        npX = X
     
-    shift_inx = shift_inx if shift_inx else range(npX.shape[1])
-    X_to_shift = npX[:, shift_inx]
-
-    append_vals = np.zeros((np.abs(shift_amt), X_to_shift.shape[1])) * np.nan
-    if shift_amt > 0:
-        shifted_X = np.concatenate((append_vals, X_to_shift), axis=0)
-        shifted_X = shifted_X[:-shift_amt, :]
-    elif shift_amt < 0:
-        shifted_X = np.concatenate((X_to_shift, append_vals), axis=0)
-        shifted_X = shifted_X[-shift_amt:, :]
-    else:
-        shifted_X = X_to_shift
-    
-    if type(X) == pd.DataFrame:
-        return_setup = X.copy()
-        return_setup.iloc[:, shift_inx] = shifted_X
-        if not keep_non_inx:
-            return_setup = return_setup.iloc[:, shift_inx]
-    else:
-        if keep_non_inx:
-            return_setup = npX.copy()
-            return_setup[:, shift_inx] = shifted_X
-        else:
-            return_setup = shifted_X.copy()
-
     if dct is None:
-        return return_setup
-    else:
-        dct[shift_amt] = return_setup
-        return
-
+        dct = {}
+    
+    # X to numpy regardless of initial type
+    npX = get_numpy_version(X) 
+    # Use all columns for shifting if none specified
+    shift_inx = range(npX.shape[1]) if len(shift_inx) == 0 else shift_inx
+    # Pull only shift columns from original data
+    X_to_shift = npX[:, shift_inx]
+    # Shift columns up/down by shift_amt
+    shifted_X = shift(X_to_shift, shift_amt)
+    # Convert shifted values to original type
+    return_setup = shifted_cols_to_original_type(X, shifted_X, shift_inx, keep_non_inx)
+    
+    dct[shift_amt] = return_setup
+    return return_setup
 
 def timeshift_multiple(X, shift_inx=[], shift_amt_list=[-1,0,1], unshifted_keep_all=True):
     """
@@ -91,9 +72,6 @@ def timeshift_multiple(X, shift_inx=[], shift_amt_list=[-1,0,1], unshifted_keep_
     shifted_dict = {}
     threads = []
     for i,shift_amt in enumerate(shift_amt_list):
-        # shifted = timeshift(X, shift_inx=shift_inx, shift_amt=shift_amt, keep_non_inx=(shift_amt == 0 and unshifted_keep_all))
-        # shifted_dict[shift_amt] = shifted
-
         threads.append(threading.Thread(target=timeshift, args=(X,), kwargs={'shift_inx':shift_inx,
                                                                  'shift_amt':shift_amt,
                                                                  'keep_non_inx':(shift_amt == 0 and unshifted_keep_all),
@@ -103,22 +81,9 @@ def timeshift_multiple(X, shift_inx=[], shift_amt_list=[-1,0,1], unshifted_keep_
 
     for i,shift_amt in enumerate(shift_amt_list):
         threads[i].join()
-
-    shifted_list = [shifted_dict[_] for _ in shift_amt_list]
-
     
-    # print(shifted_list)
-
-    if type(X) == pd.DataFrame:
-        ret = pd.DataFrame()
-        for isa, shift_amt in enumerate(shift_amt_list):
-            col_names = shifted_list[isa].columns
-            sft_col_names = [f"{_}_{shift_amt}" for _ in col_names] if shift_amt != 0 else col_names
-            ret[sft_col_names] = shifted_list[isa][col_names]
-        return ret
-    else:
-        return np.concatenate(shifted_list, axis=1)
-
+    shifted_list = [shifted_dict[_] for _ in shift_amt_list]
+    return concat_all_shifts(X, shift_amt_list, shifted_list)
 
 def zscore(X):
     """
@@ -175,6 +140,195 @@ def diff(X, diff_inx=[], n=1, axis=0, prepend=0):
         ret = pd.Series(ret.reshape(-1), name=f'{X.name}_diff', index=X.index)
     
     return ret
+
+
+######### HELPER FUNCTIONS #########
+
+def get_numpy_version(X: Union[np.ndarray, pd.DataFrame]) -> np.ndarray:
+    """
+    Return a numpy array of values regardless of input type X (np.ndarray or pd.DataFrame)
+    
+    Args:
+        X: Dataset to convert to numpy array
+    
+    Returns:
+        npX: Numpy array version of original dataset
+    """
+    if type(X) == pd.DataFrame:
+        npX = X.values
+    else:
+        npX = X
+    return npX
+
+def shift(setup_array: np.ndarray, shift_amt: int, fill_value: Optional[float] = np.nan) -> np.ndarray:
+    """
+    Shift all of setup_array up or down by shift_amt (if > 0: shift down, if < 0: shift up)
+    
+    Args:
+        setup_array: Array to be shifted up or down
+        shift_amt: Amount to shift data up or down (> 0 shift down, < 0 shift up)
+        fill_value: Optional; Value to be left in place of shifted data
+    
+    Returns:
+        shifted_X : Post-shift version of setup_array
+    """
+    blanks = np.ones((np.abs(shift_amt), setup_array.shape[1])) * fill_value
+    if shift_amt > 0:
+        shifted_X = concat_start_crop_end(blanks, setup_array)
+    elif shift_amt < 0:
+        shifted_X = concat_end_crop_start(blanks, setup_array)
+    else:
+        shifted_X = setup_array
+    return shifted_X
+
+def concat_start_crop_end(blanks: np.ndarray, X_to_shift: np.ndarray):
+    """
+    Concatenates blanks to the top of X_to_shift and crops the bottom such that
+    dimensions of output == dimensions of input.
+    
+    Parameters:
+        blanks: Values to be concatenated to the top of X_to_shift
+        X_to_shift: Data to be concatenated and cropped at the bottom of the returned values
+    
+    Returns:
+        shifted_X: Values of X_to_shift after concatenation and cropping of data
+    """
+    shift_amt = blanks.shape[0]
+    shifted_X = np.concatenate((blanks, X_to_shift), axis=0)
+    shifted_X = shifted_X[:-shift_amt, :]
+    return shifted_X
+
+def concat_end_crop_start(blanks: np.ndarray, X_to_shift: np.ndarray):
+    """
+    Concatenates blanks to the bottom of X_to_shift and crops the top such that
+    dimensions of output == dimensions of input.
+    
+    Parameters:
+        blanks: Values to be concatenated to the bottom of X_to_shift
+        X_to_shift: Data to be concatenated and cropped at the top of the returned values
+    
+    Returns:
+        shifted_X: Values of X_to_shift after concatenation and cropping of data
+    """
+    shift_amt = blanks.shape[0]
+    shifted_X = np.concatenate((X_to_shift, blanks), axis=0)
+    shifted_X = shifted_X[shift_amt:, :]
+    return shifted_X
+
+def shifted_cols_to_original_type(X: Union[np.ndarray, pd.DataFrame],
+                                  shifted_X: np.ndarray,
+                                  shift_inx: list,
+                                  keep_non_inx: bool) -> Union[np.ndarray, pd.DataFrame]:
+    """
+    Converts final shifted_X back into original input type and keeps relevant columns.
+    
+    Args:
+        X: Original input data
+        shifted_X: Post-shift numpy data
+        shift_inx: Column numbers that were shifted
+        keep_non_inx: Whether or not to keep non-shifted columns in returned value
+    
+    Returns:
+        Shifted values, converted back to the same datatype as X
+    """
+    if type(X) == pd.DataFrame:
+        return_setup = shifted_cols_to_pandas(X, shifted_X, shift_inx, keep_non_inx)
+    else:
+        return_setup = shifted_cols_to_numpy(X, shifted_X, shift_inx, keep_non_inx)
+    return return_setup
+
+def shifted_cols_to_pandas(X: pd.DataFrame,
+                           shifted_X: np.ndarray,
+                           shift_inx: list,
+                           keep_non_inx: bool) -> pd.DataFrame:
+    """
+    Generate a DataFrame with all shift_inx columns overwritten with the shifted data
+    and return either the entire DataFrame or only the subset of columns that have been
+    shifted.
+    
+    Args:
+        X: Original input data
+        shifted_X: Post-shift numpy data
+        shift_inx: Column numbers that were shifted
+        keep_non_inx: Whether or not to keep non-shifted columns in returned value
+    
+    Returns:
+        Shifted values, converted back to a Pandas DataFrame
+    """
+    return_setup = X.copy()
+    return_setup.iloc[:, shift_inx] = shifted_X
+    if not keep_non_inx:
+        return_setup = return_setup.iloc[:, shift_inx]
+    return return_setup
+
+def shifted_cols_to_numpy(X: np.ndarray,
+                          shifted_X: np.ndarray,
+                          shift_inx: list,
+                          keep_non_inx: bool) -> np.ndarray:
+    """
+    Generate a Numpy Array with all shift_inx columns overwritten with the shifted data
+    and return either the entire DataFrame or only the subset of columns that have been
+    shifted.
+    
+    Args:
+        X: Original input data
+        shifted_X: Post-shift numpy data
+        shift_inx: Column numbers that were shifted
+        keep_non_inx: Whether or not to keep non-shifted columns in returned value
+    
+    Returns:
+        Shifted values, converted back to a Numpy Array
+    """
+    if keep_non_inx:
+        return_setup = npX.copy()
+        return_setup[:, shift_inx] = shifted_X
+    else:
+        return_setup = shifted_X.copy()
+    return return_setup
+
+def concat_all_shifts(X: Union[np.ndarray, pd.DataFrame],
+                      shift_amt_list: List[int],
+                      shifted_list: List[Union[np.ndarray, pd.DataFrame]]) -> Union[np.ndarray, pd.DataFrame]:
+    """
+    Concatenate and returns all shifted values in a datatype-relevant way
+    (i.e. for DataFrames, rename columns by shift amount, for Numpy Arrays,
+    simply concatenate).
+    
+    Args:
+        X: Original input data
+        shift_amt_list: List of timeshifts used
+        shifted_list: List of all post-shift values
+    
+    Returns:
+        Final concatenated (column-wise) dataset of all timeshifts
+    """
+    if type(X) == pd.DataFrame:
+        return concat_pandas_shifts(shift_amt_list, shifted_list)
+    else:
+        return np.concatenate(shifted_list, axis=1)
+
+def concat_pandas_shifts(shift_amt_list: List[int],
+                         shifted_list: List[Union[np.ndarray, pd.DataFrame]]) -> Union[np.ndarray, pd.DataFrame]:
+    """
+    Concatenate and returns all shifted Pandas values, with columns renamed by shift amount.
+    
+    Args:
+        shift_amt_list: List of timeshifts used
+        shifted_list: List of all post-shift values
+    
+    Returns:
+        Final concatenated (column-wise) dataset of all timeshifts
+    """
+    ret = pd.DataFrame()
+    for isa, shift_amt in enumerate(shift_amt_list):
+        col_names = shifted_list[isa].columns
+        sft_col_names = [f"{_}_{shift_amt}" for _ in col_names] if shift_amt != 0 else col_names
+        ret[sft_col_names] = shifted_list[isa][col_names]
+    return ret
+
+
+##### Foopsi #####
+
 
 # Replaced scipy deconvolve with https://github.com/agiovann/constrained_foopsi_python
 def deconvolve(*args, **kwargs):
@@ -277,86 +431,3 @@ def deconvolve(*args, **kwargs):
     """
 
     return caiman.source_extraction.cnmf.deconvolution.constrained_foopsi(*args, **kwargs)
-
-# https://github.com/MouseLand/suite2p/blob/main/suite2p/extraction/dcnv.py
-
-# # compute deconvolution
-# from suite2p.extraction import dcnv
-# import numpy as np
-# tau = 1.0 # timescale of indicator
-# fs = 30.0 # sampling rate in Hz
-# neucoeff = 0.7 # neuropil coefficient
-# # for computing and subtracting baseline
-# baseline = 'maximin' # take the running max of the running min after smoothing with gaussian
-# sig_baseline = 10.0 # in bins, standard deviation of gaussian with which to smooth
-# win_baseline = 60.0 # in seconds, window in which to compute max/min filters
-# ops = {'tau': tau, 'fs': fs, 'neucoeff': neucoeff,
-#        'baseline': baseline, 'sig_baseline': sig_baseline, 'win_baseline': win_baseline}
-# # load traces and subtract neuropil
-# F = np.load('F.npy')
-# Fneu = np.load('Fneu.npy')
-# Fc = F - ops['neucoeff'] * Fneu
-# # baseline operation
-# Fc = dcnv.preprocess(
-#      F=Fc,
-#      baseline=ops['baseline'],
-#      win_baseline=ops['win_baseline'],
-#      sig_baseline=ops['sig_baseline'],
-#      fs=ops['fs'],
-#      prctile_baseline=ops['prctile_baseline']
-#  )
-# # get spikes
-# spks = dcnv.oasis(F=Fc, batch_size=ops['batch_size'], tau=ops['tau'], fs=ops['fs'])
-
-
-
-@jit(parallel=True)
-def zscore_numba(array):
-    '''
-    Parallel (multicore) Z-Score. Uses numba.
-    Computes along second dimension (axis=1) for speed
-    Best to input a contiguous array.
-    RH 2021
-    Args:
-        array (ndarray):
-            2-D array. Percentile will be calculated
-            along first dimension (columns)
-    
-    Returns:
-        output_array (ndarray):
-            2-D array. Z-Scored array
-    '''
-
-    output_array = np.zeros_like(array)
-    for ii in prange(array.shape[0]):
-        array_tmp = array[ii,:]
-        output_array[ii,:] = (array_tmp - np.mean(array_tmp)) / np.std(array_tmp)
-    return output_array
-
-
-# """
-# Credit: Rich Hakim
-# """
-# @njit(parallel=True)
-# def var_numba(X):
-#     Y = np.zeros(X.shape[0], dtype=X.dtype)
-#     for ii in prange(X.shape[0]):
-#         Y[ii] = np.var(X[ii,:])
-#     return Y
-
-
-# @njit(parallel=True)
-# def min_numba(X):
-#     output = np.zeros(X.shape[0])
-#     for ii in prange(X.shape[0]):
-#         output[ii] = np.min(X[ii])
-#     return output
-
-
-# @njit(parallel=True)
-# def max_numba(X):
-#     output = np.zeros(X.shape[0])
-#     for ii in prange(X.shape[0]):
-#         output[ii] = np.max(X[ii])
-#     return output
-
