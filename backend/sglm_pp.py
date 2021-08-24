@@ -280,7 +280,7 @@ def shifted_cols_to_numpy(X: np.ndarray,
         Shifted values, converted back to a Numpy Array
     """
     if keep_non_inx:
-        return_setup = npX.copy()
+        return_setup = X.copy()
         return_setup[:, shift_inx] = shifted_X
     else:
         return_setup = shifted_X.copy()
