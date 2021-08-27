@@ -14,6 +14,7 @@ import sklearn.model_selection
 
 # Normal (OLS)
 def test_normal_ols():
+    np.random.seed(117)
     norm = stats.norm()
 
     true_x = norm.rvs(size=1000)
@@ -42,6 +43,7 @@ def test_normal_ols():
 
 # Poisson GLM
 def test_poisson_glm():
+    np.random.seed(117)
     norm = stats.norm()
 
     true_x = np.array(sorted(norm.rvs(size=1000)*.75))
@@ -71,6 +73,7 @@ def test_poisson_glm():
 
 # Logistic GLM
 def test_logistic_glm():
+    np.random.seed(117)
     norm = stats.norm()
 
     true_x = norm.rvs(size=1000)
@@ -98,6 +101,7 @@ def test_logistic_glm():
 
 # Normal (OLS) CV Test
 def test_normal_ols_cv():
+    np.random.seed(117)
     norm = stats.norm()
 
     true_x = norm.rvs(size=1000)
