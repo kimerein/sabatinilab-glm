@@ -7,7 +7,7 @@ from numba import njit, jit, prange
 import sys
 import threading
 
-import caiman 
+# import caiman 
 # If this causes an error, navigate to backend/lib/CaImAn and run:
 #     pip install -r requirements.txt
 #     pip install .
@@ -34,28 +34,24 @@ def timeshift(X, shift_inx=[], shift_amt=1, keep_non_inx=False, dct=None):
     keep_non_inx : bool
         If True, data from all columns (shifted or not) will be returned from the function.
         If False, only shifted columns are returned.
+    dct : dict
+        Dictionary for in-place timeshift updates
     """
     
-    if dct is None:
-        dct = {}
-    
-    # X to numpy regardless of initial type
     npX = get_numpy_version(X) 
     # Use all columns for shifting if none specified
     shift_inx = range(npX.shape[1]) if len(shift_inx) == 0 else shift_inx
-    # Pull only shift columns from original data
     X_to_shift = npX[:, shift_inx]
-    # Shift columns up/down by shift_amt
     shifted_X = shift(X_to_shift, shift_amt)
-    # Convert shifted values to original type
     return_setup = shifted_cols_to_original_type(X, shifted_X, shift_inx, keep_non_inx)
     
-    dct[shift_amt] = return_setup
+    if dct is not None:
+        dct[shift_amt] = return_setup
     return return_setup
 
 def timeshift_multiple(X, shift_inx=[], shift_amt_list=[-1,0,1], unshifted_keep_all=True):
     """
-    Collect all forward/backward shifts of columns shift_inx as columns in the returned array
+    Collect multiple up/down shifts of columns as columns in the returned array
 
     Parameters
     ----------
@@ -166,7 +162,7 @@ def shift(setup_array: np.ndarray, shift_amt: int, fill_value: Optional[float] =
     
     Args:
         setup_array: Array to be shifted up or down
-        shift_amt: Amount to shift data up or down (> 0 shift down, < 0 shift up)
+        shift_amt: Amount to shift data up or down (> 0 = shift down, < 0 = shift up)
         fill_value: Optional; Value to be left in place of shifted data
     
     Returns:
@@ -330,104 +326,104 @@ def concat_pandas_shifts(shift_amt_list: List[int],
 ##### Foopsi #####
 
 
-# Replaced scipy deconvolve with https://github.com/agiovann/constrained_foopsi_python
-def deconvolve(*args, **kwargs):
-    """
-    Deconvolve using CaImAn implementation of constrained_foopsi.
+# # Replaced scipy deconvolve with https://github.com/agiovann/constrained_foopsi_python
+# def deconvolve(*args, **kwargs):
+#     """
+#     Deconvolve using CaImAn implementation of constrained_foopsi.
 
-    To install, navigate to backend/lib/CaImAn and run:
-        pip install .
-        pip install -r requirements.txt
+#     To install, navigate to backend/lib/CaImAn and run:
+#         pip install .
+#         pip install -r requirements.txt
 
-    ---
+#     ---
 
-    Infer the most likely discretized spike train underlying a fluorescence trace
+#     Infer the most likely discretized spike train underlying a fluorescence trace
 
-    It relies on a noise constrained deconvolution approach
+#     It relies on a noise constrained deconvolution approach
     
-    Parameters
-    ----------
-        fluor: np.ndarray
-            One dimensional array containing the fluorescence intensities with
-            one entry per time-bin.
+#     Parameters
+#     ----------
+#         fluor: np.ndarray
+#             One dimensional array containing the fluorescence intensities with
+#             one entry per time-bin.
 
-        bl: [optional] float
-            Fluorescence baseline value. If no value is given, then bl is estimated
-            from the data.
+#         bl: [optional] float
+#             Fluorescence baseline value. If no value is given, then bl is estimated
+#             from the data.
 
-        c1: [optional] float
-            value of calcium at time 0
+#         c1: [optional] float
+#             value of calcium at time 0
 
-        g: [optional] list,float
-            Parameters of the AR process that models the fluorescence impulse response.
-            Estimated from the data if no value is given
+#         g: [optional] list,float
+#             Parameters of the AR process that models the fluorescence impulse response.
+#             Estimated from the data if no value is given
 
-        sn: float, optional
-            Standard deviation of the noise distribution.  If no value is given,
-            then sn is estimated from the data.
+#         sn: float, optional
+#             Standard deviation of the noise distribution.  If no value is given,
+#             then sn is estimated from the data.
 
-        p: int
-            order of the autoregression model
+#         p: int
+#             order of the autoregression model
 
-        method_deconvolution: [optional] string
-            solution method for basis projection pursuit 'cvx' or 'cvxpy' or 'oasis'
+#         method_deconvolution: [optional] string
+#             solution method for basis projection pursuit 'cvx' or 'cvxpy' or 'oasis'
 
-        bas_nonneg: bool
-            baseline strictly non-negative
+#         bas_nonneg: bool
+#             baseline strictly non-negative
 
-        noise_range:  list of two elms
-            frequency range for averaging noise PSD
+#         noise_range:  list of two elms
+#             frequency range for averaging noise PSD
 
-        noise_method: string
-            method of averaging noise PSD
+#         noise_method: string
+#             method of averaging noise PSD
 
-        lags: int
-            number of lags for estimating time constants
+#         lags: int
+#             number of lags for estimating time constants
 
-        fudge_factor: float
-            fudge factor for reducing time constant bias
+#         fudge_factor: float
+#             fudge factor for reducing time constant bias
 
-        verbosity: bool
-             display optimization details
+#         verbosity: bool
+#              display optimization details
 
-        solvers: list string
-            primary and secondary (if problem unfeasible for approx solution) solvers
-            to be used with cvxpy, default is ['ECOS','SCS']
+#         solvers: list string
+#             primary and secondary (if problem unfeasible for approx solution) solvers
+#             to be used with cvxpy, default is ['ECOS','SCS']
 
-        optimize_g : [optional] int, only applies to method 'oasis'
-            Number of large, isolated events to consider for optimizing g.
-            If optimize_g=0 (default) the provided or estimated g is not further optimized.
+#         optimize_g : [optional] int, only applies to method 'oasis'
+#             Number of large, isolated events to consider for optimizing g.
+#             If optimize_g=0 (default) the provided or estimated g is not further optimized.
 
-        s_min : float, optional, only applies to method 'oasis'
-            Minimal non-zero activity within each bin (minimal 'spike size').
-            For negative values the threshold is abs(s_min) * sn * sqrt(1-g)
-            If None (default) the standard L1 penalty is used
-            If 0 the threshold is determined automatically such that RSS <= sn^2 T
+#         s_min : float, optional, only applies to method 'oasis'
+#             Minimal non-zero activity within each bin (minimal 'spike size').
+#             For negative values the threshold is abs(s_min) * sn * sqrt(1-g)
+#             If None (default) the standard L1 penalty is used
+#             If 0 the threshold is determined automatically such that RSS <= sn^2 T
 
-    Returns:
-        c: np.ndarray float
-            The inferred denoised fluorescence signal at each time-bin.
+#     Returns:
+#         c: np.ndarray float
+#             The inferred denoised fluorescence signal at each time-bin.
 
-        bl, c1, g, sn : As explained above
+#         bl, c1, g, sn : As explained above
 
-        sp: ndarray of float
-            Discretized deconvolved neural activity (spikes)
+#         sp: ndarray of float
+#             Discretized deconvolved neural activity (spikes)
 
-        lam: float
-            Regularization parameter
-    Raises:
-        Exception("You must specify the value of p")
+#         lam: float
+#             Regularization parameter
+#     Raises:
+#         Exception("You must specify the value of p")
 
-        Exception('OASIS is currently only implemented for p=1 and p=2')
+#         Exception('OASIS is currently only implemented for p=1 and p=2')
 
-        Exception('Undefined Deconvolution Method')
+#         Exception('Undefined Deconvolution Method')
 
-    References:
-        * Pnevmatikakis et al. 2016. Neuron, in press, http://dx.doi.org/10.1016/j.neuron.2015.11.037
-        * Machado et al. 2015. Cell 162(2):338-350
+#     References:
+#         * Pnevmatikakis et al. 2016. Neuron, in press, http://dx.doi.org/10.1016/j.neuron.2015.11.037
+#         * Machado et al. 2015. Cell 162(2):338-350
 
-    \image: docs/img/deconvolution.png
-    \image: docs/img/evaluationcomponent.png
-    """
+#     \image: docs/img/deconvolution.png
+#     \image: docs/img/evaluationcomponent.png
+#     """
 
-    return caiman.source_extraction.cnmf.deconvolution.constrained_foopsi(*args, **kwargs)
+#     return caiman.source_extraction.cnmf.deconvolution.constrained_foopsi(*args, **kwargs)
