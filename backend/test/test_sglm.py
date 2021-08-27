@@ -12,14 +12,14 @@ import pandas as pd
 
 import sklearn.model_selection
 
+
 # Normal (OLS)
 def test_normal_ols():
-    np.random.seed(117)
-    norm = stats.norm()
+    epsilon = 0.001
 
-    true_x = norm.rvs(size=1000)
-    true_y = true_x * 0.5
-    obs_y = (true_y + norm.rvs(size=1000)*0.2)
+    true_x = np.linspace(-3, 3, 21)
+    true_y = true_x * 0.5 + 0.5
+    obs_y = (true_y + (-1)**np.arange(len(true_x)) * 0.1)
 
     x = true_x[:,None]
     y = obs_y
@@ -27,19 +27,21 @@ def test_normal_ols():
     plt.figure(figsize=(5,5))
     plt.scatter(x, y, alpha = 0.25)
 
-    glm = sglm.GLM('Normal', alpha=0)
+    from sklearn.linear_model import LinearRegression
+    sklr = LinearRegression()
+    sklr.fit(x, y)
+
+    glm = sglm.GLM('Normal', alpha=0, reg_lambda=0)
     glm.fit(x, y)
     coef, intercept = glm.coef_, glm.intercept_
 
-    view_x = np.linspace(x.min(), x.max(), num=100)
-    view_y = view_x*coef + intercept
-    obs_y = (true_y + norm.rvs(size=1000)*0.)
+    print(f"SKL: Intercept — {sklr.intercept_}, Coefs — {sklr.coef_}")
+    print(f"GLM: Intercept — {glm.intercept_}, Coefs — {glm.coef_}")
 
-    plt.figure(figsize=(5,5))
-    plt.scatter(x[:,0], y, alpha = 0.25)
-    plt.plot(view_x, np.squeeze(view_y), color='g')
+    assert(np.abs(sklr.intercept_ - glm.intercept_) < epsilon)
+    assert(np.all(np.abs(sklr.coef_ - glm.coef_) < epsilon))
 
-    return
+    return 
 
 # Poisson GLM
 def test_poisson_glm():
