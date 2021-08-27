@@ -1,11 +1,12 @@
 language: python
 python:
   - "3.8"
-# before_install:
-#   - pip install pytest
+before_install:
+  - pip install pytest
 # # command to install dependencies
-# install:
-#   - pip install -e .
+install:
+  - pip install -e requirements.txt
+  # - pip install -e .
 # # command to run tests
-# script:
-#   - pytest
+script:
+  - pytest
