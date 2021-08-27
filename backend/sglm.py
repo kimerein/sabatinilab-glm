@@ -7,6 +7,10 @@ import numpy as np
 # TODO: Potentially add additional alternatives for different GLM API implementations (SKLearn, etc.)
 # TODO: Potentially add switching it to also allowing pandas DataFrames as the fitting function
 
+# import seaborn as sns
+# sns.set(style='white', palette='colorblind', context='poster')
+
+
 class GLM():
     """
     Generalized Linear Model class built on pyglmnet's underlying regression models.
@@ -121,12 +125,11 @@ class SKGLM():
         Create the GLM model.
 
         model_name : str
+            GLM distribution name to create ('Normal', 'Gaussian', 'Poisson', 'Tweedie', 'Gamma', 'Logistic', or 'Multinomial')
         *args : positional arguments
-            See https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html for Logistic / Multinomial
-            See https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.TweedieRegressor.html otherwise
+            See links in SKGLM documentation for arguments
         **kwargs : keyword arguments
-            See https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html for Logistic / Multinomial
-            See https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.TweedieRegressor.html otherwise
+            See links in SKGLM documentation for arguments
         """
 
         self.model_name = model_name
@@ -163,24 +166,33 @@ class SKGLM():
         self.intercept_ = self.model.intercept_ if self.model_name in {'Logistic', 'Multinomial', 'Gaussian', 'Normal'} else self.model.beta0_
 
     def log_likelihood(self, prediction, truth):
+        """
+        Calculates log likelihood of fitted distribution.
 
+        Parameters
+        ----------
+        prediction : np.ndarray
+            Array of predictor variables on which to fit the model
+        truth : np.ndarray
+            Array of response variables on which to fit the model
+        """
         if self.model_name in {'Normal', 'Gaussian'}:
             resid = truth - prediction
-            std = np.std(resid)
-            loglik = scipy.stats.norm.logpdf(resid, loc=0, scale=std)
+            s = np.std(resid)
+            loglik = scipy.stats.norm.logpdf(resid, loc=0, scale=s)
             log_likelihood = np.sum(loglik)
-
-        elif self.model_name in {'Poisson'}:
-            pass 
-            raise NotYetImplementedError()
-
-        elif self.model_name in {'Logistic'}:
-            log_likelihood = np.sum(truth * np.log(prediction) + (1-truth)*np.log(1-prediction))
 
         elif self.model_name in {'Multinomial'}:
             pass
             raise NotYetImplementedError()
             
+        elif self.model_name in {'Logistic'}:
+            log_likelihood = np.sum(truth * np.log(prediction) + (1-truth)*np.log(1-prediction))
+
+        elif self.model_name in {'Poisson'}:
+            pass 
+            raise NotYetImplementedError()
+
         else:
             pass
             raise NotYetImplementedError()
