@@ -19,8 +19,7 @@ import sklearn.model_selection
 
 
 # Normal (OLS)
-def test_normal_ols():
-    epsilon = 0.001
+def test_normal_ols(epsilon=0.01):
 
     true_x = np.linspace(-3, 3, 21)
     true_y = true_x * 0.5 + 0.5
@@ -49,13 +48,11 @@ def test_normal_ols():
     return 
 
 # Poisson GLM
-def test_poisson_glm():
-    np.random.seed(117)
-    norm = stats.norm()
+def test_poisson_glm(epsilon=0.01):
 
-    true_x = np.array(sorted(norm.rvs(size=1000)*.75))
+    true_x = np.linspace(-2, 2, 51)
     true_y = np.exp(true_x)
-    obs_y = np.array([stats.poisson(mu=np.exp(_)).rvs(1) for _ in true_x]).reshape(-1)
+    obs_y = np.array([np.floor(np.exp(_)) for _ in true_x]).reshape(-1)
 
     x = true_x[:,None]
     y = obs_y
@@ -63,19 +60,25 @@ def test_poisson_glm():
     plt.figure(figsize=(5,5))
     plt.scatter(x, y, alpha = 0.25)
 
-    # glm = sglm.GLM('Poisson', alpha=0, link='identity')
+    from sklearn.linear_model import PoissonRegressor
+    sklr = PoissonRegressor(alpha=0)
+    sklr.fit(x, y)
+
+    plt.plot(true_x, sklr.predict(x), label='SKLearn')
+
     glm = sglm.GLM('Poisson', reg_lambda=0)
     glm.fit(x, y)
     coef, intercept = glm.coef_, glm.intercept_
-    
+
+    plt.plot(true_x, glm.model.predict(x), label='Sabatini GLM')
+    plt.legend()
+
     view_x = np.linspace(x.min(), x.max(), num=100)
     view_y = np.exp(view_x*coef + intercept)
-    # view_y = view_x*coef + intercept
 
-    plt.figure(figsize=(5,5))
-    plt.scatter(x[:,0], y, alpha = 0.25)
-    plt.plot(view_x, np.squeeze(view_y), color='g')
-    plt.plot(true_x, np.squeeze(true_y), color='r')
+    assert(np.abs(sklr.intercept_ - glm.intercept_) < epsilon)
+    assert(np.all(np.abs(sklr.coef_ - glm.coef_) < epsilon))
+
     return
 
 # # Logistic GLM
