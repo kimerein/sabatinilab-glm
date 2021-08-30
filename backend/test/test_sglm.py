@@ -45,38 +45,38 @@ def test_normal_ols():
 
     assert(np.abs(sklr.intercept_ - glm.intercept_) < epsilon)
     assert(np.all(np.abs(sklr.coef_ - glm.coef_) < epsilon))
-
+    
     return 
 
-# # Poisson GLM
-# def test_poisson_glm():
-#     np.random.seed(117)
-#     norm = stats.norm()
+# Poisson GLM
+def test_poisson_glm():
+    np.random.seed(117)
+    norm = stats.norm()
 
-#     true_x = np.array(sorted(norm.rvs(size=1000)*.75))
-#     true_y = np.exp(true_x)
-#     obs_y = np.array([stats.poisson(mu=np.exp(_)).rvs(1) for _ in true_x]).reshape(-1)
+    true_x = np.array(sorted(norm.rvs(size=1000)*.75))
+    true_y = np.exp(true_x)
+    obs_y = np.array([stats.poisson(mu=np.exp(_)).rvs(1) for _ in true_x]).reshape(-1)
 
-#     x = true_x[:,None]
-#     y = obs_y
+    x = true_x[:,None]
+    y = obs_y
 
-#     plt.figure(figsize=(5,5))
-#     plt.scatter(x, y, alpha = 0.25)
+    plt.figure(figsize=(5,5))
+    plt.scatter(x, y, alpha = 0.25)
 
-#     # glm = sglm.GLM('Poisson', alpha=0, link='identity')
-#     glm = sglm.GLM('Poisson', reg_lambda=0)
-#     glm.fit(x, y)
-#     coef, intercept = glm.coef_, glm.intercept_
+    # glm = sglm.GLM('Poisson', alpha=0, link='identity')
+    glm = sglm.GLM('Poisson', reg_lambda=0)
+    glm.fit(x, y)
+    coef, intercept = glm.coef_, glm.intercept_
     
-#     view_x = np.linspace(x.min(), x.max(), num=100)
-#     view_y = np.exp(view_x*coef + intercept)
-#     # view_y = view_x*coef + intercept
+    view_x = np.linspace(x.min(), x.max(), num=100)
+    view_y = np.exp(view_x*coef + intercept)
+    # view_y = view_x*coef + intercept
 
-#     plt.figure(figsize=(5,5))
-#     plt.scatter(x[:,0], y, alpha = 0.25)
-#     plt.plot(view_x, np.squeeze(view_y), color='g')
-#     plt.plot(true_x, np.squeeze(true_y), color='r')
-#     return
+    plt.figure(figsize=(5,5))
+    plt.scatter(x[:,0], y, alpha = 0.25)
+    plt.plot(view_x, np.squeeze(view_y), color='g')
+    plt.plot(true_x, np.squeeze(true_y), color='r')
+    return
 
 # # Logistic GLM
 # def test_logistic_glm():
