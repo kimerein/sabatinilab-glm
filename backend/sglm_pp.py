@@ -1,4 +1,4 @@
-from typing import List, TypeVar, Optional, Union, List
+from typing import DefaultDict, List, TypeVar, Optional, Union, List
 import numpy as np
 import pandas as pd
 import scipy.signal
@@ -19,7 +19,7 @@ import threading
 # TODO: Switch to suite2p's convolution
 # TODO: Numba impolementations
 
-def timeshift(X, shift_inx=[], shift_amt=1, keep_non_inx=False, dct=None):
+def timeshift(X, shift_inx=[], shift_amt=1, keep_non_inx=False, dct=None, fill_value=np.nan):
     """
     Shift columns in shift_inx up or down by shift_amt (down if shift_amt > 0, up if shift_amt < 0)
 
@@ -36,20 +36,22 @@ def timeshift(X, shift_inx=[], shift_amt=1, keep_non_inx=False, dct=None):
         If False, only shifted columns are returned.
     dct : dict
         Dictionary for in-place timeshift updates
+    fill_value : np.float
+        Value to be left in place of shifted data
     """
     
     npX = get_numpy_version(X) 
     # Use all columns for shifting if none specified
     shift_inx = range(npX.shape[1]) if len(shift_inx) == 0 else shift_inx
     X_to_shift = npX[:, shift_inx]
-    shifted_X = shift(X_to_shift, shift_amt)
+    shifted_X = shift(X_to_shift, shift_amt, fill_value=fill_value)
     return_setup = shifted_cols_to_original_type(X, shifted_X, shift_inx, keep_non_inx)
     
     if dct is not None:
         dct[shift_amt] = return_setup
     return return_setup
 
-def timeshift_multiple(X, shift_inx=[], shift_amt_list=[-1,0,1], unshifted_keep_all=True):
+def timeshift_multiple(X, shift_inx=[], shift_amt_list=[-1,0,1], unshifted_keep_all=True, fill_value=np.nan):
     """
     Collect multiple up/down shifts of columns as columns in the returned array
 
@@ -63,6 +65,8 @@ def timeshift_multiple(X, shift_inx=[], shift_amt_list=[-1,0,1], unshifted_keep_
         List of amounts by which to shift forward the columns in question (backward where list elements are < 0)
     unshifted_keep_all : bool
         Whether or not to keep all unshifted columns in the returned array
+    fill_value : np.float
+        Value to be left in place of shifted data
     """
 
     shifted_dict = {}
@@ -71,7 +75,8 @@ def timeshift_multiple(X, shift_inx=[], shift_amt_list=[-1,0,1], unshifted_keep_
         threads.append(threading.Thread(target=timeshift, args=(X,), kwargs={'shift_inx':shift_inx,
                                                                  'shift_amt':shift_amt,
                                                                  'keep_non_inx':(shift_amt == 0 and unshifted_keep_all),
-                                                                 'dct':shifted_dict
+                                                                 'dct':shifted_dict,
+                                                                 'fill_value':fill_value
                                                                  }))
         threads[i].start()
 
@@ -137,6 +142,19 @@ def diff(X, diff_inx=[], n=1, axis=0, prepend=0):
     
     return ret
 
+def get_column_names(df, column_names=[]):
+    """
+    Returns a list of the column numbers associated with each column name.
+    ---
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame of which to find column name index numbers
+    column_names : array_like, optional
+        Names of the columns of which to find column numbers
+    """
+    return [df.columns.get_loc(_) for _ in column_names]
 
 ######### HELPER FUNCTIONS #########
 

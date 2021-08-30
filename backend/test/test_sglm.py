@@ -21,7 +21,7 @@ import sklearn.model_selection
 # Normal (OLS)
 def test_normal_ols(epsilon=0.01):
 
-    print('Testing Normal OLS...')
+    print('Testing Normal GLM...')
 
     true_x = np.linspace(-3, 3, 21)
     true_y = true_x * 0.5 + 0.5
@@ -52,7 +52,7 @@ def test_normal_ols(epsilon=0.01):
 # Poisson GLM
 def test_poisson_glm(epsilon=0.01):
 
-    print('Testing Poisson OLS...')
+    print('Testing Poisson GLM...')
 
     true_x = np.linspace(-2, 2, 51)
     true_y = np.exp(true_x)
@@ -90,6 +90,9 @@ def test_poisson_glm(epsilon=0.01):
 
 # Logistic GLM
 def test_logistic_glm():
+
+    print('Testing Logistic GLM...')
+
     epsilon = 0.01
 
     z = np.linspace(-10, 10, 201)
@@ -120,45 +123,12 @@ def test_logistic_glm():
     plt.plot(true_x, glm.model.predict(x), label='Sabatini GLM')
     plt.legend()
 
-    print(sklr.intercept_, glm.intercept_, sklr.coef_, glm.coef_)
+    print(f"> SKL: Intercept — {sklr.intercept_}, Coefs — {sklr.coef_}")
+    print(f"> GLM: Intercept — {glm.intercept_}, Coefs — {glm.coef_}")
 
     assert(np.abs(sklr.intercept_ - glm.intercept_) < epsilon)
     assert(np.all(np.abs(sklr.coef_ - glm.coef_) < epsilon))
     return
-
-# # Normal (OLS) CV Test
-# def test_normal_ols_cv():
-#     np.random.seed(117)
-#     norm = stats.norm()
-
-#     true_x = norm.rvs(size=1000)
-#     true_y = true_x * 0.5
-#     obs_y = (true_y + norm.rvs(size=1000)*0.2)
-
-#     x = true_x[:,None]
-#     y = obs_y
-
-#     plt.figure(figsize=(5,5))
-#     plt.scatter(x, y, alpha = 0.25)
-    
-#     ss = sklearn.model_selection.ShuffleSplit()
-#     inx = list(ss.split(x, y))
-
-#     sglm_cv.cv_glm_single_params(x, y, inx, 'Gaussian', {'alpha': 0})
-
-
-#     param_list = sglm_cv.generate_mult_params(
-#                                             {
-#                                             'alpha': [0,0.01,0.1,1],
-#                                             'roll': [0,1,2,3,4]
-#                                             },
-#                                             kwargs={'fit_intercept': True}
-#                                             )
-
-#     sglm_cv.cv_glm_mult_params(x, y, inx, 'Gaussian', param_list)
-
-#     return
-
 
 # def pull_and_format_test_data():
 #     df = pd.read_csv('../../C39v2_sampleDesignMat.csv').drop('Unnamed: 0', axis=1).drop('index', axis=1)
