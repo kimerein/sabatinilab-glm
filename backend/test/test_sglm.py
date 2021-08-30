@@ -21,6 +21,8 @@ import sklearn.model_selection
 # Normal (OLS)
 def test_normal_ols(epsilon=0.01):
 
+    print('Testing Normal OLS...')
+
     true_x = np.linspace(-3, 3, 21)
     true_y = true_x * 0.5 + 0.5
     obs_y = (true_y + (-1)**np.arange(len(true_x)) * 0.1)
@@ -39,8 +41,8 @@ def test_normal_ols(epsilon=0.01):
     glm.fit(x, y)
     coef, intercept = glm.coef_, glm.intercept_
 
-    print(f"SKL: Intercept — {sklr.intercept_}, Coefs — {sklr.coef_}")
-    print(f"GLM: Intercept — {glm.intercept_}, Coefs — {glm.coef_}")
+    print(f"> SKL: Intercept — {sklr.intercept_}, Coefs — {sklr.coef_}")
+    print(f"> GLM: Intercept — {glm.intercept_}, Coefs — {glm.coef_}")
 
     assert(np.abs(sklr.intercept_ - glm.intercept_) < epsilon)
     assert(np.all(np.abs(sklr.coef_ - glm.coef_) < epsilon))
@@ -49,6 +51,8 @@ def test_normal_ols(epsilon=0.01):
 
 # Poisson GLM
 def test_poisson_glm(epsilon=0.01):
+
+    print('Testing Poisson OLS...')
 
     true_x = np.linspace(-2, 2, 51)
     true_y = np.exp(true_x)
@@ -76,38 +80,51 @@ def test_poisson_glm(epsilon=0.01):
     view_x = np.linspace(x.min(), x.max(), num=100)
     view_y = np.exp(view_x*coef + intercept)
 
+    print(f"> SKL: Intercept — {sklr.intercept_}, Coefs — {sklr.coef_}")
+    print(f"> GLM: Intercept — {glm.intercept_}, Coefs — {glm.coef_}")
+
     assert(np.abs(sklr.intercept_ - glm.intercept_) < epsilon)
     assert(np.all(np.abs(sklr.coef_ - glm.coef_) < epsilon))
 
     return
 
-# # Logistic GLM
-# def test_logistic_glm():
-#     np.random.seed(117)
-#     norm = stats.norm()
+# Logistic GLM
+def test_logistic_glm():
+    epsilon = 0.01
 
-#     true_x = norm.rvs(size=1000)
-#     true_y = true_x * 0.5
-#     obs_y = ((true_y + norm.rvs(size=1000)*0.1) > 0)*1.0
+    z = np.linspace(-10, 10, 201)
+    sigmoid_z = 1/(1+np.exp(-z))
+    np.random.seed(117)
+    sample = np.random.binomial(1,sigmoid_z)
 
-#     x = true_x[:,None]
-#     y = obs_y
+    true_x = z #np.linspace(-10, 10, 101)
+    true_y = sigmoid_z #(true_x > 0)*1.0
+    obs_y = sample
 
-#     plt.figure(figsize=(5,5))
-#     plt.scatter(x, y, alpha = 0.25)
+    x = true_x[:,None]
+    y = obs_y
 
-#     glm = sglm.GLM('Logistic', reg_lambda=0)
-#     glm.fit(x, y)
-#     coef, intercept = glm.coef_, glm.intercept_
-    
-#     view_x = np.linspace(x.min(), x.max(), num=100)
-#     view_y = 1/(1+np.exp(-(view_x*coef + intercept)))
+    plt.figure(figsize=(5,5))
+    plt.scatter(x, y, alpha = 0.25)
 
-#     plt.figure(figsize=(5,5))
-#     plt.scatter(x[:,0], y, alpha = 0.25)
-#     plt.plot(view_x, np.squeeze(view_y), color='g')
+    from sklearn.linear_model import LogisticRegression
+    sklr = LogisticRegression(C=np.inf)
+    sklr.fit(x, y)
 
-#     return
+    plt.plot(true_x, sklr.predict(x), label='SKLearn')
+
+    glm = sglm.GLM('Logistic', reg_lambda=0.0, alpha=0, max_iter=10000)
+    glm.fit(x, y)
+    coef, intercept = glm.coef_, glm.intercept_
+
+    plt.plot(true_x, glm.model.predict(x), label='Sabatini GLM')
+    plt.legend()
+
+    print(sklr.intercept_, glm.intercept_, sklr.coef_, glm.coef_)
+
+    assert(np.abs(sklr.intercept_ - glm.intercept_) < epsilon)
+    assert(np.all(np.abs(sklr.coef_ - glm.coef_) < epsilon))
+    return
 
 # # Normal (OLS) CV Test
 # def test_normal_ols_cv():
