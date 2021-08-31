@@ -21,7 +21,8 @@ def test_unshifted():
     comparison_2 = dummy_np_data[:, [0, 3]]
 
     assert(np.all(sglm_pp.timeshift(dummy_np_data, shift_amt=0) == comparison_1))
-    assert(np.all(sglm_pp.timeshift(dummy_np_data, shift_inx=[0,3], shift_amt=0) == comparison_2))
+    assert(np.all(sglm_pp.timeshift(dummy_np_data, shift_inx=[0,3],
+                                    shift_amt=0) == comparison_2))
 
     dummy_pd_data = get_dummy_pd()
     comparison_1_pd = pd.DataFrame(comparison_1, columns=['A','B','C','D'])
@@ -29,7 +30,8 @@ def test_unshifted():
     
     inx_list = sglm_pp.get_column_names(dummy_pd_data, ['A', 'D'])
     assert(np.all(sglm_pp.timeshift(dummy_pd_data, shift_amt=0) == comparison_1_pd))
-    assert(np.all(sglm_pp.timeshift(dummy_pd_data, shift_inx=inx_list, shift_amt=0) == comparison_2_pd))
+    assert(np.all(sglm_pp.timeshift(dummy_pd_data, shift_inx=inx_list,
+                                    shift_amt=0) == comparison_2_pd))
     return
 
 def test_forward_shift():
@@ -41,15 +43,18 @@ def test_forward_shift():
     comparison_2 = fwd_np_data[:, [0, 3]]
 
     assert(np.all(sglm_pp.timeshift(dummy_np_data, shift_amt=1, fill_value=0) == comparison_1))
-    assert(np.all(sglm_pp.timeshift(dummy_np_data, shift_inx=[0,3], shift_amt=1, fill_value=0) == comparison_2))
+    assert(np.all(sglm_pp.timeshift(dummy_np_data, shift_inx=[0,3], shift_amt=1,
+                                    fill_value=0) == comparison_2))
 
     dummy_pd_data = get_dummy_pd()
     comparison_1_pd = pd.DataFrame(comparison_1, columns=['A','B','C','D'])
     comparison_2_pd = pd.DataFrame(comparison_2, columns=['A','D'])
     
     inx_list = sglm_pp.get_column_names(dummy_pd_data, ['A', 'D'])
-    assert(np.all(sglm_pp.timeshift(dummy_pd_data, shift_amt=1, fill_value=0) == comparison_1_pd))
-    assert(np.all(sglm_pp.timeshift(dummy_pd_data, shift_inx=inx_list, shift_amt=1, fill_value=0) == comparison_2_pd))
+    assert(np.all(sglm_pp.timeshift(dummy_pd_data, shift_amt=1,
+                                    fill_value=0) == comparison_1_pd))
+    assert(np.all(sglm_pp.timeshift(dummy_pd_data, shift_inx=inx_list, shift_amt=1,
+                                    fill_value=0) == comparison_2_pd))
     return
 
 def test_backward_shift():
@@ -60,16 +65,20 @@ def test_backward_shift():
     comparison_1 = bwd_np_data
     comparison_2 = bwd_np_data[:, [0, 3]]
 
-    assert(np.all(sglm_pp.timeshift(dummy_np_data, shift_amt=-1, fill_value=0) == comparison_1))
-    assert(np.all(sglm_pp.timeshift(dummy_np_data, shift_inx=[0,3], shift_amt=-1, fill_value=0) == comparison_2))
+    assert(np.all(sglm_pp.timeshift(dummy_np_data, shift_amt=-1,
+                                    fill_value=0) == comparison_1))
+    assert(np.all(sglm_pp.timeshift(dummy_np_data, shift_inx=[0,3], shift_amt=-1,
+                                    fill_value=0) == comparison_2))
 
     dummy_pd_data = get_dummy_pd()
     comparison_1_pd = pd.DataFrame(comparison_1, columns=['A','B','C','D'])
     comparison_2_pd = pd.DataFrame(comparison_2, columns=['A','D'])
     
     inx_list = sglm_pp.get_column_names(dummy_pd_data, ['A', 'D'])
-    assert(np.all(sglm_pp.timeshift(dummy_pd_data, shift_amt=-1, fill_value=0) == comparison_1_pd))
-    assert(np.all(sglm_pp.timeshift(dummy_pd_data, shift_inx=inx_list, shift_amt=-1, fill_value=0) == comparison_2_pd))
+    assert(np.all(sglm_pp.timeshift(dummy_pd_data, shift_amt=-1,
+                                    fill_value=0) == comparison_1_pd))
+    assert(np.all(sglm_pp.timeshift(dummy_pd_data, shift_inx=inx_list, shift_amt=-1,
+                                    fill_value=0) == comparison_2_pd))
     return
 
 def test_shift_keep_all_cols():
@@ -84,8 +93,10 @@ def test_shift_keep_all_cols():
     bwd_dummy_np_data_overwrite = dummy_np_data.copy()
     bwd_dummy_np_data_overwrite[:, [0, 1]] = bwd_np_data
 
-    assert(np.all(sglm_pp.timeshift(dummy_np_data, shift_inx=[0,1], shift_amt=1, fill_value=0, keep_non_inx=True) == fwd_dummy_np_data_overwrite))
-    assert(np.all(sglm_pp.timeshift(dummy_np_data, shift_inx=[0,1], shift_amt=-1, fill_value=0, keep_non_inx=True) == bwd_dummy_np_data_overwrite))
+    assert(np.all(sglm_pp.timeshift(dummy_np_data, shift_inx=[0,1], shift_amt=1,
+                                    fill_value=0, keep_non_inx=True) == fwd_dummy_np_data_overwrite))
+    assert(np.all(sglm_pp.timeshift(dummy_np_data, shift_inx=[0,1], shift_amt=-1,
+                                    fill_value=0, keep_non_inx=True) == bwd_dummy_np_data_overwrite))
 
 
     dummy_pd_data = get_dummy_pd()
@@ -93,8 +104,48 @@ def test_shift_keep_all_cols():
     comparison_2_pd = pd.DataFrame(bwd_dummy_np_data_overwrite, columns=['A','B','C','D'])
     
     inx_list = sglm_pp.get_column_names(dummy_pd_data, ['A', 'B'])
-    assert(np.all(sglm_pp.timeshift(dummy_pd_data, shift_inx=inx_list, shift_amt=1, fill_value=0, keep_non_inx=True) == comparison_1_pd))
-    assert(np.all(sglm_pp.timeshift(dummy_pd_data, shift_inx=inx_list, shift_amt=-1, fill_value=0, keep_non_inx=True) == comparison_2_pd))
+    assert(np.all(sglm_pp.timeshift(dummy_pd_data, shift_inx=inx_list, shift_amt=1,
+                                    fill_value=0, keep_non_inx=True) == comparison_1_pd))
+    assert(np.all(sglm_pp.timeshift(dummy_pd_data, shift_inx=inx_list, shift_amt=-1,
+                                    fill_value=0, keep_non_inx=True) == comparison_2_pd))
+    return
+
+def test_timeshift_multiple():
+    # timeshift_multiple
+    
+    dummy_np_data = get_dummy_np()
+
+    comp_n1 = sglm_pp.timeshift(dummy_np_data, shift_amt=-1, fill_value=0)
+    comp_0 = sglm_pp.timeshift(dummy_np_data, shift_amt=0, fill_value=0)
+    comp_1 = sglm_pp.timeshift(dummy_np_data, shift_amt=1, fill_value=0)
+
+    comparison_1 = np.concatenate([comp_n1, comp_0, comp_1], axis=-1)
+    assert(np.all(comparison_1 == sglm_pp.timeshift_multiple(dummy_np_data, shift_amt_list=[-1,0,1],
+                                                             unshifted_keep_all=True, fill_value=0)))
+
+    comp2_n1 = sglm_pp.timeshift(dummy_np_data, shift_amt=-1, fill_value=0, shift_inx=[0, 3])
+    comp2_0 = sglm_pp.timeshift(dummy_np_data, shift_amt=0, fill_value=0)
+    comp2_1 = sglm_pp.timeshift(dummy_np_data, shift_amt=1, fill_value=0, shift_inx=[0, 3])
+
+    comparison_2 = np.concatenate([comp2_n1, comp2_0, comp2_1], axis=-1)
+    assert(np.all(comparison_2 == sglm_pp.timeshift_multiple(dummy_np_data, shift_inx=[0, 3],
+                                                             shift_amt_list=[-1,0,1],
+                                                             unshifted_keep_all=True, fill_value=0)))
+
+    dummy_pd_data = get_dummy_pd()
+    comparison_1_pd = pd.DataFrame(comparison_1, columns=['A_-1','B_-1','C_-1','D_-1',
+                                                          'A','B','C','D',
+                                                          'A_1','B_1','C_1','D_1'])
+    assert(np.all(comparison_1_pd == sglm_pp.timeshift_multiple(dummy_pd_data, shift_amt_list=[-1,0,1],
+                                                                unshifted_keep_all=True, fill_value=0)))
+
+    comparison_2_pd = pd.DataFrame(comparison_2, columns=['A_-1','D_-1', 'A','B','C','D', 'A_1','D_1'])
+    assert(np.all(comparison_2_pd == sglm_pp.timeshift_multiple(dummy_pd_data, shift_inx=[0, 3],
+                                                                shift_amt_list=[-1,0,1],
+                                                                unshifted_keep_all=True,
+                                                                fill_value=0)))
+
+    
     return
 
 if __name__ == '__main__':
@@ -102,17 +153,4 @@ if __name__ == '__main__':
     test_forward_shift()
     test_backward_shift()
     test_shift_keep_all_cols()
-    
-
-# data = np.arange(100).reshape(10,-1)
-# data = np.concatenate([data, np.ones((10,1))], axis=-1)
-# data[5:,-1] = 0
-
-# print('Original Data:\n', data)
-# print('Unshifted:\n', sglm_pp.timeshift(data, shift_inx=[0,1,4,5,7], shift_amt=0))
-# print('Forward Shifted:\n', sglm_pp.timeshift(data, shift_amt=3))
-# print('Backward Shifted:\n', sglm_pp.timeshift(data, shift_amt=-3))
-# print('Forward Shifted—Specific Columns:\n', sglm_pp.timeshift(data, shift_inx=[0,1,2,9], shift_amt=3))
-# print('Backward Shifted—Specific Columns:\n', sglm_pp.timeshift(data, shift_inx=[0,1,2,9], shift_amt=-3))
-
-# print('Forward Shifted—Specific Columns (Keep All):\n', sglm_pp.timeshift(data, shift_inx=[0,1,2,9], shift_amt=3, keep_non_inx=True))
+    test_timeshift_multiple()
