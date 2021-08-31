@@ -98,7 +98,7 @@ def zscore(X):
     return (X - X.mean(axis=0))/X.std(axis=0)
 
 
-def diff(X, diff_inx=[], n=1, axis=0, prepend=0):
+def diff(X, diff_inx=[], n=1, axis=0, **kwargs):
     """
     Return the differential between each timestep and the previous timestep, n times.
     
@@ -116,12 +116,14 @@ def diff(X, diff_inx=[], n=1, axis=0, prepend=0):
     axis : int, optional
         The axis along which the difference is taken, default is the
         last axis.
-    prepend, append : array_like, optional
+    **kwargs : prepend, append : array_like, optional
         Values to prepend or append to `a` along axis prior to
         performing the difference.  Scalar values are expanded to
         arrays with length 1 in the direction of axis and the shape
         of the input array in along all other axes.  Otherwise the
         dimension and shape must match `a` except along axis.
+
+        Other keyword arguments for np diff.
     """
 
     if type(X) == pd.DataFrame or type(X) == pd.Series:
@@ -133,16 +135,16 @@ def diff(X, diff_inx=[], n=1, axis=0, prepend=0):
         X_val = X_val.reshape((-1,1))
     
     diff_inx = diff_inx if diff_inx else list(range(X_val.shape[1]))
-    ret = np.diff(X_val[:,diff_inx], n=n, axis=axis, prepend=prepend)
+    ret = np.diff(X_val[:,diff_inx], n=n, axis=axis, **kwargs)
 
     if type(X) == pd.DataFrame:
-        ret = pd.DataFrame(ret, columns=[f'{_}_diff' for _ in X.columns], index=X.index)
+        ret = pd.DataFrame(ret, columns=[f'{_}_diff' for _ in X.columns], index=X.index[1:])
     elif type(X) == pd.Series:
-        ret = pd.Series(ret.reshape(-1), name=f'{X.name}_diff', index=X.index)
+        ret = pd.Series(ret.reshape(-1), name=f'{X.name}_diff', index=X.index[1:])
     
     return ret
 
-def get_column_names(df, column_names=[]):
+def get_column_names(df, column_names=[]): #
     """
     Returns a list of the column numbers associated with each column name.
     ---

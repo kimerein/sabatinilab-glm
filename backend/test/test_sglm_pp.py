@@ -112,7 +112,7 @@ def test_shift_keep_all_cols():
 
 def test_timeshift_multiple():
     # timeshift_multiple
-    
+
     dummy_np_data = get_dummy_np()
 
     comp_n1 = sglm_pp.timeshift(dummy_np_data, shift_amt=-1, fill_value=0)
@@ -148,9 +148,42 @@ def test_timeshift_multiple():
     
     return
 
+def test_zscore():
+    X = np.array([[0, -1, 0],
+                  [1, 1, 0],
+                  [0, 1, 0],
+                  [2, 3, 4]])
+    mn = np.mean(X, 0)
+    sd = np.std(X, 0)
+    assert(np.all(sglm_pp.zscore(X) == (X - mn)/sd))
+
+
+def test_diff():
+    X = np.array([[0, -1, 0],
+                  [1, 1, 0],
+                  [0, 1, 0],
+                  [2, 3, 4]])
+    dff = np.array([[1, 2, 0],
+                    [-1, 0, 0],
+                    [2, 2, 4]])
+    assert(np.all(sglm_pp.diff(X) == dff))
+
+
+    X = pd.DataFrame([[0, -1, 0],
+                      [1, 1, 0],
+                      [0, 1, 0],
+                      [2, 3, 4]], columns=['A', 'B', 'C'])
+    dff = pd.DataFrame([[1, 2, 0],
+                    [-1, 0, 0],
+                    [2, 2, 4]], columns=['A_diff', 'B_diff', 'C_diff'], index=[1, 2, 3])
+    basis = dff.rename({_:_+'_diff' for _ in X.columns}, axis=1)
+    assert(np.all(sglm_pp.diff(X) == basis))
+
 if __name__ == '__main__':
     test_unshifted()
     test_forward_shift()
     test_backward_shift()
     test_shift_keep_all_cols()
     test_timeshift_multiple()
+    test_zscore()
+    test_diff()
