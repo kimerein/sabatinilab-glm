@@ -25,7 +25,7 @@ def test_integration():
     print(X_tmp)
     
     prediction_cols = ['A', 'B_1', 'A_1', 'A_2']
-    response_col = 'B_diff'
+    response_col = 'B'
 
     glm = sglm_ez.fit_GLM(X_tmp[prediction_cols], X_tmp[response_col], reg_lambda=0.1)
     pred = glm.predict(X_tmp[prediction_cols])
@@ -38,7 +38,9 @@ def test_integration():
 
     # Step 1: Create a dictionary of lists for these relevant keywords...
     kwargs_iterations = {
-        'alpha': [0.01, 0.1, 1.0, 10.0],
+        # 'reg_lambda': [0.0001],
+        'reg_lambda': [0, 0.01, 0.1, 1.0, 10.0],
+        'alpha': [0, 0.01, 0.1, 1.0, 10.0],
         'fit_intercept': [True, False]
     }
 
@@ -50,7 +52,8 @@ def test_integration():
     # Step 3: Generate iterable list of keyword sets for possible combinations
     glm_kwarg_lst = sglm_cv.generate_mult_params(kwargs_iterations, kwargs_fixed)
     best_score, best_params, best_model = sglm_ez.simple_cv_fit(X_tmp[prediction_cols], X_tmp[response_col], cv_idx, glm_kwarg_lst, model_type='Normal')
-    
+
+    print(best_score, best_params)
     print(best_model.coef_, best_model.intercept_)
 
 if __name__ == '__main__':

@@ -15,7 +15,7 @@ import pandas as pd
 
 # Try batch gradient descent with alpha = 0.5 & with orthogonal matrix
 
-class GLM():
+class GLM(pyglmnet.GLM):
     """
     Generalized Linear Model class built on pyglmnet's underlying regression models.
 
@@ -56,7 +56,8 @@ class GLM():
         """
 
         base_kwargs = {
-            'solver':'cdfast'
+            'solver':'cdfast',
+            'score_metric':'pseudo_R2'
         }
         base_kwargs.update(kwargs)
 
@@ -65,12 +66,13 @@ class GLM():
             model_name = 'Gaussian' if model_name in {'Normal'} else model_name
             model_name = 'Binomial' if model_name in {'Logistic', 'Multinomial'} else model_name
             base_kwargs['distr'] = model_name.lower()
-            mdl = pyglmnet.GLM(*args, **base_kwargs)
+            # mdl = pyglmnet.GLM(*args, **base_kwargs)
+            super().__init__(*args, **base_kwargs)
         else:
             print('Distribution not yet implemented.')
             raise NotYetImplementedError()
         
-        self.model = mdl
+        # self.model = mdl
     
     def fit(self, X, y, *args):
         """
@@ -84,14 +86,14 @@ class GLM():
             Array of response variables on which to fit the model
         """
 
-        self.model.fit(X, y, *args)
-        self.coef_ = self.model.beta_
-        self.intercept_ = self.model.beta0_
+        super().fit(X, y, *args)
+        self.coef_ = self.beta_
+        self.intercept_ = self.beta0_
     
     def predict(self, X):
         if type(X) == pd.DataFrame:
             X = X.values
-        return self.model.predict(X)
+        return super().predict(X)
 
     def log_likelihood(self, prediction, truth):
 

@@ -11,6 +11,7 @@ def setup_autoregression(X, response_cols, order):
 
 def timeshift_cols(X, cols_to_shift, neg_order=0, pos_order=1):
     col_nums = sglm_pp.get_column_nums(X, cols_to_shift)
+    print(list(range(neg_order, pos_order + 1)))
     return sglm_pp.timeshift_multiple(X, shift_inx=col_nums, shift_amt_list=list(range(neg_order, pos_order + 1)))
 
 def fit_GLM(X, y, model_name='Gaussian', *args, **kwargs):
@@ -73,9 +74,10 @@ if __name__ == '__main__':
     print()
     print(X_tmp)
 
-    X_tmp = timeshift_cols(X_tmp, ['A'], 2)
-    print()
+    X_tmp = timeshift_cols(X_tmp, ['A'], 0, 2)
     print(X_tmp)
+
+    print('HERE')
 
     X_tmp = diff_cols(X_tmp, ['B_1', 'B'])
     print()
@@ -87,9 +89,6 @@ if __name__ == '__main__':
     
     glm = fit_GLM(X_tmp[['A', 'B_1', 'B_2', 'B_3', 'B_4', 'A_1', 'A_2', 'B_1_diff']], X_tmp['B'], reg_lambda=0.1)
     print(glm.coef_, glm.intercept_)
-    
-
-
 
     # Step 1: Create a dictionary of lists for these relevant keywords...
     kwargs_iterations = {

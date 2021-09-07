@@ -4,8 +4,8 @@ import sys
 import os 
 dir_path = '/'.join(os.path.realpath(__file__).split('/')[:-1])
 sys.path.append(f'{dir_path}/..')
-sys.path.append('{dir_path}/backend')
-sys.path.append('{dir_path}/../backend')
+sys.path.append(f'{dir_path}/backend')
+sys.path.append(f'{dir_path}/../backend')
 
 import sglm
 import sglm_cv

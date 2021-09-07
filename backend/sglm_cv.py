@@ -54,8 +54,8 @@ def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, GLM_CLS=None, ver
 
         cv_coefs[:, iter_cv] = glm.coef_
         cv_intercepts[iter_cv] = glm.intercept_
-        cv_scores_train[iter_cv] = glm.model.score(X_train, y_train)
-        cv_scores_test[iter_cv] = glm.model.score(X_test, y_test)
+        cv_scores_train[iter_cv] = glm.score(X_train, y_train)
+        cv_scores_test[iter_cv] = glm.score(X_test, y_test)
 
     if verbose > 0:
         print('Completing arguments:', glm_kwargs)
