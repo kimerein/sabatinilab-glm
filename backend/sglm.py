@@ -3,6 +3,7 @@ import sklearn.metrics
 import pyglmnet
 import scipy.stats
 import numpy as np
+import pandas as pd
 
 # TODO: Potentially add additional alternatives for different GLM API implementations (SKLearn, etc.)
 # TODO: Potentially add switching it to also allowing pandas DataFrames as the fitting function
@@ -10,6 +11,9 @@ import numpy as np
 # import seaborn as sns
 # sns.set(style='white', palette='colorblind', context='poster')
 
+
+
+# Try batch gradient descent with alpha = 0.5 & with orthogonal matrix
 
 class GLM():
     """
@@ -46,15 +50,22 @@ class GLM():
         *args : positional arguments
             See https://glm-tools.github.io/pyglmnet/api.html for relevant arguments.
         **kwargs : keyword arguments
+            Note: Implementation overrides default solver to be cdfast (i.e. Newton Conjugate Gradient) instead of batch
+            gradient descent
             See https://glm-tools.github.io/pyglmnet/api.html for relevant arguments.
         """
+
+        base_kwargs = {
+            'solver':'cdfast'
+        }
+        base_kwargs.update(kwargs)
 
         self.model_name = model_name
         if model_name in self.model_name_options: #{'Normal', 'Gaussian', 'Poisson', 'Gamma'}:
             model_name = 'Gaussian' if model_name in {'Normal'} else model_name
             model_name = 'Binomial' if model_name in {'Logistic', 'Multinomial'} else model_name
-            kwargs['distr'] = model_name.lower()
-            mdl = pyglmnet.GLM(*args, **kwargs)
+            base_kwargs['distr'] = model_name.lower()
+            mdl = pyglmnet.GLM(*args, **base_kwargs)
         else:
             print('Distribution not yet implemented.')
             raise NotYetImplementedError()
@@ -76,6 +87,11 @@ class GLM():
         self.model.fit(X, y, *args)
         self.coef_ = self.model.beta_
         self.intercept_ = self.model.beta0_
+    
+    def predict(self, X):
+        if type(X) == pd.DataFrame:
+            X = X.values
+        return self.model.predict(X)
 
     def log_likelihood(self, prediction, truth):
 

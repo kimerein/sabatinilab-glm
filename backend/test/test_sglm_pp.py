@@ -1,9 +1,11 @@
 import pytest
 
 import sys
-sys.path.append('..')
-sys.path.append('../backend')
-sys.path.append('./backend')
+import os 
+dir_path = '/'.join(os.path.realpath(__file__).split('/')[:-1])
+sys.path.append(f'{dir_path}/..')
+sys.path.append('{dir_path}/backend')
+sys.path.append('{dir_path}/../backend')
 
 import sglm_pp
 import numpy as np
@@ -41,7 +43,7 @@ def test_forward_shift():
 
     comparison_1 = fwd_np_data
     comparison_2 = fwd_np_data[:, [0, 3]]
-
+    
     assert(np.all(sglm_pp.timeshift(dummy_np_data, shift_amt=1, fill_value=0) == comparison_1))
     assert(np.all(sglm_pp.timeshift(dummy_np_data, shift_inx=[0,3], shift_amt=1,
                                     fill_value=0) == comparison_2))
@@ -50,7 +52,7 @@ def test_forward_shift():
     comparison_1_pd = pd.DataFrame(comparison_1, columns=['A','B','C','D'])
     comparison_2_pd = pd.DataFrame(comparison_2, columns=['A','D'])
     
-    inx_list = sglm_pp.get_column_names(dummy_pd_data, ['A', 'D'])
+    inx_list = sglm_pp.get_column_nums(dummy_pd_data, ['A', 'D'])
     assert(np.all(sglm_pp.timeshift(dummy_pd_data, shift_amt=1,
                                     fill_value=0) == comparison_1_pd))
     assert(np.all(sglm_pp.timeshift(dummy_pd_data, shift_inx=inx_list, shift_amt=1,
@@ -187,3 +189,12 @@ if __name__ == '__main__':
     test_timeshift_multiple()
     test_zscore()
     test_diff()
+
+    # print()
+    # print(X_tmp)
+    # X_tmp = diff_cols(X_tmp, ['B'])
+
+    # print(sglm_pp.diff(X_tmp['A'], append_to_base=True))
+    # print(sglm_pp.diff(X_tmp[['A', 'B']], append_to_base=True))
+
+    # print(diff_cols(X_tmp, ['A', 'B_1']))

@@ -49,7 +49,7 @@ def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, GLM_CLS=None, ver
         if GLM_CLS:
             glm = GLM_CLS(model_name, **glm_kwargs)
         else:
-            glm = sglm.SKGLM(model_name, **glm_kwargs)
+            glm = sglm.GLM(model_name, **glm_kwargs)
         glm.fit(X_train, y_train)
 
         cv_coefs[:, iter_cv] = glm.coef_
@@ -65,7 +65,8 @@ def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, GLM_CLS=None, ver
         'cv_intercepts': cv_intercepts,
         'cv_scores_train': cv_scores_train,
         'cv_scores_test': cv_scores_test,
-        'cv_mean_score': np.mean(cv_scores_test)
+        'cv_mean_score': np.mean(cv_scores_test),
+        'model': glm
     }
 
     return ret_dict
@@ -99,6 +100,7 @@ def cv_glm_mult_params(X, y, cv_idx, model_name, glm_kwarg_lst, GLM_CLS=None, ve
     final_results = {}
     best_score = -np.inf
     best_params = None
+    # best_model = None
 
     resp = list()
     for glm_kwargs in glm_kwarg_lst:
@@ -110,10 +112,12 @@ def cv_glm_mult_params(X, y, cv_idx, model_name, glm_kwarg_lst, GLM_CLS=None, ve
         if cv_result['cv_mean_score'] > best_score:
             best_score = cv_result['cv_mean_score']
             best_params = glm_kwargs
+            best_model = cv_result['model']
     
     final_results = {
         'best_score': best_score,
         'best_params': best_params,
+        'best_model': best_model,
         'full_cv_results': resp,
     }
 

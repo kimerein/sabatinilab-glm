@@ -6,6 +6,7 @@ from numba import njit, jit, prange
 
 import sys
 import threading
+from sklearn.model_selection import GroupShuffleSplit
 
 # import caiman 
 # If this causes an error, navigate to backend/lib/CaImAn and run:
@@ -98,7 +99,7 @@ def zscore(X):
     return (X - X.mean(axis=0))/X.std(axis=0)
 
 
-def diff(X, diff_inx=[], n=1, axis=0, **kwargs):
+def diff(X, diff_inx=[], n=1, axis=0, append_to_base=False, fill_value=np.nan, **kwargs):
     """
     Return the differential between each timestep and the previous timestep, n times.
     
@@ -115,7 +116,7 @@ def diff(X, diff_inx=[], n=1, axis=0, **kwargs):
         is returned as-is.
     axis : int, optional
         The axis along which the difference is taken, default is the
-        last axis.
+        first axis.
     **kwargs : prepend, append : array_like, optional
         Values to prepend or append to `a` along axis prior to
         performing the difference.  Scalar values are expanded to
@@ -126,7 +127,18 @@ def diff(X, diff_inx=[], n=1, axis=0, **kwargs):
         Other keyword arguments for np diff.
     """
 
-    if type(X) == pd.DataFrame or type(X) == pd.Series:
+    typ = type(X)
+    typ = pd.DataFrame if typ == pd.Series and append_to_base else typ
+
+    if type(X) == pd.Series:
+        X = pd.DataFrame(X)
+
+    diff_inx = diff_inx if diff_inx else list(range(X.shape[1]))
+
+    if type(X) == pd.DataFrame:
+        column_names = [_ + '_diff' for _ in X.columns[diff_inx]]
+        if append_to_base:
+            column_names = list(X.columns) + column_names
         X_val = X.values
     else:
         X_val = X
@@ -134,17 +146,23 @@ def diff(X, diff_inx=[], n=1, axis=0, **kwargs):
     if len(X.shape) == 1:
         X_val = X_val.reshape((-1,1))
     
-    diff_inx = diff_inx if diff_inx else list(range(X_val.shape[1]))
     ret = np.diff(X_val[:,diff_inx], n=n, axis=axis, **kwargs)
 
+    if append_to_base:
+        ret = np.concatenate([np.ones((n, ret.shape[1])) * fill_value, ret], axis=0)
+        ret = np.concatenate([X_val, ret], axis=-1)
+        index = X.index
+    else:
+        index = X.index[1:]
+
     if type(X) == pd.DataFrame:
-        ret = pd.DataFrame(ret, columns=[f'{_}_diff' for _ in X.columns], index=X.index[1:])
-    elif type(X) == pd.Series:
-        ret = pd.Series(ret.reshape(-1), name=f'{X.name}_diff', index=X.index[1:])
+        ret = pd.DataFrame(ret, columns=column_names, index=index)
+    if typ == pd.Series:
+        ret = ret.iloc[:, 0]
     
     return ret
 
-def get_column_names(df, column_names=[]): #
+def get_column_nums(df, column_names=[]): #
     """
     Returns a list of the column numbers associated with each column name.
     ---
@@ -158,7 +176,43 @@ def get_column_names(df, column_names=[]): #
     """
     return [df.columns.get_loc(_) for _ in column_names]
 
+
+
+
+
+
+
+
+def bucket_ids_by_timeframe(total_timesteps, timesteps_per_bucket=20):
+    # Step 1: Create time buckets of 1000 entries each (actual value will vary based on
+    # sampling rate and amount of time desired for bucketing)
+    num_buckets = total_timesteps // timesteps_per_bucket
+    bucket_ids = np.arange(total_timesteps) // num_buckets
+    return bucket_ids
+
+def cv_idx_from_bucket_ids(bucket_ids, X, y=None, k_folds=None):
+    # Step 2: Create index sets for each of the K-folds based on prior groupings
+    if k_folds is None:
+        # Defaults to Leave One Out Cross-Validation
+        k_folds = bucket_ids.max() + 1
+    
+    splitter = GroupShuffleSplit(n_splits=k_folds)
+    cv_idx = list(splitter.split(X, y, bucket_ids))
+    return cv_idx
+
+
+
 ######### HELPER FUNCTIONS #########
+######### HELPER FUNCTIONS #########
+######### HELPER FUNCTIONS #########
+######### HELPER FUNCTIONS #########
+######### HELPER FUNCTIONS #########
+######### HELPER FUNCTIONS #########
+######### HELPER FUNCTIONS #########
+######### HELPER FUNCTIONS #########
+######### HELPER FUNCTIONS #########
+######### HELPER FUNCTIONS #########
+
 
 def get_numpy_version(X: Union[np.ndarray, pd.DataFrame]) -> np.ndarray:
     """
@@ -341,7 +395,6 @@ def concat_pandas_shifts(shift_amt_list: List[int],
         sft_col_names = [f"{_}_{shift_amt}" for _ in col_names] if shift_amt != 0 else col_names
         ret[sft_col_names] = shifted_list[isa][col_names]
     return ret
-
 
 ##### Foopsi #####
 

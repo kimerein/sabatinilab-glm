@@ -1,9 +1,11 @@
 import pytest
 
 import sys
-sys.path.append('..')
-sys.path.append('../backend')
-sys.path.append('./backend')
+import os 
+dir_path = '/'.join(os.path.realpath(__file__).split('/')[:-1])
+sys.path.append(f'{dir_path}/..')
+sys.path.append('{dir_path}/backend')
+sys.path.append('{dir_path}/../backend')
 
 import sglm
 import sglm_cv
@@ -15,6 +17,7 @@ import numpy as np
 import pandas as pd
 
 import sklearn.model_selection
+from sklearn.linear_model import PoissonRegressor
 
 
 
@@ -64,7 +67,6 @@ def test_poisson_glm(epsilon=0.01):
     plt.figure(figsize=(5,5))
     plt.scatter(x, y, alpha = 0.25)
 
-    from sklearn.linear_model import PoissonRegressor
     sklr = PoissonRegressor(alpha=0)
     sklr.fit(x, y)
 
