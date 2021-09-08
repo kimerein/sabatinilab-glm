@@ -97,8 +97,10 @@ def cv_glm_mult_params(X, y, cv_idx, model_name, glm_kwarg_lst, GLM_CLS=None, ve
         of 1D index shifts that should be applied)
     """
 
+    # score_metric = glm_kwarg_lst[0]['score_metric'] if 'score_metric' in glm_kwarg_lst else 'pseudo_R2'
+
     final_results = {}
-    best_score = -np.inf
+    best_score = -np.inf #if score_metric == 'pseudo_R2' else np.inf
     best_params = None
     # best_model = None
 
@@ -109,7 +111,8 @@ def cv_glm_mult_params(X, y, cv_idx, model_name, glm_kwarg_lst, GLM_CLS=None, ve
         cv_result = cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, GLM_CLS=GLM_CLS, verbose=verbose)
         resp.append(cv_result)
 
-        if cv_result['cv_mean_score'] > best_score:
+        if ((cv_result['model'].score_metric == 'pseudo_R2' and cv_result['cv_mean_score'] > best_score)): # or
+            # (cv_result['model'].score_metric == 'deviance' and cv_result['cv_mean_score'] < best_score)):
             best_score = cv_result['cv_mean_score']
             best_params = glm_kwargs
             best_model = cv_result['model']

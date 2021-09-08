@@ -13,7 +13,11 @@ import sglm
 import sglm_ez
 import sglm_cv
 
+from sklearn.linear_model import ElasticNet
+
+
 def test_integration():
+    epsilon = 0.01
 
     X_tmp = pd.DataFrame(np.arange(200).reshape((100, 2)), columns=['A', 'B'])
     X_tmp['B'] = (X_tmp['B']-1) * 2 + 1
@@ -24,7 +28,7 @@ def test_integration():
     X_tmp = X_tmp.dropna()
     print(X_tmp)
     
-    prediction_cols = ['A', 'B_1', 'A_1', 'A_2']
+    prediction_cols = ['A']
     response_col = 'B'
 
     glm = sglm_ez.fit_GLM(X_tmp[prediction_cols], X_tmp[response_col], reg_lambda=0.1)
@@ -46,7 +50,8 @@ def test_integration():
 
     # Step 2: Create a dictionary for the fixed keyword arguments that do not require iteration...
     kwargs_fixed = {
-        'max_iter': 1000
+        'max_iter': 10000,
+        # 'score_metric': 'deviance'
     }
 
     # Step 3: Generate iterable list of keyword sets for possible combinations
@@ -55,6 +60,16 @@ def test_integration():
 
     print(best_score, best_params)
     print(best_model.coef_, best_model.intercept_)
+
+    sklr = ElasticNet(alpha=0, l1_ratio=0, fit_intercept=True)
+    sklr.fit(X_tmp[prediction_cols], X_tmp[response_col])
+    
+    print(sklr.coef_, sklr.intercept_)
+
+    
+    assert(np.abs(sklr.intercept_ - best_model.intercept_) < epsilon)
+    assert(np.all(np.abs(sklr.coef_ - best_model.coef_) < epsilon))
+
 
 if __name__ == '__main__':
     test_integration()
