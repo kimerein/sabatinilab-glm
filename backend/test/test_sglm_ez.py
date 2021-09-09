@@ -24,7 +24,7 @@ def test_integration():
     # X_tmp['B'] = np.random.choice(20, size=10)
     X_tmp = sglm_ez.timeshift_cols(X_tmp, ['A'], pos_order=2)
     X_tmp = sglm_ez.diff_cols(X_tmp, ['A', 'B'])
-    X_tmp = sglm_ez.setup_autoregression(X_tmp, ['B'], 4)
+    # X_tmp = sglm_ez.setup_autoregression(X_tmp, ['B'], 4)
     X_tmp = X_tmp.dropna()
     print(X_tmp)
     

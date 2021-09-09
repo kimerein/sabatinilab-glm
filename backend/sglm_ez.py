@@ -25,7 +25,26 @@ def timeshift_cols(X, cols_to_shift, neg_order=0, pos_order=1):
         Positive order i.e. number of shifts to perform forwards
     """    
     col_nums = sglm_pp.get_column_nums(X, cols_to_shift)
-    return sglm_pp.timeshift_multiple(X, shift_inx=col_nums, shift_amt_list=list(range(neg_order, pos_order + 1)))
+    return sglm_pp.timeshift_multiple(X, shift_inx=col_nums, shift_amt_list=[0]+list(range(neg_order, 0))+list(range(1, pos_order + 1)))
+
+
+def add_timeshifts_to_col_list(all_cols, shifted_cols, neg_order=0, pos_order=1):
+    """
+    Add a number of timeshifts to the shifted_cols list provided for every column used. 
+
+    Parameters
+    ----------
+    shifted_cols : list(str)
+        The list of columns that have been timeshifted
+    neg_order : int
+        Negative order i.e. number of shifts performed backwards
+    pos_order : int
+        Positive order i.e. number of shifts performed forwards
+    """ 
+    out_col_list = []
+    for shift_amt in list(range(neg_order, 0))+list(range(1, pos_order + 1)):
+        out_col_list.extend([_ + f'_{shift_amt}' for _ in shifted_cols])
+    return all_cols + out_col_list
 
 def fit_GLM(X, y, model_name='Gaussian', *args, **kwargs):
     """
