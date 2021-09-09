@@ -127,6 +127,51 @@ def cv_glm_mult_params(X, y, cv_idx, model_name, glm_kwarg_lst, GLM_CLS=None, ve
     return final_results
 
 
+
+    # out_dict = {}
+    # threads = []
+    
+    # resp = list()
+    # for i, glm_kwargs in enumerate(glm_kwarg_lst):
+
+    #     model_name = glm_kwargs.pop('model_name', 'Gaussian')
+
+    #     threads.append(threading.Thread(target=cv_glm_single_params, args=(X, y, cv_idx, model_name, glm_kwargs),
+    #                                                                  kwargs={'GLM_CLS': GLM_CLS,
+    #                                                                          'verbose': verbose,
+    #                                                                          'dct': out_dict
+    #                                                                          }))
+
+    #     # cv_result = cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, GLM_CLS=GLM_CLS, verbose=verbose)
+    #     # resp.append(cv_result)
+        
+    #     threads[i].start()
+
+    
+    # for thread in threads:
+    #     thread.join()
+    
+    # shifted_list = [out_dict[tuple(_)] for _ in glm_kwarg_lst]
+
+    
+
+    # for cv_result in shifted_list:
+    #     if ((cv_result['model'].score_metric == 'pseudo_R2' and cv_result['cv_mean_score'] > best_score)): # or
+    #         # (cv_result['model'].score_metric == 'deviance' and cv_result['cv_mean_score'] < best_score)):
+    #         best_score = cv_result['cv_mean_score']
+    #         best_params = cv_result['params']
+    #         best_model = cv_result['model']
+    
+    # final_results = {
+    #     'best_score': best_score,
+    #     'best_params': best_params,
+    #     'best_model': best_model,
+    #     'full_cv_results': resp,
+    # }
+
+    # return final_results
+
+
 def generate_mult_params(kwarg_lists, kwargs=None):
     """
     Generates a list of dictionaries of all possible parameter combinations

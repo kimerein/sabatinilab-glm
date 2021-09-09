@@ -43,8 +43,8 @@ def test_integration():
     # Step 1: Create a dictionary of lists for these relevant keywords...
     kwargs_iterations = {
         # 'reg_lambda': [0.0001],
-        'reg_lambda': [0, 0.01, 0.1, 1.0, 10.0],
-        'alpha': [0, 0.01, 0.1, 1.0, 10.0],
+        'reg_lambda': [0, 0.01, 0.1, 1.0],
+        'alpha': [0, 0.01, 0.1, 1.0],
         'fit_intercept': [True, False]
     }
 
@@ -66,7 +66,7 @@ def test_integration():
     
     print(sklr.coef_, sklr.intercept_)
 
-    
+
     assert(np.abs(sklr.intercept_ - best_model.intercept_) < epsilon)
     assert(np.all(np.abs(sklr.coef_ - best_model.coef_) < epsilon))
 
