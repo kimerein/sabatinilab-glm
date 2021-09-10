@@ -2,13 +2,14 @@ import pandas as pd
 import numpy as np
 import sglm
 import itertools
+import threading
 
 # TODO: Multidimensional Array -- paramgrid and output grid
 # TODO: Add an OrderedDict implementation for the generate_mult_params version
 
 # TODO: Add a Feature Selection methodology -- to adjust feature selection based on cross-validation 
 
-def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, GLM_CLS=None, verbose=0):
+def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, GLM_CLS=None, verbose=0, resp_list=[]):
     """
     Runs cross-validation on GLM for a single set of parameters.
 
@@ -28,6 +29,8 @@ def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, GLM_CLS=None, ver
     glm_kwargs : dict
         Keyword arguments to pass to the GLM constructor
     """
+
+    threads = []
 
     n_coefs = X.shape[1]
     n_idx = len(cv_idx)
@@ -50,12 +53,22 @@ def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, GLM_CLS=None, ver
             glm = GLM_CLS(model_name, **glm_kwargs)
         else:
             glm = sglm.GLM(model_name, **glm_kwargs)
-        glm.fit(X_train, y_train)
 
-        cv_coefs[:, iter_cv] = glm.coef_
-        cv_intercepts[iter_cv] = glm.intercept_
-        cv_scores_train[iter_cv] = glm.score(X_train, y_train)
-        cv_scores_test[iter_cv] = glm.score(X_test, y_test)
+
+        threads.append(threading.Thread(target=glm.fit_set, args=(X_train, y_train, X_test, y_test,
+                                                                  cv_coefs, cv_intercepts, cv_scores_train, cv_scores_test,
+                                                                  iter_cv,)))
+        threads[-1].start()
+
+        # glm.fit(X_train, y_train)
+
+        # cv_coefs[:, iter_cv] = glm.coef_
+        # cv_intercepts[iter_cv] = glm.intercept_
+        # cv_scores_train[iter_cv] = glm.score(X_train, y_train)
+        # cv_scores_test[iter_cv] = glm.score(X_test, y_test)
+
+    for thread in threads:
+        thread.join()
 
     if verbose > 0:
         print('Completing arguments:', glm_kwargs)
@@ -66,8 +79,11 @@ def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, GLM_CLS=None, ver
         'cv_scores_train': cv_scores_train,
         'cv_scores_test': cv_scores_test,
         'cv_mean_score': np.mean(cv_scores_test),
+        'glm_kwargs': glm_kwargs,
         'model': glm
     }
+
+    resp_list.append(ret_dict)
 
     return ret_dict
 
@@ -104,17 +120,39 @@ def cv_glm_mult_params(X, y, cv_idx, model_name, glm_kwarg_lst, GLM_CLS=None, ve
     best_params = None
     # best_model = None
 
+    threads = []
     resp = list()
-    for glm_kwargs in glm_kwarg_lst:
+    for i, glm_kwargs in enumerate(glm_kwarg_lst):
+        print(glm_kwargs)
 
         model_name = glm_kwargs.pop('model_name', 'Gaussian')
-        cv_result = cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, GLM_CLS=GLM_CLS, verbose=verbose)
-        resp.append(cv_result)
+        # cv_result = cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, GLM_CLS=GLM_CLS, verbose=verbose, resp_list=resp)
+        # resp.append(cv_result)
 
+        threads.append(threading.Thread(target=cv_glm_single_params, args=(X, y, cv_idx, model_name, glm_kwargs,),
+                                                                     kwargs={'GLM_CLS': GLM_CLS,
+                                                                             'verbose': verbose,
+                                                                             'resp_list': resp}))
+
+        threads[i].start()
+
+        if i % 10 == 9:
+            for thread in threads:
+                thread.join()
+            threads = []
+
+
+    for i, thread in enumerate(threads):
+        # print(glm_kwarg_lst[i])
+        # print(resp)
+
+        thread.join()
+
+    for cv_result in resp:
         if ((cv_result['model'].score_metric == 'pseudo_R2' and cv_result['cv_mean_score'] > best_score)): # or
             # (cv_result['model'].score_metric == 'deviance' and cv_result['cv_mean_score'] < best_score)):
             best_score = cv_result['cv_mean_score']
-            best_params = glm_kwargs
+            best_params = cv_result['glm_kwargs']
             best_model = cv_result['model']
     
     final_results = {

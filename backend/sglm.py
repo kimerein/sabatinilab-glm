@@ -90,6 +90,25 @@ class GLM(pyglmnet.GLM):
         self.coef_ = self.beta_
         self.intercept_ = self.beta0_
     
+    def fit_set(self, X, y, X_test, y_test, cv_coefs, cv_intercepts, cv_scores_train, cv_scores_test, iter_cv, *args):
+        """
+        Fits the GLM to the provided X predictors and y responses.
+
+        Parameters
+        ----------
+        X : np.ndarray or pd.DataFrame
+            Array of predictor variables on which to fit the model
+        y : np.ndarray or pd.Series
+            Array of response variables on which to fit the model
+        """
+        self.fit(X, y, *args)
+
+        cv_coefs[:, iter_cv] = self.coef_
+        cv_intercepts[iter_cv] = self.intercept_
+        cv_scores_train[iter_cv] = self.score(X, y)
+        cv_scores_test[iter_cv] = self.score(X_test, y_test)
+
+
     def predict(self, X):
         if type(X) == pd.DataFrame:
             X = X.values
