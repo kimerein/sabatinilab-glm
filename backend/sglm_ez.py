@@ -105,7 +105,7 @@ def cv_idx_by_timeframe(X, y=None, timesteps_per_bucket=20, k_folds=10):
     return cv_idx
 
 
-def cv_idx_by_trial_id(X, y=None, trial_id_columns=[], k_folds=10):
+def cv_idx_by_trial_id(X, y=None, trial_id_columns=[], k_folds=5):
     """
     Generate Cross Validation indices by keeping together trial id columns
     (bucketing together by trial_id_columns).
@@ -161,7 +161,9 @@ def simple_cv_fit(X, y, cv_idx, glm_kwarg_lst, model_type='Normal'):
                                             y.values,
                                             cv_idx,
                                             model_type,
-                                            glm_kwarg_lst)
+                                            glm_kwarg_lst
+                                            # [tuple([glm_kwarg[_] for _ in []]) for glm_kwarg in glm_kwarg_lst]
+                                            )
     best_score = cv_results['best_score']
     best_params = cv_results['best_params']
     best_model = cv_results['best_model']

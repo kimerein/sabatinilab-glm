@@ -134,9 +134,9 @@ def cv_glm_mult_params(X, y, cv_idx, model_name, glm_kwarg_lst, GLM_CLS=None, ve
                                                                              'verbose': verbose,
                                                                              'resp_list': resp}))
 
-        threads[i].start()
+        threads[-1].start()
 
-        if i % 10 == 9:
+        if i % 5 == 4:
             for thread in threads:
                 thread.join()
             threads = []

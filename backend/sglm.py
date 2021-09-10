@@ -5,6 +5,8 @@ import scipy.stats
 import numpy as np
 import pandas as pd
 
+from numba import njit, jit, prange
+
 # TODO: Potentially add additional alternatives for different GLM API implementations (SKLearn, etc.)
 # TODO: Potentially add switching it to also allowing pandas DataFrames as the fitting function
 
