@@ -3,6 +3,7 @@ import numpy as np
 import sglm
 import itertools
 import threading
+import time
 
 # TODO: Multidimensional Array -- paramgrid and output grid
 # TODO: Add an OrderedDict implementation for the generate_mult_params version
@@ -49,23 +50,34 @@ def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, GLM_CLS=None, ver
         X_test = X[idx_test,:]
         y_test = y_rolled[idx_test]
 
+        if iter_cv == 0:
+            start = time.time()
+
+            pca_glm = sglm.GLM(model_name, **glm_kwargs)
+            pca_glm.pca_fit(X_train, y_train)
+            print(f'PCA GLM Built in {time.time() - start} seconds')
+
         if GLM_CLS:
-            glm = GLM_CLS(model_name, **glm_kwargs)
+            glm = GLM_CLS(model_name, beta0_=pca_glm.beta0_, beta_=pca_glm.beta_, **glm_kwargs)
         else:
-            glm = sglm.GLM(model_name, **glm_kwargs)
+            glm = sglm.GLM(model_name, beta0_=pca_glm.beta0_, beta_=pca_glm.beta_, **glm_kwargs)
 
 
-        threads.append(threading.Thread(target=glm.fit_set, args=(X_train, y_train, X_test, y_test,
-                                                                  cv_coefs, cv_intercepts, cv_scores_train, cv_scores_test,
-                                                                  iter_cv,)))
-        threads[-1].start()
+        # threads.append(threading.Thread(target=glm.fit_set, args=(X_train, y_train, X_test, y_test,
+        #                                                           cv_coefs, cv_intercepts, cv_scores_train, cv_scores_test,
+        #                                                           iter_cv,)))
+        # threads[-1].start()
 
-        # glm.fit(X_train, y_train)
+        
+        start = time.time()
+        glm.fit(X_train, y_train)
+        print(f'GLM fit in {time.time() - start} seconds')
 
-        # cv_coefs[:, iter_cv] = glm.coef_
-        # cv_intercepts[iter_cv] = glm.intercept_
-        # cv_scores_train[iter_cv] = glm.score(X_train, y_train)
-        # cv_scores_test[iter_cv] = glm.score(X_test, y_test)
+        
+        cv_coefs[:, iter_cv] = glm.coef_
+        cv_intercepts[iter_cv] = glm.intercept_
+        cv_scores_train[iter_cv] = glm.score(X_train, y_train)
+        cv_scores_test[iter_cv] = glm.score(X_test, y_test)
 
     for thread in threads:
         thread.join()
@@ -133,7 +145,7 @@ def cv_glm_mult_params(X, y, cv_idx, model_name, glm_kwarg_lst, GLM_CLS=None, ve
                                                                      kwargs={'GLM_CLS': GLM_CLS,
                                                                              'verbose': verbose,
                                                                              'resp_list': resp}))
-
+        threads[-1].name = str(glm_kwargs)
         threads[-1].start()
 
         if i % 5 == 4:
@@ -155,6 +167,7 @@ def cv_glm_mult_params(X, y, cv_idx, model_name, glm_kwarg_lst, GLM_CLS=None, ve
             best_params = cv_result['glm_kwargs']
             best_model = cv_result['model']
     
+
     final_results = {
         'best_score': best_score,
         'best_params': best_params,
@@ -165,7 +178,7 @@ def cv_glm_mult_params(X, y, cv_idx, model_name, glm_kwarg_lst, GLM_CLS=None, ve
     return final_results
 
 
-
+    
     # out_dict = {}
     # threads = []
     
