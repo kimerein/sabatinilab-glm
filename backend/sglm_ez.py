@@ -215,7 +215,8 @@ if __name__ == '__main__':
     print()
     print(X_tmp)
     
-    glm = fit_GLM(X_tmp[['A', 'B_1', 'B_2', 'B_3', 'B_4', 'A_1', 'A_2', 'B_1_diff']], X_tmp['B'], reg_lambda=0.1)
+    # glm = fit_GLM(X_tmp[['A', 'B_1', 'B_2', 'B_3', 'B_4', 'A_1', 'A_2', 'B_1_diff']], X_tmp['B'], reg_lambda=0.1)
+    glm = fit_GLM(X_tmp[['A', 'B_1', 'B_2', 'B_3', 'B_4', 'A_1', 'A_2', 'B_1_diff']], X_tmp['B'], alpha=0.1)
     print(glm.coef_, glm.intercept_)
 
     # Step 1: Create a dictionary of lists for these relevant keywords...

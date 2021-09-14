@@ -190,13 +190,13 @@ def bucket_ids_by_timeframe(total_timesteps, timesteps_per_bucket=20):
     bucket_ids = np.arange(total_timesteps) // num_buckets
     return bucket_ids
 
-def cv_idx_from_bucket_ids(bucket_ids, X, y=None, k_folds=None):
+def cv_idx_from_bucket_ids(bucket_ids, X, y=None, num_folds=None):
     # Step 2: Create index sets for each of the K-folds based on prior groupings
     if k_folds is None:
         # Defaults to Leave One Out Cross-Validation
         k_folds = bucket_ids.max() + 1
     
-    splitter = GroupShuffleSplit(n_splits=k_folds)
+    splitter = GroupShuffleSplit(n_splits=num_folds)
     cv_idx = list(splitter.split(X, y, bucket_ids))
     return cv_idx
 

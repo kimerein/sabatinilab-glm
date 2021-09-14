@@ -50,34 +50,35 @@ def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, GLM_CLS=None, ver
         X_test = X[idx_test,:]
         y_test = y_rolled[idx_test]
 
-        if iter_cv == 0:
-            start = time.time()
+        # if iter_cv == 0:
+        #     start = time.time()
 
-            pca_glm = sglm.GLM(model_name, **glm_kwargs)
-            pca_glm.pca_fit(X_train, y_train)
-            print(f'PCA GLM Built in {time.time() - start} seconds')
+        #     pca_glm = sglm.GLM(model_name, **glm_kwargs)
+        #     pca_glm.pca_fit(X_train, y_train)
+        #     print(f'PCA GLM Built in {time.time() - start} seconds')
 
         if GLM_CLS:
-            glm = GLM_CLS(model_name, beta0_=pca_glm.beta0_, beta_=pca_glm.beta_, **glm_kwargs)
+            # glm = GLM_CLS(model_name, beta0_=pca_glm.beta0_, beta_=pca_glm.beta_, **glm_kwargs)
+            glm = GLM_CLS(model_name, **glm_kwargs)
         else:
-            glm = sglm.GLM(model_name, beta0_=pca_glm.beta0_, beta_=pca_glm.beta_, **glm_kwargs)
+            glm = sglm.GLM(model_name, **glm_kwargs)
 
 
-        # threads.append(threading.Thread(target=glm.fit_set, args=(X_train, y_train, X_test, y_test,
-        #                                                           cv_coefs, cv_intercepts, cv_scores_train, cv_scores_test,
-        #                                                           iter_cv,)))
-        # threads[-1].start()
-
-        
-        start = time.time()
-        glm.fit(X_train, y_train)
-        print(f'GLM fit in {time.time() - start} seconds')
+        threads.append(threading.Thread(target=glm.fit_set, args=(X_train, y_train, X_test, y_test,
+                                                                  cv_coefs, cv_intercepts, cv_scores_train, cv_scores_test,
+                                                                  iter_cv,)))
+        threads[-1].start()
 
         
-        cv_coefs[:, iter_cv] = glm.coef_
-        cv_intercepts[iter_cv] = glm.intercept_
-        cv_scores_train[iter_cv] = glm.score(X_train, y_train)
-        cv_scores_test[iter_cv] = glm.score(X_test, y_test)
+        # start = time.time()
+        # glm.fit(X_train, y_train)
+        # print(f'GLM fit in {time.time() - start} seconds')
+
+        
+        # cv_coefs[:, iter_cv] = glm.coef_
+        # cv_intercepts[iter_cv] = glm.intercept_
+        # cv_scores_train[iter_cv] = glm.score(X_train, y_train)
+        # cv_scores_test[iter_cv] = glm.score(X_test, y_test)
 
     for thread in threads:
         thread.join()
@@ -148,7 +149,7 @@ def cv_glm_mult_params(X, y, cv_idx, model_name, glm_kwarg_lst, GLM_CLS=None, ve
         threads[-1].name = str(glm_kwargs)
         threads[-1].start()
 
-        if i % 5 == 4:
+        if i % 3 == 2:
             for thread in threads:
                 thread.join()
             threads = []
@@ -161,8 +162,9 @@ def cv_glm_mult_params(X, y, cv_idx, model_name, glm_kwarg_lst, GLM_CLS=None, ve
         thread.join()
 
     for cv_result in resp:
-        if ((cv_result['model'].score_metric == 'pseudo_R2' and cv_result['cv_mean_score'] > best_score)): # or
+        # if ((cv_result['model'].score_metric == 'pseudo_R2' and cv_result['cv_mean_score'] > best_score)): # or
             # (cv_result['model'].score_metric == 'deviance' and cv_result['cv_mean_score'] < best_score)):
+        if (cv_result['cv_mean_score'] > best_score): # or
             best_score = cv_result['cv_mean_score']
             best_params = cv_result['glm_kwargs']
             best_model = cv_result['model']
