@@ -10,7 +10,7 @@ import time
 
 # TODO: Add a Feature Selection methodology -- to adjust feature selection based on cross-validation 
 
-def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, GLM_CLS=None, verbose=0, resp_list=[]):
+def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, GLM_CLS=None, verbose=0, resp_list=[], beta_=None, beta0_=None):
     """
     Runs cross-validation on GLM for a single set of parameters.
 
@@ -50,23 +50,27 @@ def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, GLM_CLS=None, ver
         X_test = X[idx_test,:]
         y_test = y_rolled[idx_test]
 
-        # if iter_cv == 0:
+        # if iter_cv == 0 and not isinstance(beta_, np.ndarray) and beta0_ is None:
         #     start = time.time()
 
         #     pca_glm = sglm.GLM(model_name, **glm_kwargs)
         #     pca_glm.pca_fit(X_train, y_train)
-        #     print(f'PCA GLM Built in {time.time() - start} seconds')
+        #     print(f'> PCA GLM Built in {time.time() - start} seconds')
+
+        #     beta0_ = pca_glm.beta0_
+        #     beta_ = pca_glm.beta_.copy()
 
         if GLM_CLS:
-            # glm = GLM_CLS(model_name, beta0_=pca_glm.beta0_, beta_=pca_glm.beta_, **glm_kwargs)
-            glm = GLM_CLS(model_name, **glm_kwargs)
+            glm = GLM_CLS(model_name, beta0_=beta0_, beta_=beta_, **glm_kwargs)
+            # glm = GLM_CLS(model_name, **glm_kwargs)
         else:
-            glm = sglm.GLM(model_name, **glm_kwargs)
+            glm = sglm.GLM(model_name, beta0_=beta0_, beta_=beta_, **glm_kwargs)
+            # glm = sglm.GLM(model_name, **glm_kwargs)
 
 
         threads.append(threading.Thread(target=glm.fit_set, args=(X_train, y_train, X_test, y_test,
                                                                   cv_coefs, cv_intercepts, cv_scores_train, cv_scores_test,
-                                                                  iter_cv,)))
+                                                                  iter_cv,), kwargs={'id_fit': iter_cv}))
         threads[-1].start()
 
         
@@ -135,6 +139,19 @@ def cv_glm_mult_params(X, y, cv_idx, model_name, glm_kwarg_lst, GLM_CLS=None, ve
 
     threads = []
     resp = list()
+
+
+    start = time.time()
+
+    pca_glm = sglm.GLM(model_name)
+    pca_glm.pca_fit(X, y)
+    print(f'> PCA GLM Built in {time.time() - start} seconds')
+
+    beta0_ = pca_glm.beta0_
+    beta_ = pca_glm.beta_.copy()
+
+
+
     for i, glm_kwargs in enumerate(glm_kwarg_lst):
         print(glm_kwargs)
 
@@ -145,11 +162,14 @@ def cv_glm_mult_params(X, y, cv_idx, model_name, glm_kwarg_lst, GLM_CLS=None, ve
         threads.append(threading.Thread(target=cv_glm_single_params, args=(X, y, cv_idx, model_name, glm_kwargs,),
                                                                      kwargs={'GLM_CLS': GLM_CLS,
                                                                              'verbose': verbose,
-                                                                             'resp_list': resp}))
+                                                                             'resp_list': resp,
+                                                                             'beta0_':beta0_,
+                                                                             'beta_':beta_
+                                                                             }))
         threads[-1].name = str(glm_kwargs)
         threads[-1].start()
 
-        if i % 3 == 2:
+        if i % 5 == 4:
             for thread in threads:
                 thread.join()
             threads = []

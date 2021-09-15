@@ -135,6 +135,9 @@ def to_profile():
     glm_kwarg_lst = sglm_cv.generate_mult_params(kwargs_iterations, kwargs_fixed)
     best_score, best_params, best_model = sglm_ez.simple_cv_fit(X_setup, y_setup, kfold_cv_idx, glm_kwarg_lst, model_type='Normal')
 
+    print()
+    print('---')
+    print()
     print(f'Best Score: {best_score}')
     print(f'Best Params: {best_params}')
     print(f'Best Model: {best_model}')

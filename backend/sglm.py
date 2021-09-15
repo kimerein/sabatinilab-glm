@@ -221,11 +221,21 @@ class GLM():
         # self.Base.__init__(self, *args, **kwargs)
         self.kwargs = kwargs
         self.model = self.Base(*args, **kwargs)
+
+        # print(self.model.get_params())
+
+        if beta0_ is not None:
+            self.model.intercept_ = beta0_
+            self.beta0_ = beta0_
+        if isinstance(beta_, np.ndarray):
+            self.model.coef_ = beta_
+            self.beta_ = beta_
+        
         self.score = self.model.score
     
     def pca_fit(self, X, y):
-        self.alpha = 0
-        self.reg_lambda = 0
+        self.model.alpha = 0.1 if 'alpha' not in self.kwargs else self.kwargs['alpha']
+        self.model.l1_ratio = 0.5 if 'l1_ratio' not in self.kwargs else self.kwargs['l1_ratio']
 
         start = time.time()
         self.pca = PCA().fit(X)
@@ -234,7 +244,7 @@ class GLM():
 
         start = time.time()
         self.fit(X_trans, y)
-        print(f'PCA-based Model fit in {time.time() - start} seconds')
+        print(f'> PCA-based Model fit in {time.time() - start} seconds')
 
         W = self.pca.components_.T
         B = self.beta_.reshape([-1, 1])
@@ -265,7 +275,7 @@ class GLM():
         self.beta0_ = self.intercept_
 
 
-    def fit_set(self, X, y, X_test, y_test, cv_coefs, cv_intercepts, cv_scores_train, cv_scores_test, iter_cv, *args):
+    def fit_set(self, X, y, X_test, y_test, cv_coefs, cv_intercepts, cv_scores_train, cv_scores_test, iter_cv, *args, id_fit='None'):
         """
         Fits the GLM to the provided X predictors and y responses.
 
@@ -277,9 +287,9 @@ class GLM():
             Array of response variables on which to fit the model
         """
         start = time.time()
-        print(f'Fitting: {self.kwargs}')
+        print(f'Fitting: {self.kwargs} — {id_fit}')
         self.fit(X, y, *args)
-        print(f'Done with: {self.kwargs} — in {time.time() - start}')
+        print(f'Done with: {self.kwargs} — {id_fit} — in {time.time() - start}')
 
         cv_coefs[:, iter_cv] = self.coef_
         cv_intercepts[iter_cv] = self.intercept_
