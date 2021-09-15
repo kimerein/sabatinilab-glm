@@ -9,6 +9,11 @@ import sglm_cv
 #     col_nums = sglm_pp.get_column_nums(X, response_cols)
 #     return sglm_pp.timeshift_multiple(X, shift_inx=col_nums, shift_amt_list=list(range(order + 1)))
 
+
+# Update K_folds to be num_folds
+# Rather than trial_split name use group_split
+
+
 def timeshift_cols(X, cols_to_shift, neg_order=0, pos_order=1):
     """
     Shift the columns of X forward by all timesteups up to pos_order and backward by all timesteps down to neg_roder
@@ -84,7 +89,7 @@ def diff_cols(X, cols, append_to_base=True):
     X = sglm_pp.diff(X, col_nums, append_to_base=append_to_base)
     return X
 
-def cv_idx_by_timeframe(X, y=None, timesteps_per_bucket=20, k_folds=10):
+def cv_idx_by_timeframe(X, y=None, timesteps_per_bucket=20, num_folds=10):
     """
     Generate Cross Validation indices by keeping together bucketed timesteps
     (bucketing together by sets of timesteps_per_bucket).
@@ -101,11 +106,11 @@ def cv_idx_by_timeframe(X, y=None, timesteps_per_bucket=20, k_folds=10):
         Number of Cross Validation segmentations that should be used for k-fold Cross Validation
     """
     bucket_ids = sglm_pp.bucket_ids_by_timeframe(X.shape[0], timesteps_per_bucket=20)
-    cv_idx = sglm_pp.cv_idx_from_bucket_ids(bucket_ids, X, y=y, k_folds=k_folds)
+    cv_idx = sglm_pp.cv_idx_from_bucket_ids(bucket_ids, X, y=y, num_folds=num_folds)
     return cv_idx
 
 
-def cv_idx_by_trial_id(X, y=None, trial_id_columns=[], k_folds=5):
+def cv_idx_by_trial_id(X, y=None, trial_id_columns=[], num_folds=5):
     """
     Generate Cross Validation indices by keeping together trial id columns
     (bucketing together by trial_id_columns).
@@ -131,7 +136,7 @@ def cv_idx_by_trial_id(X, y=None, trial_id_columns=[], k_folds=5):
     
     bucket_ids = bucket_ids.astype("category").cat.codes
     
-    cv_idx = sglm_pp.cv_idx_from_bucket_ids(bucket_ids, X, y=y, k_folds=k_folds)
+    cv_idx = sglm_pp.cv_idx_from_bucket_ids(bucket_ids, X, y=y, num_folds=num_folds)
     return cv_idx
 
 # Trial-based splitting (remove inter-trial information)
@@ -207,7 +212,7 @@ if __name__ == '__main__':
 
     print('HERE')
 
-    X_tmp = diff_cols(X_tmp, ['B_1', 'B'])
+    X_tmp = diff_cols(X_tmp, ['B'])
     print()
     print(X_tmp)
 
@@ -216,7 +221,7 @@ if __name__ == '__main__':
     print(X_tmp)
     
     # glm = fit_GLM(X_tmp[['A', 'B_1', 'B_2', 'B_3', 'B_4', 'A_1', 'A_2', 'B_1_diff']], X_tmp['B'], reg_lambda=0.1)
-    glm = fit_GLM(X_tmp[['A', 'B_1', 'B_2', 'B_3', 'B_4', 'A_1', 'A_2', 'B_1_diff']], X_tmp['B'], alpha=0.1)
+    glm = fit_GLM(X_tmp[['A', 'A_1', 'A_2']], X_tmp['B'], alpha=0.1)
     print(glm.coef_, glm.intercept_)
 
     # Step 1: Create a dictionary of lists for these relevant keywords...
