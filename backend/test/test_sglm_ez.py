@@ -31,20 +31,22 @@ def test_integration():
     prediction_cols = ['A']
     response_col = 'B'
 
-    glm = sglm_ez.fit_GLM(X_tmp[prediction_cols], X_tmp[response_col], reg_lambda=0.1)
+    glm = sglm_ez.fit_GLM(X_tmp[prediction_cols], X_tmp[response_col], alpha=0.1)
     pred = glm.predict(X_tmp[prediction_cols])
     mse = np.mean((X_tmp[response_col] - pred)**2)
 
     print(mse)
 
-    cv_idx = sglm_ez.cv_idx_by_timeframe(X_tmp, y=None, k_folds=None, timesteps_per_bucket=20)    
+    cv_idx = sglm_ez.cv_idx_by_timeframe(X_tmp, y=None, num_folds=None, timesteps_per_bucket=20)    
     # print(cv_idx)
 
     # Step 1: Create a dictionary of lists for these relevant keywords...
     kwargs_iterations = {
-        # 'reg_lambda': [0.0001],
-        'reg_lambda': [0, 0.01, 0.1, 1.0],
-        'alpha': [0, 0.01, 0.1, 1.0],
+        # # 'reg_lambda': [0.0001],
+        # 'reg_lambda': [0, 0.01, 0.1, 1.0],
+        # 'alpha': [0, 0.01, 0.1, 1.0],
+        'alpha': reversed([0.1, 1.0, 10.0]),
+        'l1_ratio': [0.1, 0.5, 0.9],
         'fit_intercept': [True, False]
     }
 
@@ -59,6 +61,7 @@ def test_integration():
     best_score, best_params, best_model = sglm_ez.simple_cv_fit(X_tmp[prediction_cols], X_tmp[response_col], cv_idx, glm_kwarg_lst, model_type='Normal')
 
     print(best_score, best_params)
+    print(best_model.model)
     print(best_model.coef_, best_model.intercept_)
 
     sklr = ElasticNet(alpha=0, l1_ratio=0, fit_intercept=True)
@@ -73,5 +76,4 @@ def test_integration():
 
 if __name__ == '__main__':
     test_integration()
-
 

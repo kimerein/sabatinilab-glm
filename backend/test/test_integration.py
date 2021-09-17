@@ -99,7 +99,7 @@ if __name__ == '__main__':
 
     print('Starting PY GLM Net Done...')
 
-    glm = sglm.GLM('Normal', max_iter=10000, reg_lambda=0, alpha=0)
+    glm = sglm.GLM('Normal', max_iter=10000, alpha=0, l1_ratio=0)
     glm.fit(np.float64(X.values[1:, use_cols]), np.float64(y.values[1:]))
 
     print('PY GLM Net Done...')

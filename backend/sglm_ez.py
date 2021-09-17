@@ -14,6 +14,67 @@ import sglm_cv
 # Rather than trial_split name use group_split
 
 
+def timeshift_cols_by_signal_length(X, cols_to_shift, neg_order=0, pos_order=1, trial_id='nTrial', dummy_col='post', shift_amt_ratio=2):
+    """
+    Shift the columns of X forward by all timesteups up to pos_order and backward by all timesteps down to neg_roder
+
+    Parameters
+    ----------
+    X : pd.DataFrame
+        Underlying pandas DataFrame data to be shifted
+    cols_to_shift : list(str)
+        Column names in pandas DataFrame to shift
+    neg_order : int
+        Negative order i.e. number of shifts to perform backwards
+    pos_order : int
+        Positive order i.e. number of shifts to perform forwards
+    """
+
+    min_num_ts = {}
+    sft_orders = {}
+    for col in cols_to_shift:
+        min_num_ts[col] = X.query(f'{col} > 0').groupby([trial_id, col])[dummy_col].count().min()
+
+        col_nums = sglm_pp.get_column_nums(X, [col])
+
+        shift_amt = min_num_ts[col] // shift_amt_ratio
+        shift_amt = max(shift_amt, 1)
+
+        print(f'mnts: {min_num_ts[col]}, sar: {shift_amt_ratio}')
+        
+
+        neg_order_lst = list(np.arange(neg_order, 0, shift_amt))
+        pos_order_lst = list(np.arange(shift_amt, pos_order + 1, shift_amt))
+
+        sft_orders[col] = (neg_order_lst, pos_order_lst)
+
+        X = sglm_pp.timeshift_multiple(X, shift_inx=col_nums, shift_amt_list= [0] + neg_order_lst + pos_order_lst)
+
+    return X, sft_orders
+
+
+def add_timeshifts_by_sl_to_col_list(all_cols, shifted_cols, sft_orders):
+    """
+    Add a number of timeshifts to the shifted_cols list provided for every column used. 
+
+    Parameters
+    ----------
+    shifted_cols : list(str)
+        The list of columns that have been timeshifted
+    neg_order : int
+        Negative order i.e. number of shifts performed backwards
+    pos_order : int
+        Positive order i.e. number of shifts performed forwards
+    """ 
+    out_col_list = []
+    for col in shifted_cols:
+        neg_order_lst = sft_orders[col][0]
+        pos_order_lst = sft_orders[col][1]
+        out_col_list.extend([col + f'_{_}' for _ in neg_order_lst + pos_order_lst])
+
+    return all_cols + out_col_list
+
+
 def timeshift_cols(X, cols_to_shift, neg_order=0, pos_order=1):
     """
     Shift the columns of X forward by all timesteups up to pos_order and backward by all timesteps down to neg_roder
@@ -141,7 +202,7 @@ def cv_idx_by_trial_id(X, y=None, trial_id_columns=[], num_folds=5):
 
 # Trial-based splitting (remove inter-trial information)
 
-def simple_cv_fit(X, y, cv_idx, glm_kwarg_lst, model_type='Normal'):
+def simple_cv_fit(X, y, cv_idx, glm_kwarg_lst, model_type='Normal', verbose=0):
     """
     Fit the desired model using the list of keyword arguments provided in
     glm_kwarg_lst, identify the best model, and return the associated
@@ -166,7 +227,8 @@ def simple_cv_fit(X, y, cv_idx, glm_kwarg_lst, model_type='Normal'):
                                             y.values,
                                             cv_idx,
                                             model_type,
-                                            glm_kwarg_lst
+                                            glm_kwarg_lst,
+                                            verbose=verbose
                                             # [tuple([glm_kwarg[_] for _ in []]) for glm_kwarg in glm_kwarg_lst]
                                             )
     best_score = cv_results['best_score']

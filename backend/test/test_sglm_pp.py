@@ -30,7 +30,7 @@ def test_unshifted():
     comparison_1_pd = pd.DataFrame(comparison_1, columns=['A','B','C','D'])
     comparison_2_pd = pd.DataFrame(comparison_2, columns=['A','D'])
     
-    inx_list = sglm_pp.get_column_names(dummy_pd_data, ['A', 'D'])
+    inx_list = sglm_pp.get_column_nums(dummy_pd_data, ['A', 'D'])
     assert(np.all(sglm_pp.timeshift(dummy_pd_data, shift_amt=0) == comparison_1_pd))
     assert(np.all(sglm_pp.timeshift(dummy_pd_data, shift_inx=inx_list,
                                     shift_amt=0) == comparison_2_pd))
@@ -76,7 +76,7 @@ def test_backward_shift():
     comparison_1_pd = pd.DataFrame(comparison_1, columns=['A','B','C','D'])
     comparison_2_pd = pd.DataFrame(comparison_2, columns=['A','D'])
     
-    inx_list = sglm_pp.get_column_names(dummy_pd_data, ['A', 'D'])
+    inx_list = sglm_pp.get_column_nums(dummy_pd_data, ['A', 'D'])
     assert(np.all(sglm_pp.timeshift(dummy_pd_data, shift_amt=-1,
                                     fill_value=0) == comparison_1_pd))
     assert(np.all(sglm_pp.timeshift(dummy_pd_data, shift_inx=inx_list, shift_amt=-1,
@@ -105,7 +105,7 @@ def test_shift_keep_all_cols():
     comparison_1_pd = pd.DataFrame(fwd_dummy_np_data_overwrite, columns=['A','B','C','D'])
     comparison_2_pd = pd.DataFrame(bwd_dummy_np_data_overwrite, columns=['A','B','C','D'])
     
-    inx_list = sglm_pp.get_column_names(dummy_pd_data, ['A', 'B'])
+    inx_list = sglm_pp.get_column_nums(dummy_pd_data, ['A', 'B'])
     assert(np.all(sglm_pp.timeshift(dummy_pd_data, shift_inx=inx_list, shift_amt=1,
                                     fill_value=0, keep_non_inx=True) == comparison_1_pd))
     assert(np.all(sglm_pp.timeshift(dummy_pd_data, shift_inx=inx_list, shift_amt=-1,

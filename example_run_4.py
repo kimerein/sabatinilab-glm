@@ -63,6 +63,8 @@ def to_profile():
         'post', # log-odds probability
     ]
 
+    
+
     # y_col = 'grnL_diff'
     y_col = 'grnL'
 
@@ -75,11 +77,19 @@ def to_profile():
     print(dfrel)
     print(X_cols)
 
-    neg_order = -10
-    pos_order = 10
+    neg_order = -50
+    pos_order = 50
 
-    dfrel = sglm_ez.timeshift_cols(dfrel, X_cols[2:], neg_order=neg_order, pos_order=pos_order)
-    X_cols_sftd = sglm_ez.add_timeshifts_to_col_list(X_cols, X_cols[2:], neg_order=neg_order, pos_order=pos_order)
+    dfrel = sglm_ez.timeshift_cols(dfrel, [_ for _ in X_cols[2:] if _ not in ['Cue', 'Reward', 'post']], neg_order=neg_order, pos_order=pos_order)
+    X_cols_sftd = sglm_ez.add_timeshifts_to_col_list(X_cols, [_ for _ in X_cols[2:] if _ not in ['Cue', 'Reward', 'post']], neg_order=neg_order, pos_order=pos_order)
+
+    dfrel, sft_orders = sglm_ez.timeshift_cols_by_signal_length(dfrel, ['Cue', 'Reward', 'post'], neg_order=0, pos_order=1000, shift_amt_ratio=2)
+    X_cols_sftd = sglm_ez.add_timeshifts_by_sl_to_col_list(X_cols_sftd, ['Cue', 'Reward', 'post'], sft_orders)
+
+
+    # print(list(dfrel.columns))
+    print(X_cols_sftd)
+
     # X_setup = sglm_ez.diff_cols(X_setup, ['A', 'B'])
     # X_setup = sglm_ez.setup_autoregression(X_setup, ['B'], 4)
 
@@ -133,7 +143,7 @@ def to_profile():
 
     # Step 3: Generate iterable list of keyword sets for possible combinations
     glm_kwarg_lst = sglm_cv.generate_mult_params(kwargs_iterations, kwargs_fixed)
-    best_score, best_params, best_model = sglm_ez.simple_cv_fit(X_setup, y_setup, kfold_cv_idx, glm_kwarg_lst, model_type='Normal')
+    best_score, best_params, best_model = sglm_ez.simple_cv_fit(X_setup, y_setup, kfold_cv_idx, glm_kwarg_lst, model_type='Normal', verbose=2)
 
     print()
     print('---')

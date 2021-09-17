@@ -275,7 +275,7 @@ class GLM():
         self.beta0_ = self.intercept_
 
 
-    def fit_set(self, X, y, X_test, y_test, cv_coefs, cv_intercepts, cv_scores_train, cv_scores_test, iter_cv, *args, id_fit='None'):
+    def fit_set(self, X, y, X_test, y_test, cv_coefs, cv_intercepts, cv_scores_train, cv_scores_test, iter_cv, *args, id_fit='None', verbose=0):
         """
         Fits the GLM to the provided X predictors and y responses.
 
@@ -286,11 +286,15 @@ class GLM():
         y : np.ndarray or pd.Series
             Array of response variables on which to fit the model
         """
-        start = time.time()
-        print(f'Fitting: {self.kwargs} — {id_fit}')
+        if verbose > 1:
+            start = time.time()
+            print(f'Fitting: {self.kwargs} — {id_fit}')
+        
         self.fit(X, y, *args)
-        print(f'Done with: {self.kwargs} — {id_fit} — in {time.time() - start}')
 
+        if verbose > 1:
+            print(f'Done with: {self.kwargs} — {id_fit} — in {time.time() - start}')
+        
         cv_coefs[:, iter_cv] = self.coef_
         cv_intercepts[iter_cv] = self.intercept_
         cv_scores_train[iter_cv] = self.score(X, y)

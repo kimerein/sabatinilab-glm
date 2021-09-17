@@ -70,6 +70,8 @@ def timeshift_multiple(X, shift_inx=[], shift_amt_list=[-1,0,1], unshifted_keep_
         Value to be left in place of shifted data
     """
 
+    # print(shift_inx)
+
     shifted_dict = {}
     threads = []
     for i,shift_amt in enumerate(shift_amt_list):
@@ -79,10 +81,17 @@ def timeshift_multiple(X, shift_inx=[], shift_amt_list=[-1,0,1], unshifted_keep_
                                                                  'dct':shifted_dict,
                                                                  'fill_value':fill_value
                                                                  }))
-        threads[i].start()
+        threads[-1].start()
 
-    for i,shift_amt in enumerate(shift_amt_list):
-        threads[i].join()
+        if i % 20 == 19:
+            for thread in threads:
+                thread.join()
+            threads = []
+
+    for thread in threads:
+        thread.join()
+
+    # print(shifted_dict.keys())
     
     shifted_list = [shifted_dict[_] for _ in shift_amt_list]
     return concat_all_shifts(X, shift_amt_list, shifted_list)
@@ -151,8 +160,9 @@ def diff(X, diff_inx=[], n=1, axis=0, append_to_base=False, fill_value=np.nan, *
     if append_to_base:
         ret = np.concatenate([np.ones((n, ret.shape[1])) * fill_value, ret], axis=0)
         ret = np.concatenate([X_val, ret], axis=-1)
-        index = X.index
-    else:
+        if type(X) == pd.DataFrame:
+            index = X.index
+    elif type(X) == pd.DataFrame:
         index = X.index[1:]
 
     if type(X) == pd.DataFrame:
@@ -174,7 +184,10 @@ def get_column_nums(df, column_names=[]): #
     column_names : array_like, optional
         Names of the columns of which to find column numbers
     """
-    return [df.columns.get_loc(_) for _ in column_names]
+    ret = [df.columns.get_loc(_) for _ in column_names]
+    if len([_ for _ in ret if type(_) == np.ndarray]):
+        raise ValueError('Duplicate column found in X column names.')
+    return ret
 
 
 

@@ -70,7 +70,7 @@ def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, GLM_CLS=None, ver
 
         threads.append(threading.Thread(target=glm.fit_set, args=(X_train, y_train, X_test, y_test,
                                                                   cv_coefs, cv_intercepts, cv_scores_train, cv_scores_test,
-                                                                  iter_cv,), kwargs={'id_fit': iter_cv}))
+                                                                  iter_cv,), kwargs={'id_fit': iter_cv, 'verbose': verbose}))
         threads[-1].start()
 
         
@@ -175,10 +175,7 @@ def cv_glm_mult_params(X, y, cv_idx, model_name, glm_kwarg_lst, GLM_CLS=None, ve
             threads = []
 
 
-    for i, thread in enumerate(threads):
-        # print(glm_kwarg_lst[i])
-        # print(resp)
-
+    for thread in threads:
         thread.join()
 
     for cv_result in resp:
