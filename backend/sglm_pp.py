@@ -24,6 +24,8 @@ def timeshift(X, shift_inx=[], shift_amt=1, keep_non_inx=False, dct=None, fill_v
     """
     Shift columns in shift_inx up or down by shift_amt (down if shift_amt > 0, up if shift_amt < 0)
 
+    JZ 2021
+    
     Parameters
     ----------
     X : np.ndarray or pd.DataFrame
@@ -56,6 +58,8 @@ def timeshift_multiple(X, shift_inx=[], shift_amt_list=[-1,0,1], unshifted_keep_
     """
     Collect multiple up/down shifts of columns as columns in the returned array
 
+    JZ 2021
+    
     Parameters
     ----------
     X : np.ndarray (preferably contiguous array)
@@ -100,6 +104,8 @@ def zscore(X):
     """
     Convert X values to z-scores along the 0th axis
 
+    JZ 2021
+    
     Parameters
     ----------
     X : np.ndarray or pd.DataFrame
@@ -114,6 +120,8 @@ def diff(X, diff_inx=[], n=1, axis=0, append_to_base=False, fill_value=np.nan, *
     
     Documentation adopted from numpy diff.
 
+    JZ 2021
+    
     ---
 
     Parameters
@@ -175,6 +183,9 @@ def diff(X, diff_inx=[], n=1, axis=0, append_to_base=False, fill_value=np.nan, *
 def get_column_nums(df, column_names=[]): #
     """
     Returns a list of the column numbers associated with each column name.
+
+    JZ 2021
+    
     ---
 
     Parameters
@@ -203,13 +214,22 @@ def bucket_ids_by_timeframe(total_timesteps, timesteps_per_bucket=20):
     bucket_ids = np.arange(total_timesteps) // num_buckets
     return bucket_ids
 
-def cv_idx_from_bucket_ids(bucket_ids, X, y=None, num_folds=None):
+def cv_idx_from_bucket_ids(bucket_ids, X, y=None, num_folds=None, test_size=None):
+    '''
+
+    test_size : float
+        Percentage of datapoints to use in each GroupShuffleSplit fold for validation
+    '''
     # Step 2: Create index sets for each of the K-folds based on prior groupings
     if num_folds is None:
         # Defaults to Leave One Out Cross-Validation
         num_folds = bucket_ids.max() + 1
     
-    splitter = GroupShuffleSplit(n_splits=num_folds)
+    if test_size is None:
+        # Defaults to the number of validation datapoints equal to a single fold
+        test_size = 1/num_folds
+    
+    splitter = GroupShuffleSplit(n_splits=num_folds, test_size=test_size)
     cv_idx = list(splitter.split(X, y, bucket_ids))
     return cv_idx
 
@@ -231,6 +251,8 @@ def get_numpy_version(X: Union[np.ndarray, pd.DataFrame]) -> np.ndarray:
     """
     Return a numpy array of values regardless of input type X (np.ndarray or pd.DataFrame)
     
+    JZ 2021
+    
     Args:
         X: Dataset to convert to numpy array
     
@@ -246,6 +268,8 @@ def get_numpy_version(X: Union[np.ndarray, pd.DataFrame]) -> np.ndarray:
 def shift(setup_array: np.ndarray, shift_amt: int, fill_value: Optional[float] = np.nan) -> np.ndarray:
     """
     Shift all of setup_array up or down by shift_amt (if > 0: shift down, if < 0: shift up)
+    
+    JZ 2021
     
     Args:
         setup_array: Array to be shifted up or down
@@ -269,6 +293,8 @@ def concat_start_crop_end(blanks: np.ndarray, X_to_shift: np.ndarray):
     Concatenates blanks to the top of X_to_shift and crops the bottom such that
     dimensions of output == dimensions of input.
     
+    JZ 2021
+    
     Parameters:
         blanks: Values to be concatenated to the top of X_to_shift
         X_to_shift: Data to be concatenated and cropped at the bottom of the returned values
@@ -285,6 +311,8 @@ def concat_end_crop_start(blanks: np.ndarray, X_to_shift: np.ndarray):
     """
     Concatenates blanks to the bottom of X_to_shift and crops the top such that
     dimensions of output == dimensions of input.
+    
+    JZ 2021
     
     Parameters:
         blanks: Values to be concatenated to the bottom of X_to_shift
@@ -304,6 +332,8 @@ def shifted_cols_to_original_type(X: Union[np.ndarray, pd.DataFrame],
                                   keep_non_inx: bool) -> Union[np.ndarray, pd.DataFrame]:
     """
     Converts final shifted_X back into original input type and keeps relevant columns.
+    
+    JZ 2021
     
     Args:
         X: Original input data
@@ -329,6 +359,8 @@ def shifted_cols_to_pandas(X: pd.DataFrame,
     and return either the entire DataFrame or only the subset of columns that have been
     shifted.
     
+    JZ 2021
+    
     Args:
         X: Original input data
         shifted_X: Post-shift numpy data
@@ -352,6 +384,8 @@ def shifted_cols_to_numpy(X: np.ndarray,
     Generate a Numpy Array with all shift_inx columns overwritten with the shifted data
     and return either the entire DataFrame or only the subset of columns that have been
     shifted.
+    
+    JZ 2021
     
     Args:
         X: Original input data
@@ -377,6 +411,8 @@ def concat_all_shifts(X: Union[np.ndarray, pd.DataFrame],
     (i.e. for DataFrames, rename columns by shift amount, for Numpy Arrays,
     simply concatenate).
     
+    JZ 2021
+    
     Args:
         X: Original input data
         shift_amt_list: List of timeshifts used
@@ -394,6 +430,8 @@ def concat_pandas_shifts(shift_amt_list: List[int],
                          shifted_list: List[Union[np.ndarray, pd.DataFrame]]) -> Union[np.ndarray, pd.DataFrame]:
     """
     Concatenate and returns all shifted Pandas values, with columns renamed by shift amount.
+    
+    JZ 2021
     
     Args:
         shift_amt_list: List of timeshifts used

@@ -14,9 +14,12 @@ import sglm_cv
 # Rather than trial_split name use group_split
 
 
-def timeshift_cols_by_signal_length(X, cols_to_shift, neg_order=0, pos_order=1, trial_id='nTrial', dummy_col='post', shift_amt_ratio=2):
+def timeshift_cols_by_signal_length(X, cols_to_shift, neg_order=0, pos_order=1, trial_id='nTrial', dummy_col='nothing', shift_amt_ratio=2.0):
     """
-    Shift the columns of X forward by all timesteups up to pos_order and backward by all timesteps down to neg_roder
+    Shift the columns of X by a fractional amounts of the minimum non-zero signal length (in order to reduce multicollinearity).
+    neg_order and pos_order . shift_amt_ratio 
+
+    JZ 2021
 
     Parameters
     ----------
@@ -25,10 +28,28 @@ def timeshift_cols_by_signal_length(X, cols_to_shift, neg_order=0, pos_order=1, 
     cols_to_shift : list(str)
         Column names in pandas DataFrame to shift
     neg_order : int
-        Negative order i.e. number of shifts to perform backwards
+        Negative order i.e. number of shifts to perform backwards (i.e. max number of timesteps backwards to be
+        shifted regardless of the length of the signal itself)
     pos_order : int
-        Positive order i.e. number of shifts to perform forwards
+        Positive order i.e. number of shifts to perform forwards (i.e. max number of timesteps forwards to be
+        shifted regardless of the length of the signal itself)
+    trial_id : str
+        Column name identifying in which trial the event is currently occurring
+    dummy_col : str
+        Dummy column to be used for counting the number of entries, which are non-zero in the DataFrame (a new
+        column is created with this name and dropped afterwards if it does not exist at the start)
+    shift_amt_ratio : float
+        The factor of a signal length to shift forward / backward (as calculated from the min signal length).
+        (e.g. if the shortest 'Cue' to which a mouse is exposed is 20 timesteps and we run this function on 'Cue'
+        with a shift_amt_ratio of 2, timeshifts will be performed in incraments of 10 timesteps.)
     """
+
+    X = X.copy()
+    if dummy_col not in X.columns:
+        X[dummy_col] = 1
+        created = True
+    else:
+        created = False
 
     min_num_ts = {}
     sft_orders = {}
@@ -50,21 +71,26 @@ def timeshift_cols_by_signal_length(X, cols_to_shift, neg_order=0, pos_order=1, 
 
         X = sglm_pp.timeshift_multiple(X, shift_inx=col_nums, shift_amt_list= [0] + neg_order_lst + pos_order_lst)
 
+    if created:
+        X = X.drop(dummy_col, axis=1)
+
     return X, sft_orders
 
 
 def add_timeshifts_by_sl_to_col_list(all_cols, shifted_cols, sft_orders):
     """
-    Add a number of timeshifts to the shifted_cols list provided for every column used. 
+    Add the number of timeshifts to the shifted_cols list provided for every column used. 
 
+    JZ 2021
+    
     Parameters
     ----------
+    all_cols : list(str)
+        All column names prior to the addition of shifted column names
     shifted_cols : list(str)
-        The list of columns that have been timeshifted
-    neg_order : int
-        Negative order i.e. number of shifts performed backwards
-    pos_order : int
-        Positive order i.e. number of shifts performed forwards
+        The list of columns that have been timeshifted by the sft_orders
+    sft_orders : list(int)
+        A list of the timeshifts used for all of the columns provided in "shifted_columns"
     """ 
     out_col_list = []
     for col in shifted_cols:
@@ -77,8 +103,10 @@ def add_timeshifts_by_sl_to_col_list(all_cols, shifted_cols, sft_orders):
 
 def timeshift_cols(X, cols_to_shift, neg_order=0, pos_order=1):
     """
-    Shift the columns of X forward by all timesteups up to pos_order and backward by all timesteps down to neg_roder
+    Shift the columns of X forward by all timesteups up to pos_order (inclusive) and backward by all timesteps down to neg_roder (inclusive)
 
+    JZ 2021
+    
     Parameters
     ----------
     X : pd.DataFrame
@@ -98,8 +126,12 @@ def add_timeshifts_to_col_list(all_cols, shifted_cols, neg_order=0, pos_order=1)
     """
     Add a number of timeshifts to the shifted_cols list provided for every column used. 
 
+    JZ 2021
+    
     Parameters
     ----------
+    all_cols : list(str)
+        All column names prior to the addition of shifted column names
     shifted_cols : list(str)
         The list of columns that have been timeshifted
     neg_order : int
@@ -116,6 +148,8 @@ def fit_GLM(X, y, model_name='Gaussian', *args, **kwargs):
     """
     Fit GLM on training dataset of predictor columns of X and response y
 
+    JZ 2021
+    
     Parameters
     ----------
     X : pd.DataFrame
@@ -124,9 +158,9 @@ def fit_GLM(X, y, model_name='Gaussian', *args, **kwargs):
         Response to be predicted
     model_name : str
         Type of GLM to build (e.g. Gaussian, Poisson, Logistic, etc.)
-    args : iterable
+    *args : *iterable
         Positional arguments to be passed to GLM model
-    kwargs : dict
+    **kwargs : **dict
         Keyword arguments to be passed to GLM model
     """
     glm = sglm.GLM(model_name, *args, **kwargs)
@@ -137,12 +171,14 @@ def diff_cols(X, cols, append_to_base=True):
     """
     Take differentials along columns col of DataFrame X
 
+    JZ 2021
+    
     Parameters
     ----------
     X : pd.DataFrame
-        DataFrame of data to take the differential along column
-    cols : list
-        Names of the columns along which to take the differential
+        DataFrame of data of which to take the differential
+    cols : list(str)
+        Names of specific columns along which to take the differential
     append_to_base : bool
         Whether or not those columns should be returned as columns added to the original DataFrame
     """
@@ -150,11 +186,13 @@ def diff_cols(X, cols, append_to_base=True):
     X = sglm_pp.diff(X, col_nums, append_to_base=append_to_base)
     return X
 
-def cv_idx_by_timeframe(X, y=None, timesteps_per_bucket=20, num_folds=10):
+def cv_idx_by_timeframe(X, y=None, timesteps_per_bucket=20, num_folds=10, test_size=None):
     """
     Generate Cross Validation indices by keeping together bucketed timesteps
-    (bucketing together by sets of timesteps_per_bucket).
+    (bucketing together timesteps between intervals of timesteps_per_bucket).
 
+    JZ 2021
+    
     Parameters
     ----------
     X : pd.DataFrame
@@ -163,29 +201,35 @@ def cv_idx_by_timeframe(X, y=None, timesteps_per_bucket=20, num_folds=10):
         Response Series
     timesteps_per_bucket : int
         Number of timesteps (i.e. rows in the DataFrame) that should be kept together as buckets
-    k_folds : int
+    num_folds : int
         Number of Cross Validation segmentations that should be used for k-fold Cross Validation
+    test_size : float
+        Percentage of datapoints to use in each GroupShuffleSplit fold for validation
     """
-    bucket_ids = sglm_pp.bucket_ids_by_timeframe(X.shape[0], timesteps_per_bucket=20)
-    cv_idx = sglm_pp.cv_idx_from_bucket_ids(bucket_ids, X, y=y, num_folds=num_folds)
+    bucket_ids = sglm_pp.bucket_ids_by_timeframe(X.shape[0], timesteps_per_bucket=timesteps_per_bucket)
+    cv_idx = sglm_pp.cv_idx_from_bucket_ids(bucket_ids, X, y=y, num_folds=num_folds, test_size=test_size)
     return cv_idx
 
 
-def cv_idx_by_trial_id(X, y=None, trial_id_columns=[], num_folds=5):
+def holdout_split_by_trial_id(X, y=None, trial_id_columns=[], num_folds=5, test_size=None):
     """
     Generate Cross Validation indices by keeping together trial id columns
     (bucketing together by trial_id_columns).
 
+    JZ 2021
+    
     Parameters
     ----------
     X : pd.DataFrame
         Prediction DataFrame from which to bucket
-    y : list
+    y : pd.Series
         Response Series
-    trial_id_columns : int
+    trial_id_columns : list(str)
         Columns to use to identify bucketing identifiers
-    k_folds : int
-        Number of Cross Validation segmentations that should be used for k-fold Cross Validation
+    num_folds : int
+        Number of Cross Validation segmentations that should be used for GroupShuffleSplit fold Cross Validation
+    test_size : float
+        Percentage of datapoints to use in each GroupShuffleSplit fold for validation
     """
     X = pd.DataFrame(X)
 
@@ -197,7 +241,41 @@ def cv_idx_by_trial_id(X, y=None, trial_id_columns=[], num_folds=5):
     
     bucket_ids = bucket_ids.astype("category").cat.codes
     
-    cv_idx = sglm_pp.cv_idx_from_bucket_ids(bucket_ids, X, y=y, num_folds=num_folds)
+    cv_idx = sglm_pp.cv_idx_from_bucket_ids(bucket_ids, X, y=y, num_folds=num_folds, test_size=test_size)
+    return cv_idx
+
+
+def cv_idx_by_trial_id(X, y=None, trial_id_columns=[], num_folds=5, test_size=None):
+    """
+    Generate Cross Validation indices by keeping together trial id columns
+    (bucketing together by trial_id_columns).
+
+    JZ 2021
+    
+    Parameters
+    ----------
+    X : pd.DataFrame
+        Prediction DataFrame from which to bucket
+    y : pd.Series
+        Response Series
+    trial_id_columns : list(str)
+        Columns to use to identify bucketing identifiers
+    num_folds : int
+        Number of Cross Validation segmentations that should be used for GroupShuffleSplit fold Cross Validation
+    test_size : float
+        Percentage of datapoints to use in each GroupShuffleSplit fold for validation
+    """
+    X = pd.DataFrame(X)
+
+    for i, idc in enumerate(trial_id_columns):
+        if i == 0:
+            bucket_ids = X[idc].astype(str).str.len().astype(str) + ':' + X[idc].astype(str)
+        else:
+            bucket_ids = bucket_ids + '_' + X[idc].astype(str)
+    
+    bucket_ids = bucket_ids.astype("category").cat.codes
+    
+    cv_idx = sglm_pp.cv_idx_from_bucket_ids(bucket_ids, X, y=y, num_folds=num_folds, test_size=test_size)
     return cv_idx
 
 # Trial-based splitting (remove inter-trial information)
@@ -208,6 +286,8 @@ def simple_cv_fit(X, y, cv_idx, glm_kwarg_lst, model_type='Normal', verbose=0):
     glm_kwarg_lst, identify the best model, and return the associated
     score, parameters, and the model itself.
 
+    JZ 2021
+    
     Parameters
     ----------
     X : pd.DataFrame

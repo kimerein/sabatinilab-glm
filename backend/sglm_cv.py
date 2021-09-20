@@ -14,6 +14,8 @@ def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, GLM_CLS=None, ver
     """
     Runs cross-validation on GLM for a single set of parameters.
 
+    JZ 2021
+    
     Parameters
     ----------
     X : np.ndarray
@@ -110,6 +112,8 @@ def cv_glm_mult_params(X, y, cv_idx, model_name, glm_kwarg_lst, GLM_CLS=None, ve
     """
     Runs cross-validation on GLM over a list of possible parameters.
 
+    JZ 2021
+    
     Parameters
     ----------
     X : np.ndarray
@@ -247,6 +251,8 @@ def generate_mult_params(kwarg_lists, kwargs=None):
     Generates a list of dictionaries of all possible parameter combinations
     from a dictionary of lists.
 
+    JZ 2021
+    
     Parameters
     ----------
     kwarg_lists : dict(list(keywords))

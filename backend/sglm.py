@@ -174,15 +174,18 @@ from numba import njit, jit, prange
 
 class GLM():
     """
-        Generalized Linear Model class built on scikit-learn's underlying regression models.
-        power : float
-            Only specify with a 'Tweedie' model_name in order to use fractional powers for Tweedie distribution
-        *args : positional arguments
-            See https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html for Logistic / Multinomial
-            See https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.TweedieRegressor.html otherwise
-        **kwargs : keyword arguments
-            See https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html for Logistic / Multinomial
-            See https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.TweedieRegressor.html otherwise
+    Generalized Linear Model class built on scikit-learn's underlying regression models.
+
+    JZ 2021
+
+    power : float
+        Only specify with a 'Tweedie' model_name in order to use fractional powers for Tweedie distribution
+    *args : positional arguments
+        See https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html for Logistic / Multinomial
+        See https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.TweedieRegressor.html otherwise
+    **kwargs : keyword arguments
+        See https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html for Logistic / Multinomial
+        See https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.TweedieRegressor.html otherwise
     """
 
     model = None
@@ -192,6 +195,9 @@ class GLM():
     def __init__(self, model_name, beta0_=None, beta_=None, *args, **kwargs):
         """
         Create the GLM model.
+
+        JZ 2021
+    
         model_name : str
             GLM distribution name to create ('Normal', 'Gaussian', 'Poisson', 'Tweedie', 'Gamma', 'Logistic', or 'Multinomial')
         *args : positional arguments
@@ -259,6 +265,9 @@ class GLM():
     def fit(self, X, y, *args):
         """
         Fits the GLM to the provided X predictors and y responses.
+
+        JZ 2021
+    
         Parameters
         ----------
         X : np.ndarray or pd.DataFrame
@@ -279,6 +288,8 @@ class GLM():
         """
         Fits the GLM to the provided X predictors and y responses.
 
+        JZ 2021
+    
         Parameters
         ----------
         X : np.ndarray or pd.DataFrame
