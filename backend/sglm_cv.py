@@ -148,7 +148,7 @@ def cv_glm_mult_params(X, y, cv_idx, model_name, glm_kwarg_lst, GLM_CLS=None, ve
 
     start = time.time()
 
-    pca_glm = sglm.GLM(model_name)
+    pca_glm = sglm.GLM('PCA Normal') if model_name in {'Normal', 'Gaussian'} else sglm.GLM(model_name)
     pca_glm.pca_fit(X, y)
     print(f'> PCA GLM Built in {time.time() - start} seconds')
 

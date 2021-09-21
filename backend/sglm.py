@@ -1,5 +1,5 @@
 from sklearn.base import BaseEstimator, RegressorMixin
-from sklearn.linear_model import ElasticNet, TweedieRegressor, LogisticRegression, PoissonRegressor
+from sklearn.linear_model import ElasticNet, TweedieRegressor, LogisticRegression, PoissonRegressor, LinearRegression
 import sklearn.metrics
 import pyglmnet
 import scipy.stats
@@ -178,14 +178,29 @@ class GLM():
 
     JZ 2021
 
-    power : float
-        Only specify with a 'Tweedie' model_name in order to use fractional powers for Tweedie distribution
-    *args : positional arguments
-        See https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html for Logistic / Multinomial
-        See https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.TweedieRegressor.html otherwise
-    **kwargs : keyword arguments
-        See https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html for Logistic / Multinomial
-        See https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.TweedieRegressor.html otherwise
+    Attributes:
+        model_name (str) : Type of GLM built (e.g. Normal, Poisson, Logistic, Multinomial, etc.)
+        Base (class in sklearn.linear_models.*) : SKLearn class associated with model_name
+        kwargs (dict) : Keyword arguments specified to build Base model object
+        model (object of Base) : Object of class Base with arguments kwargs for fitting
+        intercept_ (float) : Bias term to be fitted in model
+        beta0_ (float) : Another name for intercept_
+        coef_ (np.ndarray) : Weights by which predictors in X are multiplied for linear prediction
+        beta_ (np.ndarray) : Another name for coef_
+        pca (object of sklearn.decomposition.PCA) : PCA object for use in PCA pre-procesisng of data
+
+    Methods:
+        __init__ : Create the GLM model.
+        score : Call underlying score function of model
+        pca_fit : Automatically apply PCA to predictors prior to fitting and use inverse transform to
+                  identify associated coefficients in the non-PCA space. (Should be a faster fit &
+                  can be used to seed other fits.)
+        fit : Fits the GLM model
+        fit_set : Fits the GLM model while setting variables for in-place calculations for CV
+        predict : Run prediction through the GLM model
+        log_likelihood : Calculate log_likelihood of the model for given datset (requires dsitributional
+                  assumptions of residuals)
+
     """
 
     model = None
@@ -200,10 +215,20 @@ class GLM():
     
         model_name : str
             GLM distribution name to create ('Normal', 'Gaussian', 'Poisson', 'Tweedie', 'Gamma', 'Logistic', or 'Multinomial')
+        beta0_ : int
+
+        beta_ : np.ndarray
+
+        power : float
+            Only specify with a 'Tweedie' model_name in order to use fractional powers for Tweedie distribution
         *args : positional arguments
-            See links in SKGLM documentation for arguments
+            See https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.ElasticNet.html for Normal / Gaussian
+            See https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html for Logistic / Multinomial
+            See https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.TweedieRegressor.html otherwise
         **kwargs : keyword arguments
-            See links in SKGLM documentation for arguments
+            See https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.ElasticNet.html for Normal / Gaussian
+            See https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html for Logistic / Multinomial
+            See https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.TweedieRegressor.html otherwise
         """
 
         self.model_name = model_name
@@ -219,6 +244,8 @@ class GLM():
             kwargs['multi_class'] = 'multinomial' if model_name == 'Multinomial' else 'auto'
             kwargs['n_jobs'] = kwargs['n_jobs'] if 'n_jobs' in kwargs else -1
             Base = LogisticRegression
+        elif model_name in {'PCA Normal', 'PCA Gaussian'}:
+            Base = LinearRegression
         else:
             print('Distribution not yet implemented.')
             raise NotYetImplementedError()
@@ -240,8 +267,9 @@ class GLM():
         self.score = self.model.score
     
     def pca_fit(self, X, y):
-        self.model.alpha = 0.1 if 'alpha' not in self.kwargs else self.kwargs['alpha']
-        self.model.l1_ratio = 0.5 if 'l1_ratio' not in self.kwargs else self.kwargs['l1_ratio']
+        if self.model_name in {'Normal', 'Gaussian'}:
+            self.model.alpha = 0.1 if 'alpha' not in self.kwargs else self.kwargs['alpha']
+            self.model.l1_ratio = 0.5 if 'l1_ratio' not in self.kwargs else self.kwargs['l1_ratio']
 
         start = time.time()
         self.pca = PCA().fit(X)
@@ -278,9 +306,9 @@ class GLM():
 
         self.model.fit(X, y, *args)
 
-        self.coef_ = self.model.coef_ if self.model_name in {'Logistic', 'Multinomial', 'Gaussian', 'Normal'} else self.model.beta_
+        self.coef_ = self.model.coef_ if self.model_name in {'Logistic', 'Multinomial', 'Gaussian', 'Normal', 'PCA Gaussian', 'PCA Normal'} else self.model.beta_
         self.beta_ = self.coef_
-        self.intercept_ = self.model.intercept_ if self.model_name in {'Logistic', 'Multinomial', 'Gaussian', 'Normal'} else self.model.beta0_
+        self.intercept_ = self.model.intercept_ if self.model_name in {'Logistic', 'Multinomial', 'Gaussian', 'Normal', 'PCA Gaussian', 'PCA Normal'} else self.model.beta0_
         self.beta0_ = self.intercept_
 
 
@@ -311,6 +339,10 @@ class GLM():
         cv_scores_train[iter_cv] = self.score(X, y)
         cv_scores_test[iter_cv] = self.score(X_test, y_test)
 
+    def get_residuals(self, X, y):
+        residuals = (y - self.predict(X))
+        mean_residuals = (y - np.mean(y))
+        return residuals, mean_residuals
     
     def predict(self, X):
         if type(X) == pd.DataFrame:

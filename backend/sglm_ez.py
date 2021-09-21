@@ -318,6 +318,11 @@ def simple_cv_fit(X, y, cv_idx, glm_kwarg_lst, model_type='Normal', verbose=0):
     return best_score, best_score_std, best_params, best_model
 
 
+def calc_R2(residuals, mean_residuals):
+    rss = np.sum(residuals**2)
+    tss = np.sum(mean_residuals**2)
+    r2 = 1 - rss/tss
+    return r2
 
 
 
