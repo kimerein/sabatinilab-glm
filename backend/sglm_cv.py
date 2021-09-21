@@ -98,6 +98,7 @@ def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, GLM_CLS=None, ver
         'cv_scores_train': cv_scores_train,
         'cv_scores_test': cv_scores_test,
         'cv_mean_score': np.mean(cv_scores_test),
+        'cv_std_score': np.std(cv_scores_test),
         'glm_kwargs': glm_kwargs,
         'model': glm
     }
@@ -187,12 +188,14 @@ def cv_glm_mult_params(X, y, cv_idx, model_name, glm_kwarg_lst, GLM_CLS=None, ve
             # (cv_result['model'].score_metric == 'deviance' and cv_result['cv_mean_score'] < best_score)):
         if (cv_result['cv_mean_score'] > best_score): # or
             best_score = cv_result['cv_mean_score']
+            best_score_std = cv_result['cv_std_score']
             best_params = cv_result['glm_kwargs']
             best_model = cv_result['model']
     
 
     final_results = {
         'best_score': best_score,
+        'best_score_std': best_score_std,
         'best_params': best_params,
         'best_model': best_model,
         'full_cv_results': resp,

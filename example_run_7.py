@@ -115,8 +115,8 @@ def to_profile():
     print(dfrel)
     print(X_cols)
 
-    neg_order = -5
-    pos_order = 5
+    neg_order = -40
+    pos_order = 40
 
 
     dfrel = sglm_ez.timeshift_cols(dfrel, X_cols[2:], neg_order=neg_order, pos_order=pos_order)
@@ -203,7 +203,7 @@ def to_profile():
 
     # Step 3: Generate iterable list of keyword sets for possible combinations
     glm_kwarg_lst = sglm_cv.generate_mult_params(kwargs_iterations, kwargs_fixed)
-    best_score, best_params, best_model = sglm_ez.simple_cv_fit(X_setup, y_setup, kfold_cv_idx, glm_kwarg_lst, model_type='Normal', verbose=2)
+    best_score, best_score_std, best_params, best_model = sglm_ez.simple_cv_fit(X_setup, y_setup, kfold_cv_idx, glm_kwarg_lst, model_type='Normal', verbose=2)
 
     print()
     print('---')

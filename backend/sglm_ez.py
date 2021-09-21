@@ -229,7 +229,7 @@ def holdout_split_by_trial_id(X, y=None, trial_id_columns=[], num_folds=5, test_
     num_folds : int
         Number of Cross Validation segmentations that should be used for GroupShuffleSplit fold Cross Validation
     test_size : float
-        Percentage of datapoints to use in each GroupShuffleSplit fold for validation
+        Percentage of datapoints to use in each GroupShuffleSplit fold for validation (Defaults to 1/num_folds if None)
     """
     X = pd.DataFrame(X)
 
@@ -263,7 +263,7 @@ def cv_idx_by_trial_id(X, y=None, trial_id_columns=[], num_folds=5, test_size=No
     num_folds : int
         Number of Cross Validation segmentations that should be used for GroupShuffleSplit fold Cross Validation
     test_size : float
-        Percentage of datapoints to use in each GroupShuffleSplit fold for validation
+        Percentage of datapoints to use in each GroupShuffleSplit fold for validation (Defaults to 1/num_folds if None)
     """
     X = pd.DataFrame(X)
 
@@ -312,9 +312,10 @@ def simple_cv_fit(X, y, cv_idx, glm_kwarg_lst, model_type='Normal', verbose=0):
                                             # [tuple([glm_kwarg[_] for _ in []]) for glm_kwarg in glm_kwarg_lst]
                                             )
     best_score = cv_results['best_score']
+    best_score_std = cv_results['best_score_std']
     best_params = cv_results['best_params']
     best_model = cv_results['best_model']
-    return best_score, best_params, best_model
+    return best_score, best_score_std, best_params, best_model
 
 
 
