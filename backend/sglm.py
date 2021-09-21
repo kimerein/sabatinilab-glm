@@ -221,6 +221,8 @@ class GLM():
             Initialize intercept value for warm-start-based fitting
         beta_ : np.ndarray
             Initialize coefficient value for warm-start-based fitting
+        score_method : str
+            'mse' for Mean Squared Error-based scoring, 'r2' for R^2 based scoring
         power : float
             Only specify with a 'Tweedie' model_name in order to use fractional powers for Tweedie distribution
         *args : positional arguments
@@ -276,7 +278,8 @@ class GLM():
     
     def neg_mse_score(self, X, y):
         """
-        Score function based on the negative of the Mean Squared Error for use in model selection
+        Score function based on the negative of the Mean Squared Error for use in model selection.
+        (i.e. greater values represent a more accurate model)
 
         JZ 2021
 
@@ -286,7 +289,7 @@ class GLM():
             y: pd.Series
                 True y response values against which to calculate the MSE
         
-        Returns: Negative of the MSE between prediction from X and y
+        Returns: Negative of the MSE between X-based prediction and true response y
         """
         pred = self.predict(X)
         resid = (y - pred)
@@ -312,7 +315,7 @@ class GLM():
         """
         Apply PCA to X (without dimensionality reduction), fit the model, and inverse the transform
         to more quickly generate coefficients in the original basis of X. (Best used as a setup process
-        for fitting other regularized models.)
+        to speed up the fitting of other models.)
 
         JZ 2021
 
@@ -321,6 +324,8 @@ class GLM():
                 Array of predictor variables on which to fit the model
             y : np.ndarray or pd.Series
                 Array of response variables on which to fit the model
+        
+        Returns: None
         """
         if self.model_name in {'Normal', 'Gaussian'}:
             self.model.alpha = 0.1 if 'alpha' not in self.kwargs else self.kwargs['alpha']
@@ -356,6 +361,8 @@ class GLM():
                 Array of predictor variables on which to fit the model
             y : np.ndarray or pd.Series
                 Array of response variables on which to fit the model
+        
+        Returns: None
         """
 
         self.model.fit(X, y, *args)
@@ -372,17 +379,18 @@ class GLM():
                 cv_intercepts, cv_scores_train, cv_scores_test,
                 iter_cv, *args, resids=[], mean_resids=[], id_fit='None', verbose=0):
         """
-        Fits the GLM to the provided X predictors and y responses and sets associated values in output variables
-        (for use in multi-threading applications).
+        Fits the GLM to the provided X predictors and y responses and sets associated values
+        in place in output variables (for use in multi-threading applications).
 
         JZ 2021
-    
-        Parameters
-        ----------
-        X : np.ndarray or pd.DataFrame
-            Array of predictor variables on which to fit the model
-        y : np.ndarray or pd.Series
-            Array of response variables on which to fit the model
+
+        Args:
+            X : np.ndarray or pd.DataFrame
+                Array of predictor variables on which to fit the model
+            y : np.ndarray or pd.Series
+                Array of response variables on which to fit the model
+        
+        Returns: N/A
         """
         if verbose > 1:
             start = time.time()
@@ -409,12 +417,13 @@ class GLM():
 
         JZ 2021
     
-        Parameters
-        ----------
-        X : np.ndarray or pd.DataFrame
-            Array of predictor variables with which to calculate R^2
-        y : np.ndarray or pd.Series
-            Array of response variables with which to calculate R^2
+        Args:
+            X : np.ndarray or pd.DataFrame
+                Array of predictor variables with which to calculate R^2
+            y : np.ndarray or pd.Series
+                Array of response variables with which to calculate R^2
+        
+        Returns: Iterable of residuals, Iterable of delta between y and mean
         """
         residuals = (y - self.predict(X))
         mean_residuals = (y - np.mean(y))
@@ -428,9 +437,7 @@ class GLM():
     
         Args:
             X : np.ndarray or pd.DataFrame
-                Array of predictor variables on which to fit the model
-            y : np.ndarray or pd.Series
-                Array of response variables on which to fit the model
+                Array of predictor variables from which to run model predictions
 
         Returns: np.ndarray of predicted responses
         """

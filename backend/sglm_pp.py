@@ -128,12 +128,19 @@ def diff(X, diff_inx=[], n=1, axis=0, append_to_base=False, fill_value=np.nan, *
     Args:
         X : np.ndarray (preferably contiguous array)
             Array of all variables (columns should be features, rows should be timesteps)
+        diff_inx : list
+            Column indices that should be diffed
         n : int, optional
             The number of times values are differenced. If zero, the input
             is returned as-is.
         axis : int, optional
             The axis along which the difference is taken, default is the
             first axis.
+        append_to_base : bool
+            Whether or not to keep the undifferenced columns in the returned array
+        fill_value : float
+            Value that should fill in the columns that do not have a prior column with
+            which to difference
         **kwargs : prepend, append : array_like, optional
             Values to prepend or append to `a` along axis prior to
             performing the difference.  Scalar values are expanded to

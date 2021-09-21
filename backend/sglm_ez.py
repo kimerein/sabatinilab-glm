@@ -166,7 +166,7 @@ def fit_GLM(X, y, model_name='Gaussian', *args, **kwargs):
         **kwargs : **dict
             Keyword arguments to be passed to GLM model
     
-    Returns: GLM model fit by code
+    Returns: Fitted GLM model
     """
     glm = sglm.GLM(model_name, *args, **kwargs)
     glm.fit(X.values, y.values)
@@ -229,7 +229,7 @@ def holdout_split_by_trial_id(X, y=None, id_cols=['nTrial', 'iBlock'], perc_hold
             Prediction DataFrame from which to bucket
         y : pd.Series
             Response Series
-        trial_id_columns : list(str)
+        id_cols : list(str)
             Columns to use to identify bucketing identifiers
         perc_holdout : int
             Percentage of group identifiers to holdout as test set
@@ -309,10 +309,12 @@ def simple_cv_fit(X, y, cv_idx, glm_kwarg_lst, model_type='Normal', verbose=0, s
             List of dictionaries of keyword arguments to try for Cross Validation parameter search
         model_type : str
             Keyword arguments to be passed to GLM model
+        verbose ; int
+            Amount of information to print out during model fitting / validation (larger numbers print more)
         score_method : str
             Either 'mse' or 'r2' to base cross-validation selection on Mean Squared Error or R^2
 
-    Returns: In association with the model with the largest score value, the...
+    Returns: From the model with the best (largest) score value the...
              Best Score Value, Best Score Standard Deviation, Best Params, Best Model
     """
     # Step 4: Fit GLM models for all possible sets of values
