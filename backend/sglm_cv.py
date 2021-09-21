@@ -16,21 +16,22 @@ def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, GLM_CLS=None, ver
 
     JZ 2021
     
-    Parameters
-    ----------
-    X : np.ndarray
-        The full set of available predictor data (columns should be features, rows should be timesteps).
-    y : np.ndarray
-        The full set of corresponding available response data.
-    cv_idx : list of pairs of lists
-        Cross-validation indices. Each entry in the outer list is
-        for a different run. Each entry in the outer list should 
-        contain 2 lists, the first one containing the training 
-        indices, and the second one containing the test indices.
-    model_name : str
-        The type of GLM to construct ('Normal', 'Gaussian', 'Poisson', 'Tweedie', 'Gamma', 'Logistic', or 'Multinomial')
-    glm_kwargs : dict
-        Keyword arguments to pass to the GLM constructor
+    Args:
+        X : np.ndarray
+            The full set of available predictor data (columns should be features, rows should be timesteps).
+        y : np.ndarray
+            The full set of corresponding available response data.
+        cv_idx : list of pairs of lists
+            Cross-validation indices. Each entry in the outer list is
+            for a different run. Each entry in the outer list should 
+            contain 2 lists, the first one containing the training 
+            indices, and the second one containing the test indices.
+        model_name : str
+            The type of GLM to construct ('Normal', 'Gaussian', 'Poisson', 'Tweedie', 'Gamma', 'Logistic', or 'Multinomial')
+        glm_kwargs : dict
+            Keyword arguments to pass to the GLM constructor
+    
+    Returns: dict of information relevant to fitted validation model based on single set of GLM parameters
     """
 
     threads = []
@@ -134,24 +135,25 @@ def cv_glm_mult_params(X, y, cv_idx, model_name, glm_kwarg_lst, GLM_CLS=None, ve
 
     JZ 2021
     
-    Parameters
-    ----------
-    X : np.ndarray
-        The full set of available predictor data (columns should be features, rows should be timesteps).
-    y : np.ndarray
-        The full set of corresponding available response data (1D).
-    cv_idx : list of pairs of lists
-        Cross-validation indices. Each entry in the outer list is
-        for a different run. Each entry in the outer list should 
-        contain 2 lists, the first one containing the training 
-        indices, and the second one containing the test indices.
-    model_name : str
-        The type of GLM to construct ('Normal', 'Gaussian', 'Poisson', 'Tweedie', 'Gamma', 'Logistic', or 'Multinomial')
-    glm_kwarg_lst : list(dict(GLM parameters))
-        A list of all kwarg parameters for the GLM through which
-        the crossvalidation function should iterate. ('roll' should be
-        specified here if desired where 'roll' corresponds to the amount
-        of 1D index shifts that should be applied)
+    Args:
+        X : np.ndarray
+            The full set of available predictor data (columns should be features, rows should be timesteps).
+        y : np.ndarray
+            The full set of corresponding available response data (1D).
+        cv_idx : list of pairs of lists
+            Cross-validation indices. Each entry in the outer list is
+            for a different run. Each entry in the outer list should 
+            contain 2 lists, the first one containing the training 
+            indices, and the second one containing the test indices.
+        model_name : str
+            The type of GLM to construct ('Normal', 'Gaussian', 'Poisson', 'Tweedie', 'Gamma', 'Logistic', or 'Multinomial')
+        glm_kwarg_lst : list(dict(GLM parameters))
+            A list of all kwarg parameters for the GLM through which
+            the crossvalidation function should iterate. ('roll' should be
+            specified here if desired where 'roll' corresponds to the amount
+            of 1D index shifts that should be applied)
+    
+    Returns: dict of information relevant to the best model identified and overall fit information
     """
 
     # score_metric = glm_kwarg_lst[0]['score_metric'] if 'score_metric' in glm_kwarg_lst else 'pseudo_R2'
@@ -282,12 +284,13 @@ def generate_mult_params(kwarg_lists, kwargs=None):
 
     JZ 2021
     
-    Parameters
-    ----------
-    kwarg_lists : dict(list(keywords))
-        Dictionary where each key is associated with a list of possible parameters to consider.
-    kwargs : Optional[dict(keywords)]
-        Dictionary of fixed keyword arguments that should remain the same across all CV trials.
+    Args:
+        kwarg_lists : dict(list(keywords))
+            Dictionary where each key is associated with a list of possible parameters to consider.
+        kwargs : Optional[dict(keywords)]
+            Dictionary of fixed keyword arguments that should remain the same across all CV trials.
+    
+    Returns: list of dicts of keyword arguments for GLM model fitting
     """
 
     base_list = [[kwargs]] if kwargs else []
