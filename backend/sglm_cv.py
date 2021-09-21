@@ -10,7 +10,7 @@ import time
 
 # TODO: Add a Feature Selection methodology -- to adjust feature selection based on cross-validation 
 
-def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, GLM_CLS=None, verbose=0, resp_list=[], beta_=None, beta0_=None):
+def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, GLM_CLS=None, verbose=0, resp_list=[], beta_=None, beta0_=None, score_method='mse'):
     """
     Runs cross-validation on GLM for a single set of parameters.
 
@@ -46,6 +46,9 @@ def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, GLM_CLS=None, ver
     cv_scores_train = np.zeros(n_idx)
     cv_scores_test = np.zeros(n_idx)
 
+    resids = []
+    mean_resids = []
+
     for iter_cv, (idx_train, idx_test) in enumerate(cv_idx):
         X_train = X[idx_train,:]
         y_train = y_rolled[idx_train]
@@ -63,22 +66,27 @@ def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, GLM_CLS=None, ver
         #     beta_ = pca_glm.beta_.copy()
 
         if GLM_CLS:
-            glm = GLM_CLS(model_name, beta0_=beta0_, beta_=beta_, **glm_kwargs)
+            glm = GLM_CLS(model_name, beta0_=beta0_, beta_=beta_, **glm_kwargs, score_method=score_method)
             # glm = GLM_CLS(model_name, **glm_kwargs)
         else:
-            glm = sglm.GLM(model_name, beta0_=beta0_, beta_=beta_, **glm_kwargs)
+            glm = sglm.GLM(model_name, beta0_=beta0_, beta_=beta_, **glm_kwargs, score_method=score_method)
             # glm = sglm.GLM(model_name, **glm_kwargs)
 
 
         threads.append(threading.Thread(target=glm.fit_set, args=(X_train, y_train, X_test, y_test,
                                                                   cv_coefs, cv_intercepts, cv_scores_train, cv_scores_test,
-                                                                  iter_cv,), kwargs={'id_fit': iter_cv, 'verbose': verbose}))
+                                                                  iter_cv,), kwargs={'resids': resids, 'mean_resids': mean_resids,
+                                                                                     'id_fit': iter_cv, 'verbose': verbose
+                                                                                     }))
+
+        threads[-1].name = str(glm_kwargs) + f' - {iter_cv}'
         threads[-1].start()
 
-        
-        # start = time.time()
-        # glm.fit(X_train, y_train)
-        # print(f'GLM fit in {time.time() - start} seconds')
+        if iter_cv % 5 == 4:
+            for thread in threads:
+                thread.join()
+            threads = []
+
 
         
         # cv_coefs[:, iter_cv] = glm.coef_
@@ -88,6 +96,14 @@ def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, GLM_CLS=None, ver
 
     for thread in threads:
         thread.join()
+
+
+    #####################
+
+    glm = sglm.GLM(model_name, beta0_=beta0_, beta_=beta_, **glm_kwargs)
+    glm.fit(X, y)
+
+    #####################
 
     if verbose > 0:
         print('Completing arguments:', glm_kwargs)
@@ -99,9 +115,12 @@ def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, GLM_CLS=None, ver
         'cv_scores_test': cv_scores_test,
         'cv_mean_score': np.mean(cv_scores_test),
         'cv_std_score': np.std(cv_scores_test),
+        'cv_R2_score': sglm.calc_R2(np.concatenate(resids), np.concatenate(mean_resids)),
         'glm_kwargs': glm_kwargs,
         'model': glm
     }
+
+    print(f"{glm_kwargs}\n> cv_R2_score: {ret_dict['cv_R2_score']}\n> cv_mean_score: {ret_dict['cv_mean_score']}")
 
     resp_list.append(ret_dict)
 
@@ -109,7 +128,7 @@ def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, GLM_CLS=None, ver
 
 
 
-def cv_glm_mult_params(X, y, cv_idx, model_name, glm_kwarg_lst, GLM_CLS=None, verbose=0):
+def cv_glm_mult_params(X, y, cv_idx, model_name, glm_kwarg_lst, GLM_CLS=None, verbose=0, score_method='mse'):
     """
     Runs cross-validation on GLM over a list of possible parameters.
 
@@ -169,12 +188,13 @@ def cv_glm_mult_params(X, y, cv_idx, model_name, glm_kwarg_lst, GLM_CLS=None, ve
                                                                              'verbose': verbose,
                                                                              'resp_list': resp,
                                                                              'beta0_':beta0_,
-                                                                             'beta_':beta_
+                                                                             'beta_':beta_,
+                                                                             'score_method':score_method
                                                                              }))
         threads[-1].name = str(glm_kwargs)
         threads[-1].start()
 
-        if i % 5 == 4:
+        if i % 4 == 3:
             for thread in threads:
                 thread.join()
             threads = []
@@ -186,7 +206,13 @@ def cv_glm_mult_params(X, y, cv_idx, model_name, glm_kwarg_lst, GLM_CLS=None, ve
     for cv_result in resp:
         # if ((cv_result['model'].score_metric == 'pseudo_R2' and cv_result['cv_mean_score'] > best_score)): # or
             # (cv_result['model'].score_metric == 'deviance' and cv_result['cv_mean_score'] < best_score)):
-        if (cv_result['cv_mean_score'] > best_score): # or
+        
+        if (score_method == 'r2' and cv_result['cv_R2_score'] > best_score):
+            best_score = cv_result['cv_R2_score']
+            best_score_std = cv_result['cv_std_score']
+            best_params = cv_result['glm_kwargs']
+            best_model = cv_result['model']
+        elif (score_method == 'mse' and cv_result['cv_mean_score'] > best_score):
             best_score = cv_result['cv_mean_score']
             best_score_std = cv_result['cv_std_score']
             best_params = cv_result['glm_kwargs']

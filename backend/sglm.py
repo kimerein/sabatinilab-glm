@@ -7,6 +7,8 @@ import numpy as np
 import pandas as pd
 import time
 
+from typing import Union, List, Tuple, Optional
+
 from sklearn.decomposition import PCA
 
 from numba import njit, jit, prange
@@ -207,7 +209,7 @@ class GLM():
     model_name_options = {'Normal', 'Gaussian', 'Poisson', 'Tweedie', 'Gamma', 'Logistic', 'Binomial', 'Multinomial'}
     tweedie_lookup = {'Normal': 0, 'Gaussian':0, 'Poisson': 1, 'Gamma': 2}
 
-    def __init__(self, model_name, beta0_=None, beta_=None, *args, **kwargs):
+    def __init__(self, model_name, beta0_=None, beta_=None, score_method='mse', *args, **kwargs):
         """
         Create the GLM model.
 
@@ -216,9 +218,9 @@ class GLM():
         model_name : str
             GLM distribution name to create ('Normal', 'Gaussian', 'Poisson', 'Tweedie', 'Gamma', 'Logistic', or 'Multinomial')
         beta0_ : int
-
+            Initialize intercept value for warm-start-based fitting
         beta_ : np.ndarray
-
+            Initialize coefficient value for warm-start-based fitting
         power : float
             Only specify with a 'Tweedie' model_name in order to use fractional powers for Tweedie distribution
         *args : positional arguments
@@ -264,9 +266,62 @@ class GLM():
             self.model.coef_ = beta_
             self.beta_ = beta_
         
-        self.score = self.model.score
+        if score_method == 'r2':
+            self.score = self.r2_score
+        elif score_method == 'mse':
+            self.score = self.neg_mse_score
+        else:
+            self.score = self.neg_mse_score
+
     
+    def neg_mse_score(self, X, y):
+        """
+        Score function based on the negative of the Mean Squared Error for use in model selection
+
+        JZ 2021
+
+        Args:
+            X: pd.DataFrame
+                Data from which to run the prediction model
+            y: pd.Series
+                True y response values against which to calculate the MSE
+        
+        Returns: Negative of the MSE between prediction from X and y
+        """
+        pred = self.predict(X)
+        resid = (y - pred)
+        return -np.mean(resid**2)
+
+    def r2_score(self, X, y):
+        """
+        Score function for use with out-of-sample R^2 for use in model selection
+
+        JZ 2021
+
+        Args:
+            X: pd.DataFrame
+                Input data for the prediction model
+            y: pd.Series
+                True y response values against which to evaluate R^2
+        
+        Returns: The calculated R^2 value
+        """
+        return self.model.score(X, y)
+
     def pca_fit(self, X, y):
+        """
+        Apply PCA to X (without dimensionality reduction), fit the model, and inverse the transform
+        to more quickly generate coefficients in the original basis of X. (Best used as a setup process
+        for fitting other regularized models.)
+
+        JZ 2021
+
+        Args:
+            X : np.ndarray or pd.DataFrame
+                Array of predictor variables on which to fit the model
+            y : np.ndarray or pd.Series
+                Array of response variables on which to fit the model
+        """
         if self.model_name in {'Normal', 'Gaussian'}:
             self.model.alpha = 0.1 if 'alpha' not in self.kwargs else self.kwargs['alpha']
             self.model.l1_ratio = 0.5 if 'l1_ratio' not in self.kwargs else self.kwargs['l1_ratio']
@@ -296,25 +351,29 @@ class GLM():
 
         JZ 2021
     
-        Parameters
-        ----------
-        X : np.ndarray or pd.DataFrame
-            Array of predictor variables on which to fit the model
-        y : np.ndarray or pd.Series
-            Array of response variables on which to fit the model
+        Args:
+            X : np.ndarray or pd.DataFrame
+                Array of predictor variables on which to fit the model
+            y : np.ndarray or pd.Series
+                Array of response variables on which to fit the model
         """
 
         self.model.fit(X, y, *args)
 
-        self.coef_ = self.model.coef_ if self.model_name in {'Logistic', 'Multinomial', 'Gaussian', 'Normal', 'PCA Gaussian', 'PCA Normal'} else self.model.beta_
+        self.coef_ = self.model.coef_ if self.model_name in {'Logistic', 'Multinomial', 'Gaussian', 'Normal',
+                                                             'PCA Gaussian', 'PCA Normal'} else self.model.beta_
         self.beta_ = self.coef_
-        self.intercept_ = self.model.intercept_ if self.model_name in {'Logistic', 'Multinomial', 'Gaussian', 'Normal', 'PCA Gaussian', 'PCA Normal'} else self.model.beta0_
+        self.intercept_ = self.model.intercept_ if self.model_name in {'Logistic', 'Multinomial', 'Gaussian', 'Normal',
+                                                                       'PCA Gaussian', 'PCA Normal'} else self.model.beta0_
         self.beta0_ = self.intercept_
 
 
-    def fit_set(self, X, y, X_test, y_test, cv_coefs, cv_intercepts, cv_scores_train, cv_scores_test, iter_cv, *args, id_fit='None', verbose=0):
+    def fit_set(self, X, y, X_test, y_test, cv_coefs,
+                cv_intercepts, cv_scores_train, cv_scores_test,
+                iter_cv, *args, resids=[], mean_resids=[], id_fit='None', verbose=0):
         """
-        Fits the GLM to the provided X predictors and y responses.
+        Fits the GLM to the provided X predictors and y responses and sets associated values in output variables
+        (for use in multi-threading applications).
 
         JZ 2021
     
@@ -339,18 +398,60 @@ class GLM():
         cv_scores_train[iter_cv] = self.score(X, y)
         cv_scores_test[iter_cv] = self.score(X_test, y_test)
 
-    def get_residuals(self, X, y):
+        residuals, mean_residuals = self.get_residuals(X_test, y_test)
+        resids.append(residuals)
+        mean_resids.append(mean_residuals)
+
+    def get_residuals(self, X: Union[np.ndarray, pd.DataFrame], y: Union[np.ndarray, pd.Series]) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Runs the prediction of the responses and returns the residuals and mean_residuals for
+        downstream calculations of RSS and TSS.
+
+        JZ 2021
+    
+        Parameters
+        ----------
+        X : np.ndarray or pd.DataFrame
+            Array of predictor variables with which to calculate R^2
+        y : np.ndarray or pd.Series
+            Array of response variables with which to calculate R^2
+        """
         residuals = (y - self.predict(X))
         mean_residuals = (y - np.mean(y))
         return residuals, mean_residuals
     
-    def predict(self, X):
+    def predict(self, X: Union[np.ndarray, pd.DataFrame]) -> np.ndarray:
+        """
+        Run a prediction of features, X, through the model.
+
+        JZ 2021
+    
+        Args:
+            X : np.ndarray or pd.DataFrame
+                Array of predictor variables on which to fit the model
+            y : np.ndarray or pd.Series
+                Array of response variables on which to fit the model
+
+        Returns: np.ndarray of predicted responses
+        """
         if type(X) == pd.DataFrame:
             X = X.values
         return self.model.predict(X)
 
-    def log_likelihood(self, prediction, truth):
+    def log_likelihood(self, prediction: Union[np.ndarray, pd.Series], truth: Union[np.ndarray, pd.Series]) -> float:
+        """
+        Calculate the log likelihood of the predictions generated by the model in comparison with the truth (IN PROGRESS)
 
+        JZ 2021
+    
+        Args:
+            prediction : np.ndarray or pd.Series
+                Predictions generated by the model
+            truth : np.ndarray or pd.Series
+                True values to compare to the prediction
+        
+        Returns: float of log_likelihood values
+        """
         if self.model_name in {'Normal', 'Gaussian'}:
             resid = truth - prediction
             std = np.std(resid)
@@ -374,3 +475,28 @@ class GLM():
         
         return log_likelihood
 
+
+def calc_R2(residuals: np.ndarray, mean_residuals: np.ndarray) -> float:
+    """
+    Calculates the R^2 value given the residuals (for RSS) and residuals from the mean (for TSS)
+
+    JZ 2021
+
+    Args:
+        residuals: Array of all residual values observed during model fitting (e.g. concatenated validaiton residuals)
+        mean_residuals: Array of all deltas between observed values and response means (e.g. concatenated y - np.mean(y) values)
+    
+    Returns: R^2 Value
+    """
+    rss = np.sum(residuals**2)
+    tss = np.sum(mean_residuals**2)
+    r2 = 1 - rss/tss
+    return r2
+
+# def calc_R2(residuals, y):
+#     rss = np.sum(residuals**2)
+#     tss = np.sum((y - np.mean(y))**2)
+#     print(f'rss: {rss}')
+#     print(f'tss: {tss}')
+#     r2 = 1 - rss/tss
+#     return r2

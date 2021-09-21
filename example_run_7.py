@@ -150,20 +150,7 @@ def to_profile():
     # pred = glm.predict(X_setup)
     # mse = np.mean((y_setup - pred)**2)
 
-    perc_holdout = 0.2
-    id_cols = ['nTrial', 'iBlock']
-    for i, idc in enumerate(id_cols):
-        if i == 0:
-            bucket_ids = X_setup[idc].astype(str).str.len().astype(str) + ':' + X_setup[idc].astype(str)
-        else:
-            bucket_ids = bucket_ids + '_' + X_setup[idc].astype(str)
-    bucket_ids = bucket_ids.astype("category").cat.codes
-
-    num_bucket_ids = int(bucket_ids.max() + 1)
-    num_buckets_for_test = int(num_bucket_ids * perc_holdout)
-
-    test_ids = np.random.choice(num_bucket_ids, size=num_buckets_for_test)
-    holdout = bucket_ids.isin(test_ids)
+    holdout = sglm_ez.holdout_split_by_trial_id(X_setup, y_setup, id_cols=['nTrial', 'iBlock'], perc_holdout=0.2)
 
     X_holdout = X_setup.loc[holdout]
     y_holdout = y_setup.loc[holdout]
@@ -201,9 +188,11 @@ def to_profile():
     # hold_out_idx = kfold_cv_idx[0:1]
     # kfold_cv_idx = kfold_cv_idx[1:]
 
+    score_method = 'mse'
+
     # Step 3: Generate iterable list of keyword sets for possible combinations
     glm_kwarg_lst = sglm_cv.generate_mult_params(kwargs_iterations, kwargs_fixed)
-    best_score, best_score_std, best_params, best_model = sglm_ez.simple_cv_fit(X_setup, y_setup, kfold_cv_idx, glm_kwarg_lst, model_type='Normal', verbose=2)
+    best_score, best_score_std, best_params, best_model = sglm_ez.simple_cv_fit(X_setup, y_setup, kfold_cv_idx, glm_kwarg_lst, model_type='Normal', verbose=2, score_method=score_method)
 
     print()
     print('---')
@@ -233,7 +222,7 @@ def to_profile():
     # pred = glm.predict(X_holdout)
     # mse = np.mean((y_holdout - pred)**2)
 
-    holdout_score = glm.score(X_holdout[X_setup.columns], y_holdout)
+    holdout_score = glm.r2_score(X_holdout[X_setup.columns], y_holdout)
 
     print(f'Holdout Score: {holdout_score}')
 

@@ -26,21 +26,22 @@ def timeshift(X, shift_inx=[], shift_amt=1, keep_non_inx=False, dct=None, fill_v
 
     JZ 2021
     
-    Parameters
-    ----------
-    X : np.ndarray or pd.DataFrame
-        Array of all variables (columns should be features, rows should be timesteps)
-    shift_inx : list(int)
-        Column indices to shift forward/backward
-    shift_amt : int
-        Amount by which to shift the columns in question up or down (down if shift_amt > 0, up if shift_amt < 0)
-    keep_non_inx : bool
-        If True, data from all columns (shifted or not) will be returned from the function.
-        If False, only shifted columns are returned.
-    dct : dict
-        Dictionary for in-place timeshift updates
-    fill_value : np.float
-        Value to be left in place of shifted data
+    Args:
+        X : np.ndarray or pd.DataFrame
+            Array of all variables (columns should be features, rows should be timesteps)
+        shift_inx : list(int)
+            Column indices to shift forward/backward
+        shift_amt : int
+            Amount by which to shift the columns in question up or down (down if shift_amt > 0, up if shift_amt < 0)
+        keep_non_inx : bool
+            If True, data from all columns (shifted or not) will be returned from the function.
+            If False, only shifted columns are returned.
+        dct : dict
+            Dictionary for in-place timeshift updates
+        fill_value : np.float
+            Value to be left in place of shifted data
+    
+    Returns: DataFrame or NDArray including the relevant timeshift
     """
     
     npX = get_numpy_version(X) 
@@ -60,18 +61,19 @@ def timeshift_multiple(X, shift_inx=[], shift_amt_list=[-1,0,1], unshifted_keep_
 
     JZ 2021
     
-    Parameters
-    ----------
-    X : np.ndarray (preferably contiguous array)
-        Array of all variables (columns should be features, rows should be timesteps)
-    shift_inx : list(int)
-        Column indices to shift forward/backward
-    shift_amt_list : list(int)
-        List of amounts by which to shift forward the columns in question (backward where list elements are < 0)
-    unshifted_keep_all : bool
-        Whether or not to keep all unshifted columns in the returned array
-    fill_value : np.float
-        Value to be left in place of shifted data
+    Args:
+        X : np.ndarray (preferably contiguous array)
+            Array of all variables (columns should be features, rows should be timesteps)
+        shift_inx : list(int)
+            Column indices to shift forward/backward
+        shift_amt_list : list(int)
+            List of amounts by which to shift forward the columns in question (backward where list elements are < 0)
+        unshifted_keep_all : bool
+            Whether or not to keep all unshifted columns in the returned array
+        fill_value : np.float
+            Value to be left in place of shifted data
+    
+    Returns: DataFrame or NDArray with the relevant timeshifts
     """
 
     # print(shift_inx)
@@ -106,10 +108,11 @@ def zscore(X):
 
     JZ 2021
     
-    Parameters
-    ----------
-    X : np.ndarray or pd.DataFrame
-        Array of variables to zscore
+    Args:
+        X : np.ndarray or pd.DataFrame
+            Array of variables to zscore
+    
+    Returns: Z-scored values of X along dimension 0
     """
     return (X - X.mean(axis=0))/X.std(axis=0)
 
@@ -122,26 +125,25 @@ def diff(X, diff_inx=[], n=1, axis=0, append_to_base=False, fill_value=np.nan, *
 
     JZ 2021
     
-    ---
+    Args:
+        X : np.ndarray (preferably contiguous array)
+            Array of all variables (columns should be features, rows should be timesteps)
+        n : int, optional
+            The number of times values are differenced. If zero, the input
+            is returned as-is.
+        axis : int, optional
+            The axis along which the difference is taken, default is the
+            first axis.
+        **kwargs : prepend, append : array_like, optional
+            Values to prepend or append to `a` along axis prior to
+            performing the difference.  Scalar values are expanded to
+            arrays with length 1 in the direction of axis and the shape
+            of the input array in along all other axes.  Otherwise the
+            dimension and shape must match `a` except along axis.
 
-    Parameters
-    ----------
-    X : np.ndarray (preferably contiguous array)
-        Array of all variables (columns should be features, rows should be timesteps)
-    n : int, optional
-        The number of times values are differenced. If zero, the input
-        is returned as-is.
-    axis : int, optional
-        The axis along which the difference is taken, default is the
-        first axis.
-    **kwargs : prepend, append : array_like, optional
-        Values to prepend or append to `a` along axis prior to
-        performing the difference.  Scalar values are expanded to
-        arrays with length 1 in the direction of axis and the shape
-        of the input array in along all other axes.  Otherwise the
-        dimension and shape must match `a` except along axis.
-
-        Other keyword arguments for np diff.
+            Other keyword arguments for np diff.
+    
+    Returns: DataFrame or NDArray with the relevant columns differenced
     """
 
     typ = type(X)
@@ -186,14 +188,13 @@ def get_column_nums(df, column_names=[]): #
 
     JZ 2021
     
-    ---
-
-    Parameters
-    ----------
-    df : pd.DataFrame
-        DataFrame of which to find column name index numbers
-    column_names : array_like, optional
-        Names of the columns of which to find column numbers
+    Args:
+        df : pd.DataFrame
+            DataFrame of which to find column name index numbers
+        column_names : array_like, optional
+            Names of the columns of which to find column numbers
+    
+    Returns: list of the column indices associated with the names of columns in questions
     """
     ret = [df.columns.get_loc(_) for _ in column_names]
     if len([_ for _ in ret if type(_) == np.ndarray]):
