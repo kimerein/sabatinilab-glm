@@ -457,7 +457,8 @@ def concat_all_shifts(X: Union[np.ndarray, pd.DataFrame],
         return np.concatenate(shifted_list, axis=1)
 
 def concat_pandas_shifts(shift_amt_list: List[int],
-                         shifted_list: List[Union[np.ndarray, pd.DataFrame]]) -> Union[np.ndarray, pd.DataFrame]:
+                         shifted_list: List[Union[np.ndarray, pd.DataFrame]]
+                         ) -> Union[np.ndarray, pd.DataFrame]:
     """
     Concatenate and returns all shifted Pandas values, with columns renamed by shift amount.
     

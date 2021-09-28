@@ -4,15 +4,11 @@ import pandas as pd
 import sglm
 import sglm_pp
 import sglm_cv
+import matplotlib.pyplot as plt
 
 # def setup_autoregression(X, response_cols, order):
 #     col_nums = sglm_pp.get_column_nums(X, response_cols)
 #     return sglm_pp.timeshift_multiple(X, shift_inx=col_nums, shift_amt_list=list(range(order + 1)))
-
-
-# Update K_folds to be num_folds
-# Rather than trial_split name use group_split
-
 
 def timeshift_cols_by_signal_length(X, cols_to_shift, neg_order=0, pos_order=1, trial_id='nTrial', dummy_col='nothing', shift_amt_ratio=2.0):
     """
@@ -288,8 +284,8 @@ def cv_idx_by_trial_id(X, y=None, trial_id_columns=[], num_folds=5, test_size=No
     cv_idx = sglm_pp.cv_idx_from_bucket_ids(bucket_ids, X, y=y, num_folds=num_folds, test_size=test_size)
     return cv_idx
 
-# Trial-based splitting (remove inter-trial information)
 
+# Trial-based splitting (remove inter-trial information?)
 def simple_cv_fit(X, y, cv_idx, glm_kwarg_lst, model_type='Normal', verbose=0, score_method='mse'):
     """
     Fit the desired model using the list of keyword arguments provided in
@@ -336,6 +332,36 @@ def simple_cv_fit(X, y, cv_idx, glm_kwarg_lst, model_type='Normal', verbose=0, s
 
 
 
+def reconstruct_signal(glm, X, y_true=-1):
+    """
+    Plot a graph of the predicted signal overlaid with the truly observed signal
+
+    Args:
+        glm : sglm.GLM
+            Model with which to predict X
+        X : np.ndarray or pd.DataFrame
+            Predictors to use for signal reconstruction
+        y : np.ndarray or pd.DataFrame
+            True signal for comparison
+
+    Returns; N/A
+    """
+    import seaborn as sns
+    sns.set(style='white', palette='colorblind', context='poster')
+
+    pred = glm.predict(X)
+
+    plt.figure(figsize=(20,10))
+    plt.plot(X.index, pred, label='Predicted Signal', alpha=0.5)
+    
+    if type(y_true) != int:
+        plt.plot(X.index, y_true, label='True Signal', alpha=0.5)
+    
+    plt.xlabel('Data Point Index')
+    plt.ylabel(f'{"True vs. " if type(y_true) != int else ""}Prediction Reconstructed Signals')
+    plt.legend()
+
+    return
 
 
 
@@ -362,9 +388,6 @@ if __name__ == '__main__':
     X_tmp['B'] = (X_tmp['B']-1) * 2 + 1
     print()
     print(X_tmp)
-    # X_tmp = setup_autoregression(X_tmp, ['B'], 4)
-    # print()
-    # print(X_tmp)
 
     X_tmp = timeshift_cols(X_tmp, ['A'], 0, 2)
     print(X_tmp)

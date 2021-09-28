@@ -21,12 +21,8 @@ import sglm_ez
 def to_profile():
 
     start = time.time()
-
-    # df = pd.read_csv(f'{dir_path}/../sample_dataframe.csv').drop('Unnamed: 0', axis=1)#.drop('index', axis=1)
-
     print(dir_path)
-
-    df = pd.read_csv(f'{dir_path}/../lynne-data-zs.csv').drop('Unnamed: 16', axis=1).drop('Unnamed: 17', axis=1)#.drop('index', axis=1)
+    df = pd.read_csv(f'{dir_path}/../lynne-data-zs.csv').drop('Unnamed: 16', axis=1).drop('Unnamed: 17', axis=1) # .drop('index', axis=1)
 
 
 
@@ -50,8 +46,6 @@ def to_profile():
                     'gdFF (Ach3.0)': 'gdFF',
                     'zscored red (rGRAB-DA)': 'rdFF'}, axis=1)
     
-    # df['nTrial'] = df['time (msec)'] // 40
-
     df['event_col_a'] = ((df['cpo'].diff() > 0)*1).replace(0, np.nan) * 1.0
     df['event_col_b'] = df['nr'].replace(0, np.nan) * 2.0
     df['event_col_c'] = df['r'].replace(0, np.nan) * 3.0
@@ -65,14 +59,8 @@ def to_profile():
     
     df['nTrial'] = df['trial_start_flag'].cumsum().shift(-10).ffill()
 
-
-    # df['rdFF'] = df['rdFF'].cumsum()
-
     if 'index' in df.columns:
         df = df.drop('index', axis=1)
-    # df = df.reset_index(drop=False)
-
-    print(df.shape)
     
     y_setup_col = 'rdFF' # photometry response
     df = sglm_ez.diff_cols(df, ['rdFF'])
@@ -92,26 +80,17 @@ def to_profile():
        'nr', 'r'
     ]
 
-    # y_col = 'gdFF'
     y_col = 'rdFF'
-    # y_col = 'grnR'
 
     dfrel = df[X_cols + [y_col]].copy()
     dfrel = dfrel.replace('False', 0).astype(float)
     dfrel = dfrel*1
     
-    print(dfrel)
-    print(X_cols)
+    neg_order = -20
+    pos_order = 20
 
-    neg_order = -30
-    pos_order = 30
-
-
-    dfrel = sglm_ez.timeshift_cols(dfrel, X_cols[:], neg_order=neg_order, pos_order=pos_order)
-    X_cols_sftd = sglm_ez.add_timeshifts_to_col_list(X_cols, X_cols[:], neg_order=neg_order, pos_order=pos_order)
-
-    print(dfrel.shape)
-    print(X_cols_sftd)
+    dfrel = sglm_ez.timeshift_cols(dfrel, X_cols[1:], neg_order=neg_order, pos_order=pos_order)
+    X_cols_sftd = sglm_ez.add_timeshifts_to_col_list(X_cols, X_cols[1:], neg_order=neg_order, pos_order=pos_order)
 
     dfrel = dfrel.dropna()
 
@@ -141,13 +120,8 @@ def to_profile():
 
     # Step 1: Create a dictionary of lists for these relevant keywords...
     kwargs_iterations = {
-        # 'reg_lambda': [0.0001],
-        # 'reg_lambda': [0.001, 0.01, 0.1, 1.0, 10.0],
-        # 'alpha': [0.01, 0.1, 1.0, 10.0],
         'alpha': reversed([0.0001, 0.001, 0.01, 0.1, 1.0, 10.0]),
         'l1_ratio': [0.0001, 0.001, 0.01, 0.1, 0.5, 0.9, 0.99],
-        # 'l1_ratio': [0.001, 0.1, 0.5, 0.9, 0.999],
-        # 'fit_intercept': [True, False]
         'fit_intercept': [True]
     }
 
@@ -183,14 +157,8 @@ def to_profile():
     print()
 
     glm = sglm_ez.fit_GLM(X_setup, y_setup, **best_params)
-    
     holdout_score = glm.r2_score(X_holdout[X_setup.columns], y_holdout)
 
     print(f'Holdout Score: {holdout_score}')
-
-
-
-# import cProfile
-# cProfile.run('to_profile()')
 
 to_profile()
