@@ -10,7 +10,7 @@ import time
 
 # TODO: Add a Feature Selection methodology -- to adjust feature selection based on cross-validation 
 
-def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, GLM_CLS=None, verbose=0, resp_list=[], beta_=None, beta0_=None, score_method='mse'):
+def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, verbose=0, resp_list=[], beta_=None, beta0_=None, score_method='mse'):
     """
     Runs cross-validation on GLM for a single set of parameters.
 
@@ -30,6 +30,16 @@ def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, GLM_CLS=None, ver
             The type of GLM to construct ('Normal', 'Gaussian', 'Poisson', 'Tweedie', 'Gamma', 'Logistic', or 'Multinomial')
         glm_kwargs : dict
             Keyword arguments to pass to the GLM constructor
+        verbose : int
+            How much information to print during the fititng process
+        resp_list : list
+            list for in place appending of fitting results (for use in multi-threading)
+        beta_ : np.ndarray
+            Pre-initialized coefficient values for warm-start-based fitting
+        beta0_ : np.ndarray
+            Pre-initialized intercept value for warm-start-based fitting
+        score_method : str
+            'mse' for Mean Squared Error-based scoring, 'r2' for R^2 based scoring
     
     Returns: dict of information relevant to fitted validation model based on single set of GLM parameters
     """
@@ -65,13 +75,9 @@ def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, GLM_CLS=None, ver
 
         #     beta0_ = pca_glm.beta0_
         #     beta_ = pca_glm.beta_.copy()
-
-        if GLM_CLS:
-            glm = GLM_CLS(model_name, beta0_=beta0_, beta_=beta_, **glm_kwargs, score_method=score_method)
-            # glm = GLM_CLS(model_name, **glm_kwargs)
-        else:
-            glm = sglm.GLM(model_name, beta0_=beta0_, beta_=beta_, **glm_kwargs, score_method=score_method)
-            # glm = sglm.GLM(model_name, **glm_kwargs)
+    
+        glm = sglm.GLM(model_name, beta0_=beta0_, beta_=beta_, **glm_kwargs, score_method=score_method)
+        # glm = sglm.GLM(model_name, **glm_kwargs)
 
 
         threads.append(threading.Thread(target=glm.fit_set, args=(X_train, y_train, X_test, y_test,
@@ -114,6 +120,7 @@ def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, GLM_CLS=None, ver
         'cv_intercepts': cv_intercepts,
         'cv_scores_train': cv_scores_train,
         'cv_scores_test': cv_scores_test,
+        'cv_mean_score_train': np.mean(cv_scores_train),
         'cv_mean_score': np.mean(cv_scores_test),
         'cv_std_score': np.std(cv_scores_test),
         'cv_R2_score': sglm.calc_R2(np.concatenate(resids), np.concatenate(mean_resids)),
@@ -121,7 +128,7 @@ def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, GLM_CLS=None, ver
         'model': glm
     }
 
-    print(f"{glm_kwargs}\n> cv_R2_score: {ret_dict['cv_R2_score']}\n> cv_mean_score: {ret_dict['cv_mean_score']}")
+    print(f"{glm_kwargs}\n> cv_mean_score_train: {ret_dict['cv_mean_score_train']}\n> cv_R2_score: {ret_dict['cv_R2_score']}\n> cv_mean_score: {ret_dict['cv_mean_score']}")
 
     resp_list.append(ret_dict)
 
@@ -129,7 +136,7 @@ def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, GLM_CLS=None, ver
 
 
 
-def cv_glm_mult_params(X, y, cv_idx, model_name, glm_kwarg_lst, GLM_CLS=None, verbose=0, score_method='mse'):
+def cv_glm_mult_params(X, y, cv_idx, model_name, glm_kwarg_lst, verbose=0, score_method='mse'):
     """
     Runs cross-validation on GLM over a list of possible parameters.
 
@@ -152,6 +159,10 @@ def cv_glm_mult_params(X, y, cv_idx, model_name, glm_kwarg_lst, GLM_CLS=None, ve
             the crossvalidation function should iterate. ('roll' should be
             specified here if desired where 'roll' corresponds to the amount
             of 1D index shifts that should be applied)
+        verbose : int
+            How much information to print during the fititng process
+        score_method : str
+            'mse' for Mean Squared Error-based scoring, 'r2' for R^2 based scoring
     
     Returns: dict of information relevant to the best model identified and overall fit information
     """
@@ -182,12 +193,9 @@ def cv_glm_mult_params(X, y, cv_idx, model_name, glm_kwarg_lst, GLM_CLS=None, ve
         print(glm_kwargs)
 
         model_name = glm_kwargs.pop('model_name', 'Gaussian')
-        # cv_result = cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, GLM_CLS=GLM_CLS, verbose=verbose, resp_list=resp)
-        # resp.append(cv_result)
 
         threads.append(threading.Thread(target=cv_glm_single_params, args=(X, y, cv_idx, model_name, glm_kwargs,),
-                                                                     kwargs={'GLM_CLS': GLM_CLS,
-                                                                             'verbose': verbose,
+                                                                     kwargs={'verbose': verbose,
                                                                              'resp_list': resp,
                                                                              'beta0_':beta0_,
                                                                              'beta_':beta_,

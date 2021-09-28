@@ -177,7 +177,7 @@ def to_profile():
         'l1_ratio': [0.1, 0.5, 0.9],
         # 'l1_ratio': [0.001, 0.1, 0.5, 0.9, 0.999],
         # 'fit_intercept': [True, False]
-        'fit_intercept': [True, False]
+        'fit_intercept': [True]
     }
 
     # Step 2: Create a dictionary for the fixed keyword arguments that do not require iteration...
@@ -188,7 +188,7 @@ def to_profile():
     # hold_out_idx = kfold_cv_idx[0:1]
     # kfold_cv_idx = kfold_cv_idx[1:]
 
-    score_method = 'mse'
+    score_method = 'r2'
 
     # Step 3: Generate iterable list of keyword sets for possible combinations
     glm_kwarg_lst = sglm_cv.generate_mult_params(kwargs_iterations, kwargs_fixed)

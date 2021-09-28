@@ -186,13 +186,13 @@ class GLM():
         kwargs (dict) : Keyword arguments specified to build Base model object
         model (object of Base) : Object of class Base with arguments kwargs for fitting
         intercept_ (float) : Bias term to be fitted in model
-        beta0_ (float) : Another name for intercept_
         coef_ (np.ndarray) : Weights by which predictors in X are multiplied for linear prediction
+        beta0_ (float) : Another name for intercept_
         beta_ (np.ndarray) : Another name for coef_
         pca (object of sklearn.decomposition.PCA) : PCA object for use in PCA pre-procesisng of data
 
     Methods:
-        __init__ : Create the GLM model.
+        __init__ : Create the GLM model
         score : Call underlying score function of model
         pca_fit : Automatically apply PCA to predictors prior to fitting and use inverse transform to
                   identify associated coefficients in the non-PCA space. (Should be a faster fit &
@@ -214,25 +214,30 @@ class GLM():
         Create the GLM model.
 
         JZ 2021
-    
-        model_name : str
-            GLM distribution name to create ('Normal', 'Gaussian', 'Poisson', 'Tweedie', 'Gamma', 'Logistic', or 'Multinomial')
-        beta0_ : int
-            Initialize intercept value for warm-start-based fitting
-        beta_ : np.ndarray
-            Initialize coefficient value for warm-start-based fitting
-        score_method : str
-            'mse' for Mean Squared Error-based scoring, 'r2' for R^2 based scoring
-        power : float
-            Only specify with a 'Tweedie' model_name in order to use fractional powers for Tweedie distribution
-        *args : positional arguments
-            See https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.ElasticNet.html for Normal / Gaussian
-            See https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html for Logistic / Multinomial
-            See https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.TweedieRegressor.html otherwise
-        **kwargs : keyword arguments
-            See https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.ElasticNet.html for Normal / Gaussian
-            See https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html for Logistic / Multinomial
-            See https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.TweedieRegressor.html otherwise
+
+        Args:
+            model_name : str
+                GLM distribution name to create ('Normal', 'Gaussian', 'Poisson', 'Tweedie', 'Gamma', 'Logistic', 'Multinomial',
+                'PCA Normal', or 'PCA Gaussian'). Use 'PCA Normal' or 'PCA Gaussian' to fit a PCA model for Normal / Gaussian warm
+                start bases.
+            beta0_ : int
+                Pre-initialized intercept value for warm-start-based fitting
+            beta_ : np.ndarray
+                Pre-initialized coefficient values for warm-start-based fitting
+            score_method : str
+                'mse' for Mean Squared Error-based scoring, 'r2' for R^2 based scoring
+            power : float
+                Only specify with a 'Tweedie' model_name in order to use fractional powers for Tweedie distribution
+            *args : positional arguments
+                See https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.ElasticNet.html for Normal / Gaussian
+                See https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html for Logistic / Multinomial
+                See https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.TweedieRegressor.html otherwise
+            **kwargs : keyword arguments
+                See https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.ElasticNet.html for Normal / Gaussian
+                See https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html for Logistic / Multinomial
+                See https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.TweedieRegressor.html otherwise
+        
+        Returns: N/A
         """
 
         self.model_name = model_name
@@ -279,7 +284,7 @@ class GLM():
     def neg_mse_score(self, X, y):
         """
         Score function based on the negative of the Mean Squared Error for use in model selection.
-        (i.e. greater values represent a more accurate model)
+        (i.e. greater / less negative values represent a more accurate model)
 
         JZ 2021
 
@@ -297,7 +302,8 @@ class GLM():
 
     def r2_score(self, X, y):
         """
-        Score function for use with out-of-sample R^2 for use in model selection
+        Score function for use with out-of-sample R^2 for use in model selection.
+        (i.e. greater values represent a more accurate model)
 
         JZ 2021
 
@@ -325,7 +331,7 @@ class GLM():
             y : np.ndarray or pd.Series
                 Array of response variables on which to fit the model
         
-        Returns: None
+        Returns: N/A
         """
         if self.model_name in {'Normal', 'Gaussian'}:
             self.model.alpha = 0.1 if 'alpha' not in self.kwargs else self.kwargs['alpha']
@@ -361,8 +367,10 @@ class GLM():
                 Array of predictor variables on which to fit the model
             y : np.ndarray or pd.Series
                 Array of response variables on which to fit the model
+            *args : any
+                Additional arguments to pass into the GLM fit function
         
-        Returns: None
+        Returns: N/A
         """
 
         self.model.fit(X, y, *args)
@@ -383,12 +391,36 @@ class GLM():
         in place in output variables (for use in multi-threading applications).
 
         JZ 2021
-
+    
         Args:
             X : np.ndarray or pd.DataFrame
                 Array of predictor variables on which to fit the model
             y : np.ndarray or pd.Series
                 Array of response variables on which to fit the model
+            X_test : np.ndarray or pd.DataFrame
+                Array of predictor variables on which to evaluate the model
+            y_test : np.ndarray or pd.Series
+                Array of response variables on which to evaluate the model
+            cv_coefs : np.ndarray
+                array for in place setting of fitted coefficients
+            cv_intercepts : np.ndarray
+                array for in place setting of fitted intercepts
+            cv_scores_train : np.ndarray
+                array for in place setting of validation scores on training set
+            cv_scores_test : np.ndarray
+                array for in place setting of validation scores on testing set
+            iter_cv : list(tuple(np.ndarray))
+                List of tuples of validation indices to be used for validation / hyperparameter selection
+            *args : any
+                Additional arguments to pass into the GLM fit function
+            resids : list(np.ndarray)
+                list for in place appending of deltas (resids) between test responses and predictions
+            mean_resids : list(np.ndarray)
+                list for in place appending of deltas (resids) between test responses and mean of test responses
+            id_fit : str
+                Identifier for verbose printing threads
+            verbose : int
+                How much information to print during the fititng process
         
         Returns: N/A
         """
@@ -412,8 +444,8 @@ class GLM():
 
     def get_residuals(self, X: Union[np.ndarray, pd.DataFrame], y: Union[np.ndarray, pd.Series]) -> Tuple[np.ndarray, np.ndarray]:
         """
-        Runs the prediction of the responses and returns the residuals and mean_residuals for
-        downstream calculations of RSS and TSS.
+        Runs the prediction of the responses and returns the residuals and mean_residuals (for
+        downstream calculations of RSS and TSS).
 
         JZ 2021
     
@@ -447,7 +479,8 @@ class GLM():
 
     def log_likelihood(self, prediction: Union[np.ndarray, pd.Series], truth: Union[np.ndarray, pd.Series]) -> float:
         """
-        Calculate the log likelihood of the predictions generated by the model in comparison with the truth (IN PROGRESS)
+        Calculate the log likelihood of the predictions generated by the model in comparison with the truth
+        (IN PROGRESS)
 
         JZ 2021
     
@@ -490,8 +523,10 @@ def calc_R2(residuals: np.ndarray, mean_residuals: np.ndarray) -> float:
     JZ 2021
 
     Args:
-        residuals: Array of all residual values observed during model fitting (e.g. concatenated validaiton residuals)
-        mean_residuals: Array of all deltas between observed values and response means (e.g. concatenated y - np.mean(y) values)
+        residuals : np.ndarray
+            Array of all residual values observed during model fitting (e.g. concatenated validaiton residuals)
+        mean_residuals : np.ndarray
+            Array of all deltas between observed values and response means (e.g. concatenated y - np.mean(y) values)
     
     Returns: R^2 Value
     """

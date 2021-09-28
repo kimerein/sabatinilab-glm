@@ -16,8 +16,7 @@ import sglm_cv
 
 def timeshift_cols_by_signal_length(X, cols_to_shift, neg_order=0, pos_order=1, trial_id='nTrial', dummy_col='nothing', shift_amt_ratio=2.0):
     """
-    Shift the columns of X by a fractional amounts of the minimum non-zero signal length (in order to reduce multicollinearity).
-    neg_order and pos_order . shift_amt_ratio 
+    Shift the columns of X by fractional amounts of the minimum non-zero signal length (in order to reduce multicollinearity).
 
     JZ 2021
 
@@ -33,16 +32,16 @@ def timeshift_cols_by_signal_length(X, cols_to_shift, neg_order=0, pos_order=1, 
             Positive order i.e. number of shifts to perform forwards (i.e. max number of timesteps forwards to be
             shifted regardless of the length of the signal itself)
         trial_id : str
-            Column name identifying in which trial the event is currently occurring
+            Column name that identifies event lengths on a per-trial basis
         dummy_col : str
-            Dummy column to be used for counting the number of entries, which are non-zero in the DataFrame (a new
+            Dummy column name to be used for counting the number of entries, which are non-zero in the DataFrame (a new
             column is created with this name and dropped afterwards if it does not exist at the start)
         shift_amt_ratio : float
             The factor of a signal length to shift forward / backward (as calculated from the min signal length).
             (e.g. if the shortest 'Cue' to which a mouse is exposed is 20 timesteps and we run this function on 'Cue'
             with a shift_amt_ratio of 2, timeshifts will be performed in incraments of 10 timesteps.)
     
-    Returns: Timeshifted DataFrame, List of Timeshift orders used
+    Returns: (Timeshifted DataFrame, List of Timeshift orders used)
     """
 
     X = X.copy()
@@ -105,7 +104,8 @@ def add_timeshifts_by_sl_to_col_list(all_cols, shifted_cols, sft_orders):
 
 def timeshift_cols(X, cols_to_shift, neg_order=0, pos_order=1):
     """
-    Shift the columns of X forward by all timesteups up to pos_order (inclusive) and backward by all timesteps down to neg_roder (inclusive)
+    Shift the columns of X forward by all timesteups up to pos_order (inclusive)
+    and backward by all timesteps down to neg_roder (inclusive)
 
     JZ 2021
     
@@ -115,9 +115,9 @@ def timeshift_cols(X, cols_to_shift, neg_order=0, pos_order=1):
         cols_to_shift : list(str)
             Column names in pandas DataFrame to shift
         neg_order : int
-            Negative order i.e. number of shifts to perform backwards
+            Negative order i.e. number of shifts to perform backwards (should be in range -inf to 0 (incl.))
         pos_order : int
-            Positive order i.e. number of shifts to perform forwards
+            Positive order i.e. number of shifts to perform forwards (should be in range 0 (incl.) to inf)
     
     Returns: New DataFrame with all shifted cols included in output
     """    
@@ -127,7 +127,7 @@ def timeshift_cols(X, cols_to_shift, neg_order=0, pos_order=1):
 
 def add_timeshifts_to_col_list(all_cols, shifted_cols, neg_order=0, pos_order=1):
     """
-    Add a number of timeshifts to the shifted_cols list provided for every column used. 
+    Add a number of timeshifts to the shifted_cols name list provided for every column used. 
 
     JZ 2021
     
@@ -137,9 +137,9 @@ def add_timeshifts_to_col_list(all_cols, shifted_cols, neg_order=0, pos_order=1)
         shifted_cols : list(str)
             The list of columns that have been timeshifted
         neg_order : int
-            Negative order i.e. number of shifts performed backwards
+            Negative order i.e. number of shifts performed backwards (should be in range -inf to 0 (incl.))
         pos_order : int
-            Positive order i.e. number of shifts performed forwards
+            Positive order i.e. number of shifts performed forwards (should be in range 0 (incl.) to inf)
     
     Returns: List of all column names remaining after shifts in question
     """ 
@@ -211,7 +211,7 @@ def cv_idx_by_timeframe(X, y=None, timesteps_per_bucket=20, num_folds=10, test_s
         test_size : float
             Percentage of datapoints to use in each GroupShuffleSplit fold for validation
     
-    Returns: List of tuple of indices to be used for validation / hyperparameter selection
+    Returns: List of tuples of indices to be used for validation / hyperparameter selection
     """
     bucket_ids = sglm_pp.bucket_ids_by_timeframe(X.shape[0], timesteps_per_bucket=timesteps_per_bucket)
     cv_idx = sglm_pp.cv_idx_from_bucket_ids(bucket_ids, X, y=y, num_folds=num_folds, test_size=test_size)
@@ -220,7 +220,8 @@ def cv_idx_by_timeframe(X, y=None, timesteps_per_bucket=20, num_folds=10, test_s
 
 def holdout_split_by_trial_id(X, y=None, id_cols=['nTrial', 'iBlock'], perc_holdout=0.2):
     """
-    Create a True/False pd.Series using Group ID columns to identify the holdout data to be used.
+    Create a True/False pd.Series using Group ID columns to identify the holdout data to
+    be used via GroupShuffleSplit.
 
     JZ 2021
     
@@ -234,7 +235,7 @@ def holdout_split_by_trial_id(X, y=None, id_cols=['nTrial', 'iBlock'], perc_hold
         perc_holdout : int
             Percentage of group identifiers to holdout as test set
     
-    Returns: pd.Series of True values if it should be held out, False if it should be part of validation
+    Returns: pd.Series of True values if it should be heldout, False if it should be part of training/validation
     """
     
     for i, idc in enumerate(id_cols):
@@ -256,7 +257,7 @@ def holdout_split_by_trial_id(X, y=None, id_cols=['nTrial', 'iBlock'], perc_hold
 def cv_idx_by_trial_id(X, y=None, trial_id_columns=[], num_folds=5, test_size=None):
     """
     Generate Cross Validation indices by keeping together trial id columns
-    (bucketing together by trial_id_columns).
+    (bucketing together by trial_id_columns) via GroupShuffleSplit.
 
     JZ 2021
     
@@ -303,10 +304,10 @@ def simple_cv_fit(X, y, cv_idx, glm_kwarg_lst, model_type='Normal', verbose=0, s
         y : pd.Series
             Response Series to fit
         cv_idx : list(tuple(tuple(int)))
-            List of list of indices to use for k-fold Cross Validation
-            - k-folds list [ ( training tuple(indices), testing tuple(indices) ) ]
+            List of list of indices to use for fold Cross Validation —
+            k-folds list [ ( training tuple(indices), testing tuple(indices) ) ]
         glm_kwarg_lst : list(dict)
-            List of dictionaries of keyword arguments to try for Cross Validation parameter search
+            List of dictionaries of keyword arguments to try for validation parameter search
         model_type : str
             Keyword arguments to be passed to GLM model
         verbose ; int
@@ -314,7 +315,7 @@ def simple_cv_fit(X, y, cv_idx, glm_kwarg_lst, model_type='Normal', verbose=0, s
         score_method : str
             Either 'mse' or 'r2' to base cross-validation selection on Mean Squared Error or R^2
 
-    Returns: From the model with the best (largest) score value the...
+    Returns: From the model with the best (largest) score value, return the...
              Best Score Value, Best Score Standard Deviation, Best Params, Best Model
     """
     # Step 4: Fit GLM models for all possible sets of values

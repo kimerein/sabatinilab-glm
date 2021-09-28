@@ -216,6 +216,17 @@ def get_column_nums(df, column_names=[]): #
 
 
 def bucket_ids_by_timeframe(total_timesteps, timesteps_per_bucket=20):
+    """
+    Create a numpy array of ids to associate each timestep with its nearest timesteps_per_bucket timesteps.
+    
+    Args:
+        total_timesteps : int
+            Number of timesteps in the overall dataset
+        timesteps_per_bucket : int
+            Number of timesteps that should fall within each time bucket
+
+    Returns: numpy array of bucket ids of length 'total_timesteps'
+    """
     # Step 1: Create time buckets of 1000 entries each (actual value will vary based on
     # sampling rate and amount of time desired for bucketing)
     num_buckets = total_timesteps // timesteps_per_bucket
@@ -224,9 +235,20 @@ def bucket_ids_by_timeframe(total_timesteps, timesteps_per_bucket=20):
 
 def cv_idx_from_bucket_ids(bucket_ids, X, y=None, num_folds=None, test_size=None):
     '''
+    Generate a GroupShuffleSplit on the provided bucket ids. (i.e. create a list of
+    splits to use in different stages of cross-validation).
 
-    test_size : float
-        Percentage of datapoints to use in each GroupShuffleSplit fold for validation
+    Args:
+        bucket_ids : np.ndarray
+            Array of grouping ids to use in generating the GroupShuffleSplit
+        X : pd.DataFrame
+            Prediction DataFrame from which to bucket
+        y : pd.Series
+            Response Series
+        num_folds : int
+            Number of Cross Validation segmentations that should be used for GroupShuffleSplit fold Cross Validation
+        test_size : float
+            Percentage of datapoints to use in each GroupShuffleSplit fold for validation (Defaults to 1/num_folds if None)
     '''
     # Step 2: Create index sets for each of the K-folds based on prior groupings
     if num_folds is None:
