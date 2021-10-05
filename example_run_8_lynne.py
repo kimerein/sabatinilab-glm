@@ -22,9 +22,11 @@ def to_profile():
 
     start = time.time()
     print(dir_path)
-    df = pd.read_csv(f'{dir_path}/../lynne-data-zs2.csv')
+    df = pd.read_csv(f'{dir_path}/../dlight_only_WT35_12212020.csv')
+    # df = pd.read_csv(f'{dir_path}/../dlight_only_WT36_12212020.csv')
     df = df[[_ for _ in df.columns if 'Unnamed' not in _]]
 
+    print(df.columns)
 
 
     df = df.rename({'center port occupancy': 'cpo',
@@ -44,8 +46,8 @@ def to_profile():
                     'no reward': 'nr',
                     'reward': 'r',
 
-                    'zscored green (Ach3.0)': 'gdFF',
-                    'zscored red (rGRAB-DA)': 'rdFF'}, axis=1)
+                    'dF/F green (dLight1.1)': 'gdFF',
+                    'zscored green (dLight1.1)': 'zsgdFF'}, axis=1)
     
     df['event_col_a'] = ((df['cpo'].diff() > 0)*1).replace(0, np.nan) * 1.0
     df['event_col_b'] = df['nr'].replace(0, np.nan) * 2.0
@@ -56,9 +58,13 @@ def to_profile():
     df = df.drop(['event_col_a', 'event_col_b', 'event_col_c'], axis=1)
 
     df['event_col'] = df['event_col'].bfill()
-    df['trial_start_flag'] = (df['event_col'] == 1.0)&(df['event_col'].shift(-1) != df['event_col']) * 1.0
     
-    df['nTrial'] = df['trial_start_flag'].cumsum().shift(-10).ffill()
+    df['trial_start_flag'] = ((df['event_col'] == 1.0)&(df['event_col'].shift(-1) != df['event_col']) * 1.0).shift(-10) * 1.0
+    df['trial_end_flag'] = ((df['event_col'] != 1.0)&(df['event_col'].shift(-1) == 1.0)&(df['event_col'].shift(-1) != df['event_col']) * 1.0).shift(10) * 1.0
+    df['nTrial'] = df['trial_start_flag'].cumsum()
+    df['nEndTrial'] = df['trial_end_flag'].cumsum()
+
+    wi_trial_keep = (df['nTrial'] != df['nEndTrial'])
 
     if 'index' in df.columns:
         df = df.drop('index', axis=1)
@@ -81,14 +87,14 @@ def to_profile():
        'nr', 'r'
     ]
 
-    y_col = 'gdFF'
+    y_col = 'zsgdFF'
 
     dfrel = df[X_cols + [y_col]].copy()
     dfrel = dfrel.replace('False', 0).astype(float)
     dfrel = dfrel*1
     
-    neg_order = -20
-    pos_order = 20
+    neg_order = -40
+    pos_order = 40
 
     dfrel = sglm_ez.timeshift_cols(dfrel, X_cols[1:], neg_order=neg_order, pos_order=pos_order)
     X_cols_sftd = sglm_ez.add_timeshifts_to_col_list(X_cols, X_cols[1:], neg_order=neg_order, pos_order=pos_order)
@@ -97,6 +103,17 @@ def to_profile():
 
     X_setup = dfrel[X_cols_sftd].copy()
     y_setup = dfrel[y_col].copy()
+
+
+
+
+
+    X_setup = X_setup[wi_trial_keep]
+    y_setup = y_setup[wi_trial_keep]
+
+
+
+
 
     X_setup.head()
 

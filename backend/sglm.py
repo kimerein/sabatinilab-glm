@@ -1,7 +1,7 @@
 from sklearn.base import BaseEstimator, RegressorMixin
 from sklearn.linear_model import ElasticNet, TweedieRegressor, LogisticRegression, PoissonRegressor, LinearRegression
 import sklearn.metrics
-import pyglmnet
+# import pyglmnet
 import scipy.stats
 import numpy as np
 import pandas as pd
