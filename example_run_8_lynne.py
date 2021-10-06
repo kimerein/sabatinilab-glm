@@ -55,14 +55,25 @@ def to_profile():
 
     df['event_col'] = df['event_col_a'].combine_first(df['event_col_b']).combine_first(df['event_col_c'])
 
-    df = df.drop(['event_col_a', 'event_col_b', 'event_col_c'], axis=1)
 
     df['event_col'] = df['event_col'].bfill()
     
-    df['trial_start_flag'] = ((df['event_col'] == 1.0)&(df['event_col'].shift(-1) != df['event_col']) * 1.0).shift(-10) * 1.0
-    df['trial_end_flag'] = ((df['event_col'] != 1.0)&(df['event_col'].shift(-1) == 1.0)&(df['event_col'].shift(-1) != df['event_col']) * 1.0).shift(10) * 1.0
+    df['trial_start_flag'] = ((df['event_col'] == 1.0)&(df['event_col'].shift(-1) != df['event_col']) * 1.0).shift(-5) * 1.0
     df['nTrial'] = df['trial_start_flag'].cumsum()
+
+
+
+    # df['trial_end_flag'] = ((df['event_col'] != 1.0)&(df['event_col'].shift(-1) == 1.0)&(df['event_col'].shift(-1) != df['event_col']) * 1.0).shift(10) * 1.0
+    # df['nEndTrial'] = df['trial_end_flag'].cumsum()
+
+    df['event_col_d'] = ((df['lpx'] > 0)*1.0).replace(0, np.nan) * 1.0
+    df['event_col_e'] = ((df['rpx'] > 0)*1.0).replace(0, np.nan) * 1.0
+    df['event_col_end'] = df['event_col_d'].combine_first(df['event_col_e']).combine_first(df['event_col_b']).combine_first(df['event_col_c']).ffill()
+    df['trial_end_flag'] = ((df['event_col_end'] == 1.0)&(df['event_col_end'].shift(1) != 1.0)&(df['event_col_end'].shift(1) != df['event_col_end'])&(df['nTrial'] > 0) * 1.0).shift(5) * 1.0
     df['nEndTrial'] = df['trial_end_flag'].cumsum()
+
+    df = df.drop(['event_col_a', 'event_col_b', 'event_col_c', 'event_col_d', 'event_col_e'], axis=1)
+
 
     wi_trial_keep = (df['nTrial'] != df['nEndTrial'])
 
@@ -75,7 +86,7 @@ def to_profile():
     X_cols = [
        'nTrial',
     #    'index',
-
+       
        #'cpo',
        'cpn', 'cpx',
        #'lpo',
