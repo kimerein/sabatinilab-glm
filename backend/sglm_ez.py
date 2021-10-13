@@ -365,10 +365,61 @@ def reconstruct_signal(glm, X, y_true=-1):
 
 
 
+def get_coef_name_sets(coef_names, sftd_coef_names):    
+    coef_cols = {}
+
+    for coef_name in coef_names:
+        if coef_name in ['nTrial', 'nEndTrial']:
+            continue
+        lst = [_ for _ in sftd_coef_names if coef_name in _.split('_')]
+        lst = [_ if _ != coef_name else coef_name+'_0' for _ in lst]
+        lst = sorted(lst, key=lambda x: int(x.split('_')[-1]))
+        # lst = [_.replace('_0', '') for _ in lst]
+        coef_cols[coef_name] = lst
+    return coef_cols
+
+def get_single_coef_set(names, lookup):
+    return [int(_.split('_')[-1]) for _ in names], [lookup[_.replace('_0', '')] for _ in names]
+
+def plot_single_coef_set(name, timeshifts, coefs, ax=None, y_lims=None):
+    ax.plot(timeshifts, coefs)
+
+    ax.set_ylim(y_lims)
+
+    ax.set_title(name)
+    ax.set_xlabel('Timeshifts', fontsize=15)
+    ax.set_ylabel('Coefficient Value', fontsize=15)
+    ax.grid()
+    return
+
+def plot_all_beta_coefs(glm, coef_names, sftd_coef_names, plot_width=4, y_lims=None, filename='', plot_name=''):
+    if y_lims is None:
+        y_lims = (glm.coef_.min(), glm.coef_.max())
+    print(y_lims)
+
+    coef_lookup = {sftd_coef_names[i]:glm.coef_[i] for i in range(len(sftd_coef_names))}
+    coef_cols = get_coef_name_sets(coef_names, sftd_coef_names)
+    
+    fig, axs = plt.subplots(len(coef_cols)//plot_width + (len(coef_cols)%plot_width > 0)*1, plot_width)
+    fig.set_figheight(20)
+    fig.set_figwidth(20)
+
+    addl_plot_name = ' — ' + plot_name if plot_name else ''
+    fig.suptitle(f'Feature Coefficients by Timeshift{addl_plot_name}', fontsize=20)
+
+    for icn, coef_name in enumerate(coef_cols):
+        print(icn)
+        timeshifts, coefs = get_single_coef_set(coef_cols[coef_name], coef_lookup)
+        plot_single_coef_set(coef_name, timeshifts, coefs, axs[icn//plot_width, icn%plot_width], y_lims)
+    fig.tight_layout()
+
+    if filename:
+        fig.savefig(filename)
+
+    return
 
 
-
-
+# sglm_ez.plot_all_beta_coefs(glm, X_cols, X_cols_sftd, plot_width=2)
 
 
 

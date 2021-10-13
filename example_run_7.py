@@ -151,4 +151,5 @@ def to_profile():
     holdout_score = glm.r2_score(X_holdout[X_setup.columns], y_holdout)
     print(f'Holdout Score: {holdout_score}')
 
+
 to_profile()

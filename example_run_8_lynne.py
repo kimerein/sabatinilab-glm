@@ -22,8 +22,14 @@ def to_profile():
 
     start = time.time()
     print(dir_path)
-    df = pd.read_csv(f'{dir_path}/../dlight_only_WT35_12212020.csv')
-    # df = pd.read_csv(f'{dir_path}/../dlight_only_WT36_12212020.csv')
+
+    # filename = 'dlight_only_WT35_12212020.csv'
+    filename = 'dlight_only_WT36_12212020.csv'
+    # filename = 'Ach_only_WT53L_09032021xlsx.csv'
+    # filename = 'Ach_only_WT60R_10042021xlsx.csv'
+
+    df = pd.read_csv(f'{dir_path}/../{filename}')
+    
     df = df[[_ for _ in df.columns if 'Unnamed' not in _]]
 
     print(df.columns)
@@ -46,8 +52,13 @@ def to_profile():
                     'no reward': 'nr',
                     'reward': 'r',
 
+
+                    'dF/F green (Ach3.0)': 'gdFF',
+                    'zscored green (Ach3.0)': 'zsgdFF',
+
                     'dF/F green (dLight1.1)': 'gdFF',
-                    'zscored green (dLight1.1)': 'zsgdFF'}, axis=1)
+                    'zscored green (dLight1.1)': 'zsgdFF'
+                    }, axis=1)
     
     df['event_col_a'] = ((df['cpo'].diff() > 0)*1).replace(0, np.nan) * 1.0
     df['event_col_b'] = df['nr'].replace(0, np.nan) * 2.0
@@ -95,15 +106,14 @@ def to_profile():
        'nTrial',
     #    'index',
        
-       #'cpo',
        'cpn', 'cpx',
+       'lpn', 'rpn',
+       'lpx', 'rpx',
+       'll', 'rl',
+       'nr', 'r',
+       #'cpo',
        #'lpo',
-       'lpn', 'lpx',
-       'll',
        #'rpo',
-       'rpn', 'rpx',
-       'rl',
-       'nr', 'r'
     ]
 
     y_col = 'zsgdFF'
@@ -112,8 +122,8 @@ def to_profile():
     dfrel = dfrel.replace('False', 0).astype(float)
     dfrel = dfrel*1
     
-    neg_order = -40
-    pos_order = 40
+    neg_order = -30
+    pos_order = 30
 
     dfrel = sglm_ez.timeshift_cols(dfrel, X_cols[1:], neg_order=neg_order, pos_order=pos_order)
     X_cols_sftd = sglm_ez.add_timeshifts_to_col_list(X_cols, X_cols[1:], neg_order=neg_order, pos_order=pos_order)
@@ -157,14 +167,15 @@ def to_profile():
 
     # Step 1: Create a dictionary of lists for these relevant keywords...
     kwargs_iterations = {
-        'alpha': reversed([0.0001, 0.001, 0.01, 0.1, 1.0, 10.0]),
-        'l1_ratio': [0.0001, 0.001, 0.01, 0.1, 0.5, 0.9, 0.99],
-        'fit_intercept': [True]
+        # 'alpha': reversed([0.0001, 0.001, 0.01, 0.1, 1.0, 10.0]),
+        'alpha': [0.001, 0.01, 0.1, 1.0, 10.0],
+        'l1_ratio': [0.0001, 0.001, 0.01, 0.1, 0.5, 0.9, 0.99]
     }
 
     # Step 2: Create a dictionary for the fixed keyword arguments that do not require iteration...
     kwargs_fixed = {
-        'max_iter': 1000
+        'max_iter': 1000,
+        'fit_intercept': True
     }
 
     score_method = 'r2'
@@ -197,5 +208,18 @@ def to_profile():
     holdout_score = glm.r2_score(X_holdout[X_setup.columns], y_holdout)
 
     print(f'Holdout Score: {holdout_score}')
+
+    X_cols_plot = [_ for _ in X_cols if _ in X_setup.columns]
+    X_cols_sftd_plot = [_ for _ in X_cols_sftd if _ in X_setup.columns]
+
+    fn = filename.split(".")[0]
+
+    sglm_ez.plot_all_beta_coefs(glm, X_cols_plot,
+                                     X_cols_sftd_plot,
+                                     plot_width=2,
+                                     y_lims=(-1.0, 1.0),
+                                     filename=f'{fn}_coeffs.png',
+                                     plot_name=f'{fn} — {best_params}'
+                                     )
 
 to_profile()
