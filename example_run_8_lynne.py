@@ -30,6 +30,11 @@ def to_profile():
 
 
 
+    # Try dropping lick time shifts (or only forward a little bit)
+    # Get rid of left / right port exits
+
+
+
 
 
 
@@ -43,16 +48,21 @@ def to_profile():
     # filename = 'Ach_only_WT53L_09032021xlsx.csv'
     # filename = 'Ach_only_WT53L_09062021xlsx.csv'
 
-    files_list = [
-        'dlight_only_WT36L_12172020.csv',
-        'dlight_only_WT36L_12212020.csv',
-        'dlight_only_WT36L_12242020.csv',
-        'dlight_only_WT36L_12292020.csv',
+    # files_list = [
+    #     'dlight_only_WT36L_12172020.csv',
+    #     'dlight_only_WT36L_12212020.csv',
+    #     'dlight_only_WT36L_12242020.csv',
+    #     'dlight_only_WT36L_12292020.csv',
 
-        'Ach_only_WT53L_08262021xlsx.csv',
-        'Ach_only_WT53L_09012021xlsx.csv',
-        'Ach_only_WT53L_09032021xlsx.csv',
-        'Ach_only_WT53L_09062021xlsx.csv',
+    #     'Ach_only_WT53L_08262021xlsx.csv',
+    #     'Ach_only_WT53L_09012021xlsx.csv',
+    #     'Ach_only_WT53L_09032021xlsx.csv',
+    #     'Ach_only_WT53L_09062021xlsx.csv',
+    # ]
+
+    files_list = [
+        'dlight_only_WT36L_12242020.csv',
+        'Ach_only_WT53L_09062021xlsx.csv'
     ]
 
     for filename in files_list:
@@ -160,7 +170,7 @@ def to_profile():
         'lpn', 'rpn',
         # 'lpnr', 'rpnr',
         # 'lpnnr', 'rpnnr',
-           'lpx', 'rpx',
+        'lpx', 'rpx',
         # 'lpxr', 'rpxr',
         # 'lpxnr', 'rpxnr',
         'll', 'rl',
@@ -176,8 +186,8 @@ def to_profile():
         dfrel = dfrel.replace('False', 0).astype(float)
         dfrel = dfrel*1
         
-        neg_order = -30
-        pos_order = 30
+        neg_order = -20
+        pos_order = 20
 
         dfrel = sglm_ez.timeshift_cols(dfrel, X_cols[1:], neg_order=neg_order, pos_order=pos_order)
         X_cols_sftd = sglm_ez.add_timeshifts_to_col_list(X_cols, X_cols[1:], neg_order=neg_order, pos_order=pos_order)
@@ -222,8 +232,8 @@ def to_profile():
         # Step 1: Create a dictionary of lists for these relevant keywords...
         kwargs_iterations = {
             # 'alpha': reversed([0.0001, 0.001, 0.01, 0.1, 1.0, 10.0]),
-            'alpha': [0.001, 0.01, 0.1, 1.0, 10.0],
-            'l1_ratio': [0.0001, 0.001, 0.01, 0.1, 0.5, 0.9, 0.99]
+            'alpha': [1.0],
+            'l1_ratio': [1.0]
         }
 
         # Step 2: Create a dictionary for the fixed keyword arguments that do not require iteration...
@@ -271,7 +281,7 @@ def to_profile():
         sglm_ez.plot_all_beta_coefs(glm, X_cols_plot,
                                         X_cols_sftd_plot,
                                         plot_width=2,
-                                        y_lims=(-1.5, 1.5),
+                                        y_lims=(-2.0, 2.0),
                                         # filename=f'{fn}_coeffs.png',
                                         filename=f'{fn}_coeffs_R2_{np.round(holdout_score, 4)}.png',
                                         plot_name=f'{fn} — {best_params}'

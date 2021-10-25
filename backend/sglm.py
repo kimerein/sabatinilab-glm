@@ -1,5 +1,5 @@
 from sklearn.base import BaseEstimator, RegressorMixin
-from sklearn.linear_model import ElasticNet, TweedieRegressor, LogisticRegression, PoissonRegressor, LinearRegression
+from sklearn.linear_model import ElasticNet, TweedieRegressor, LogisticRegression, PoissonRegressor, LinearRegression, Ridge, Lasso
 import sklearn.metrics
 # import pyglmnet
 import scipy.stats
@@ -85,9 +85,24 @@ class GLM():
         Returns: N/A
         """
 
+            
+
         self.model_name = model_name
         if model_name in {'Normal', 'Gaussian'}:
-            Base = ElasticNet
+            if 'alpha' in kwargs and kwargs['alpha'] == 0:
+                kwargs.pop('alpha')
+                kwargs.pop('l1_ratio')
+                kwargs.pop('max_iter')
+                Base = LinearRegression
+            elif 'l1_ratio' in kwargs and kwargs['l1_ratio'] == 0:
+                del kwargs['l1_ratio']
+                Base = Ridge
+            elif 'l1_ratio' in kwargs and kwargs['l1_ratio'] == 1:
+                del kwargs['l1_ratio']
+                Base = Lasso
+            else:
+                Base = ElasticNet
+            
         elif model_name in {'Poisson', 'Gamma'}:
             power = self.tweedie_lookup[model_name]
             kwargs['power'] = power

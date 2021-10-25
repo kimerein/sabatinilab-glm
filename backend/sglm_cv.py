@@ -228,6 +228,7 @@ def cv_glm_mult_params(X, y, cv_idx, model_name, glm_kwarg_lst, verbose=0, score
             best_params = cv_result['glm_kwargs']
             best_model = cv_result['model']
     
+    # print(score_method, cv_result['cv_R2_score'], best_score)
 
     final_results = {
         'best_score': best_score,
