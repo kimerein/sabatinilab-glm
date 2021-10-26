@@ -61,9 +61,12 @@ def to_profile():
     # ]
 
     files_list = [
-        'dlight_only_WT36L_12242020.csv',
+        'dlight_only_WT35_12212020.csv',
+        # 'dlight_only_WT36L_12242020.csv',
         'Ach_only_WT53L_09062021xlsx.csv'
     ]
+
+    res = {}
 
     for filename in files_list:
 
@@ -186,8 +189,8 @@ def to_profile():
         dfrel = dfrel.replace('False', 0).astype(float)
         dfrel = dfrel*1
         
-        neg_order = -20
-        pos_order = 20
+        neg_order = -10
+        pos_order = 10
 
         dfrel = sglm_ez.timeshift_cols(dfrel, X_cols[1:], neg_order=neg_order, pos_order=pos_order)
         X_cols_sftd = sglm_ez.add_timeshifts_to_col_list(X_cols, X_cols[1:], neg_order=neg_order, pos_order=pos_order)
@@ -232,8 +235,11 @@ def to_profile():
         # Step 1: Create a dictionary of lists for these relevant keywords...
         kwargs_iterations = {
             # 'alpha': reversed([0.0001, 0.001, 0.01, 0.1, 1.0, 10.0]),
-            'alpha': [1.0],
-            'l1_ratio': [1.0]
+            'alpha': [0.0, 0.001, 0.01, 0.1, 1.0],
+            'l1_ratio': [0.0, 0.01, 0.1, 0.5, 0.9, 0.99, 1.0]
+
+            # 'alpha': [0.1],
+            # 'l1_ratio': [0.1]
         }
 
         # Step 2: Create a dictionary for the fixed keyword arguments that do not require iteration...
@@ -246,7 +252,7 @@ def to_profile():
 
         # Step 3: Generate iterable list of keyword sets for possible combinations
         glm_kwarg_lst = sglm_cv.generate_mult_params(kwargs_iterations, kwargs_fixed)
-        best_score, best_score_std, best_params, best_model = sglm_ez.simple_cv_fit(X_setup, y_setup, kfold_cv_idx, glm_kwarg_lst, model_type='Normal', verbose=2, score_method=score_method)
+        best_score, best_score_std, best_params, best_model, cv_results = sglm_ez.simple_cv_fit(X_setup, y_setup, kfold_cv_idx, glm_kwarg_lst, model_type='Normal', verbose=2, score_method=score_method)
 
         print()
         print('---')
@@ -266,10 +272,19 @@ def to_profile():
 
         print(f'Overall RunTime: {time.time() - start}')
 
+        
         print()
 
         glm = sglm_ez.fit_GLM(X_setup, y_setup, **best_params)
         holdout_score = glm.r2_score(X_holdout[X_setup.columns], y_holdout)
+        holdout_neg_mse_score = glm.neg_mse_score(X_holdout[X_setup.columns], y_holdout),
+
+        res[filename] = {'holdout_score':holdout_score,
+                        'holdout_neg_mse_score':holdout_neg_mse_score,
+                        'best_score':best_score,
+                        'best_params':best_params,
+                        'all_models':sorted([(_['cv_R2_score'], _['glm_kwargs']) for _ in cv_results['full_cv_results']], key=lambda x: -x[0])
+                        }
 
         print(f'Holdout Score: {holdout_score}')
 
@@ -286,5 +301,18 @@ def to_profile():
                                         filename=f'{fn}_coeffs_R2_{np.round(holdout_score, 4)}.png',
                                         plot_name=f'{fn} — {best_params}'
                                         )
+    print(f'Final Results:')
+    for k in res:
+        print(f'> {k}')
+        for k_ in res[k]:
+            if type(res[k][k_]) != list:
+                print(f'>> {k_}: {res[k][k_]}')
+            else:
+                lst_str_setup = f'>> {k_}: ['
+                lss_spc = ' '*(len(lst_str_setup)-1)
+                print(lst_str_setup)
+                for v_ in res[k][k_]:
+                    print(f'{lss_spc} R^2: {np.round(v_[0], 5)} — {v_[1]}')
+                print(lss_spc + ']')
 
 to_profile()

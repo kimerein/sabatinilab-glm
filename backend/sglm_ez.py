@@ -328,7 +328,7 @@ def simple_cv_fit(X, y, cv_idx, glm_kwarg_lst, model_type='Normal', verbose=0, s
     best_score_std = cv_results['best_score_std']
     best_params = cv_results['best_params']
     best_model = cv_results['best_model']
-    return best_score, best_score_std, best_params, best_model
+    return best_score, best_score_std, best_params, best_model, cv_results
 
 
 
@@ -344,7 +344,7 @@ def reconstruct_signal(glm, X, y_true=-1):
         y : np.ndarray or pd.DataFrame
             True signal for comparison
 
-    Returns; N/A
+    Returns: Tuple[y_true, y_hat]
     """
     import seaborn as sns
     sns.set(style='white', palette='colorblind', context='poster')
@@ -361,7 +361,7 @@ def reconstruct_signal(glm, X, y_true=-1):
     plt.ylabel(f'{"True vs. " if type(y_true) != int else ""}Prediction Reconstructed Signals')
     plt.legend()
 
-    return
+    return y_true, pred
 
 
 
@@ -381,18 +381,26 @@ def get_coef_name_sets(coef_names, sftd_coef_names):
 def get_single_coef_set(names, lookup):
     return [int(_.split('_')[-1]) for _ in names], [lookup[_.replace('_0', '')] for _ in names]
 
-def plot_single_coef_set(name, timeshifts, coefs, ax=None, y_lims=None):
-    ax.plot(timeshifts, coefs)
+def plot_single_coef_set(name, timeshifts, coefs, ax=None, y_lims=None, binsize=None):
+    # Binsize in Milliseconds
+    x_vals = np.array(timeshifts)
+    x_label = 'Timeshifts'
+
+    if binsize is not None:
+        x_vals *= binsize
+        x_label += ' (ms)'
+
+    ax.plot(x_vals, coefs)
 
     ax.set_ylim(y_lims)
-
     ax.set_title(name)
-    ax.set_xlabel('Timeshifts', fontsize=15)
+
+    ax.set_xlabel(x_label, fontsize=15)
     ax.set_ylabel('Coefficient Value', fontsize=15)
     ax.grid()
     return
 
-def plot_all_beta_coefs(glm, coef_names, sftd_coef_names, plot_width=4, y_lims=None, filename='', plot_name=''):
+def plot_all_beta_coefs(glm, coef_names, sftd_coef_names, plot_width=4, y_lims=None, filename='', plot_name='', binsize=None):
     if y_lims is None:
         y_lims = (glm.coef_.min(), glm.coef_.max())
     print(y_lims)
@@ -410,7 +418,7 @@ def plot_all_beta_coefs(glm, coef_names, sftd_coef_names, plot_width=4, y_lims=N
     for icn, coef_name in enumerate(coef_cols):
         print(icn)
         timeshifts, coefs = get_single_coef_set(coef_cols[coef_name], coef_lookup)
-        plot_single_coef_set(coef_name, timeshifts, coefs, axs[icn//plot_width, icn%plot_width], y_lims)
+        plot_single_coef_set(coef_name, timeshifts, coefs, axs[icn//plot_width, icn%plot_width], y_lims, binsize=binsize)
     fig.tight_layout()
 
     if filename:
@@ -418,6 +426,13 @@ def plot_all_beta_coefs(glm, coef_names, sftd_coef_names, plot_width=4, y_lims=N
 
     return
 
+
+
+
+
+def plot_avg_reconstruction():
+    
+    return
 
 # sglm_ez.plot_all_beta_coefs(glm, X_cols, X_cols_sftd, plot_width=2)
 
