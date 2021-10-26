@@ -426,7 +426,160 @@ def plot_all_beta_coefs(glm, coef_names, sftd_coef_names, plot_width=4, y_lims=N
 
     return
 
+def get_trial_timestamp(df, trial_id_col='nTrial'):
+    dummy_col_name = '1'
+    timestamp_name = 'tim'
 
+    df_tmp = df.copy()
+    df_tmp[dummy_col_name] = 1
+    df_tmp[timestamp_name] = df_tmp.groupby(trial_id_col)[dummy_col_name].cumsum()
+    return df_tmp[timestamp_name]
+
+def get_first_timestamp_abv_threshold(df, thresh_col, trial_id_col='nTrial', threshold=0.0):
+    tmp = df.copy()
+    tmp['above_flag'] = (tmp[thresh_col] > threshold)*1.0
+    above_loc = tmp.groupby('nTrial')['above_flag'].transform(lambda x: x.argmax()).astype(int)
+    return above_loc
+
+# # def 
+
+# tmp = dfrel[holdout].copy()
+# tmp['tim'] = get_trial_timestamp(tmp, (tmp['nTrial'] != tmp['nEndTrial']), trial_id_col='nTrial')
+
+# # tmp = dfrel[holdout]
+# # tmp = tmp[(tmp['nTrial'] != tmp['nEndTrial'])].copy()
+# # tmp['1'] = 1
+# # tmp['tim'] = tmp.groupby('nTrial')['1'].cumsum()
+# tmp['pred'] = glm.predict(tmp[X_cols_sftd])
+
+# entry_timing_r = tmp.groupby('nTrial')['rpn'].agg(lambda x: (x).argmax()).astype(int)
+# entry_timing_l = tmp.groupby('nTrial')['lpn'].agg(lambda x: (x).argmax()).astype(int)
+# entry_timing = (entry_timing_r > entry_timing_l)*entry_timing_r + (entry_timing_r < entry_timing_l)*entry_timing_l
+
+# adjusted_time = (tmp.set_index('nTrial')['tim'] - entry_timing)
+# adjusted_time.index = tmp.index
+# tmp['adjusted_time'] = adjusted_time
+
+# def get_is_trial(X, gb_name=['nTrial'], col_names=['r']):
+#     for icol, col in enumerate(col_names):
+#         if icol == 0:
+#             check_list = (X.groupby(gb_name)[col].transform(np.max) == 1)
+#         else:
+#             check_list = check_list&(X.groupby(gb_name)[col].transform(np.max) == 1)
+#     return check_list
+
+# def get_sem(df, filt, gb, col, mult=1.96):
+#     interim = df[filt].groupby(gb)[col].agg([np.mean, np.std, np.size])
+#     interim['sem'] = interim['std'] / np.sqrt(interim['size'])
+#     interim['ub'] = interim['mean'] + 1.96*interim['sem']
+#     interim['lb'] = interim['mean'] - 1.96*interim['sem']
+#     return interim[['lb', 'mean', 'ub', 'sem', 'size', 'std']]
+
+# tmp_backup = tmp
+
+# binsize = 50
+
+# min_time = -20
+# max_time = 30
+# min_signal = -3.0
+# max_signal = 3.0
+
+# x_label = 'Timesteps __ from Event'
+# y_label = 'Response'
+
+# if binsize is not None:
+#     min_time *= binsize
+#     max_time *= binsize
+#     x_label = x_label.replace(' __', ' (ms)')
+#     tmp_backup['plot_time'] = tmp_backup['adjusted_time'] * binsize
+# else:
+#     x_label = x_label.replace(' __', '')
+#     tmp_backup['plot_time'] = tmp_backup['adjusted_time']
+
+
+
+# tmp = tmp_backup[tmp_backup['plot_time'].between(min_time, max_time)].copy()
+
+
+
+# fig, ax = plt.subplots(2,2)
+# fig.suptitle('Average Photometry Response Aligned to Side Port Entry — Holdout Data Only')
+# fig.set_figheight(20)
+# fig.set_figwidth(40)
+
+# tmp['is_rlpn_trial'] = get_is_trial(tmp, ['nTrial'], ['r', 'lpn'])
+# tmp['is_rrpn_trial'] = get_is_trial(tmp, ['nTrial'], ['r', 'rpn'])
+# tmp['is_nrlpn_trial'] = get_is_trial(tmp, ['nTrial'], ['nr', 'lpn'])
+# tmp['is_nrrpn_trial'] = get_is_trial(tmp, ['nTrial'], ['nr', 'rpn'])
+
+# ci_setup = get_sem(tmp, tmp['is_rlpn_trial'], 'plot_time', 'zsgdFF')
+# ax[0,0].plot(ci_setup['mean'], color='b')
+# ax[0,0].fill_between(ci_setup.index, ci_setup['lb'], ci_setup['ub'], color='b', alpha=.2)
+
+# ci_setup = get_sem(tmp, tmp['is_rlpn_trial'], 'plot_time', 'pred')
+# ax[0,0].plot(ci_setup['mean'], color='r')
+
+
+# ax[0,0].set_xlim((min_time, max_time))
+# ax[0,0].set_ylim((min_signal, max_signal))
+# ax[0,0].title.set_text('Rewarded, Left Port Entry')
+# ax[0,0].set_xlabel(x_label)
+# ax[0,0].set_ylabel(y_label)
+# ax[0,0].grid()
+
+# ci_setup = get_sem(tmp, tmp['is_rrpn_trial'], 'plot_time', 'zsgdFF')
+# ax[0,1].plot(ci_setup['mean'])
+# ax[0,1].fill_between(ci_setup.index, ci_setup['lb'], ci_setup['ub'], color='b', alpha=.2)
+
+# ci_setup = get_sem(tmp, tmp['is_rrpn_trial'], 'plot_time', 'pred')
+# ax[0,1].plot(ci_setup['mean'], color='r')
+
+
+
+# ax[0,1].set_xlim((min_time, max_time))
+# ax[0,1].set_ylim((min_signal, max_signal))
+# ax[0,1].title.set_text('Rewarded, Right Port Entry')
+# ax[0,1].set_xlabel(x_label)
+# ax[0,1].set_ylabel(y_label)
+# ax[0,1].grid()
+
+# ci_setup = get_sem(tmp, tmp['is_nrlpn_trial'], 'plot_time', 'zsgdFF')
+# ax[1,0].plot(ci_setup['mean'])
+# ax[1,0].fill_between(ci_setup.index, ci_setup['lb'], ci_setup['ub'], color='b', alpha=.2)
+
+# ci_setup = get_sem(tmp, tmp['is_nrlpn_trial'], 'plot_time', 'pred')
+# ax[1,0].plot(ci_setup['mean'], color='r')
+
+
+
+# ax[1,0].set_xlim((min_time, max_time))
+# ax[1,0].set_ylim((min_signal, max_signal))
+# ax[1,0].title.set_text('Unrewarded, Left Port Entry')
+# ax[1,0].set_xlabel(x_label)
+# ax[1,0].set_ylabel(y_label)
+# ax[1,0].grid()
+
+# ci_setup = get_sem(tmp, tmp['is_nrrpn_trial'], 'plot_time', 'zsgdFF')
+# ax[1,1].plot(ci_setup['mean'])
+# ax[1,1].fill_between(ci_setup.index, ci_setup['lb'], ci_setup['ub'], color='b', alpha=.2)
+
+# ci_setup = get_sem(tmp, tmp['is_nrrpn_trial'], 'plot_time', 'pred')
+# ax[1,1].plot(ci_setup['mean'], color='r')
+
+
+
+# ax[1,1].set_xlim((min_time, max_time))
+# ax[1,1].set_ylim((min_signal, max_signal))
+# ax[1,1].title.set_text('Unrewarded, Right Port Entry')
+# ax[1,1].set_xlabel(x_label)
+# ax[1,1].set_ylabel(y_label)
+# ax[1,1].grid()
+
+# ax[1,1].legend(['Mean Photometry Response',
+#                 'Predicted Photometry Response',
+#                 '95% SEM Confidence Interval'])
+
+# fig.savefig('figure_outputs/average_response_reconstruction.png')
 
 
 

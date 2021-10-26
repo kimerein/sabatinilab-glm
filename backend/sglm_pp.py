@@ -44,7 +44,7 @@ def timeshift(X, shift_inx=[], shift_amt=1, keep_non_inx=False, dct=None, fill_v
     Returns: DataFrame or NDArray including the relevant timeshift
     """
     
-    npX = get_numpy_version(X) 
+    npX = get_numpy_version(X)
     # Use all columns for shifting if none specified
     shift_inx = range(npX.shape[1]) if len(shift_inx) == 0 else shift_inx
     X_to_shift = npX[:, shift_inx]
