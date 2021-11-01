@@ -124,6 +124,7 @@ def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, verbose=0, resp_l
         'cv_mean_score': np.mean(cv_scores_test),
         'cv_std_score': np.std(cv_scores_test),
         'cv_R2_score': sglm.calc_R2(np.concatenate(resids), np.concatenate(mean_resids)),
+        'cv_mse_score': np.mean(np.square(np.concatenate(resids))),
         'glm_kwargs': glm_kwargs,
         'model': glm
     }
@@ -184,9 +185,10 @@ def cv_glm_mult_params(X, y, cv_idx, model_name, glm_kwarg_lst, verbose=0, score
     pca_glm.pca_fit(X, y)
     print(f'> PCA GLM Built in {time.time() - start} seconds')
 
-    beta0_ = pca_glm.beta0_
-    beta_ = pca_glm.beta_.copy()
-
+    # beta0_ = pca_glm.beta0_
+    # beta_ = pca_glm.beta_.copy()
+    beta0_ = None
+    beta_ = None
 
 
     for i, glm_kwargs in enumerate(glm_kwarg_lst):

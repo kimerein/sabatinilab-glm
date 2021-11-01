@@ -227,7 +227,7 @@ def to_profile():
         #######################
         #######################
 
-        kfold_cv_idx = sglm_ez.cv_idx_by_trial_id(X_setup, y=y_setup, trial_id_columns=['nTrial'], num_folds=5, test_size=0.2)
+        kfold_cv_idx = sglm_ez.cv_idx_by_trial_id(X_setup, y=y_setup, trial_id_columns=['nTrial'], num_folds=10, test_size=0.2)
 
         X_setup = X_setup[[_ for _ in X_setup.columns if _ not in ['nTrial']]]
         # X_setup = X_setup[[_ for _ in X_setup.columns]]
@@ -235,8 +235,12 @@ def to_profile():
         # Step 1: Create a dictionary of lists for these relevant keywords...
         kwargs_iterations = {
             # 'alpha': reversed([0.0001, 0.001, 0.01, 0.1, 1.0, 10.0]),
-            'alpha': [0.0, 0.001, 0.01, 0.1, 1.0],
-            'l1_ratio': [0.0, 0.01, 0.1, 0.5, 0.9, 0.99, 1.0]
+            # 'alpha': [0.0, 0.001, 0.01, 0.1, 1.0],
+            # 'l1_ratio': [0.0, 0.01, 0.1, 0.5, 0.9, 0.99, 1.0]
+
+            'alpha': [0.0, 1e-100, 1e-30, 1e-10, 0.00001, 0.0001, 0.001, 0.01, 0.1, 1.0, 10.0, 100.0],
+            'l1_ratio': [0.0, 0.0, 0.0]
+
 
             # 'alpha': [0.1],
             # 'l1_ratio': [0.1]
@@ -244,7 +248,7 @@ def to_profile():
 
         # Step 2: Create a dictionary for the fixed keyword arguments that do not require iteration...
         kwargs_fixed = {
-            'max_iter': 1000,
+            'max_iter': -1,
             'fit_intercept': True
         }
 
@@ -277,13 +281,17 @@ def to_profile():
 
         glm = sglm_ez.fit_GLM(X_setup, y_setup, **best_params)
         holdout_score = glm.r2_score(X_holdout[X_setup.columns], y_holdout)
-        holdout_neg_mse_score = glm.neg_mse_score(X_holdout[X_setup.columns], y_holdout),
+        holdout_neg_mse_score = glm.neg_mse_score(X_holdout[X_setup.columns], y_holdout)
 
         res[filename] = {'holdout_score':holdout_score,
                         'holdout_neg_mse_score':holdout_neg_mse_score,
                         'best_score':best_score,
                         'best_params':best_params,
-                        'all_models':sorted([(_['cv_R2_score'], _['glm_kwargs']) for _ in cv_results['full_cv_results']], key=lambda x: -x[0])
+                        'all_models':sorted([(_['cv_R2_score'],
+                                              _['cv_mse_score'],
+                                              sglm_ez.calc_l1(_['cv_coefs']),
+                                              sglm_ez.calc_l2(_['cv_coefs']),
+                                              _['glm_kwargs']) for _ in cv_results['full_cv_results']], key=lambda x: -x[0])
                         }
 
         print(f'Holdout Score: {holdout_score}')
@@ -312,7 +320,9 @@ def to_profile():
                 lss_spc = ' '*(len(lst_str_setup)-1)
                 print(lst_str_setup)
                 for v_ in res[k][k_]:
-                    print(f'{lss_spc} R^2: {np.round(v_[0], 5)} — {v_[1]}')
+                    print((f'{lss_spc} R^2: {np.round(v_[0], 5)} — MSE: {np.round(v_[1], 5)} —'+
+                          f' L1: {np.round(v_[2], 5)} — L2: {np.round(v_[3], 5)} — '+
+                          f'Params: {v_[4]}'))
                 print(lss_spc + ']')
 
 to_profile()

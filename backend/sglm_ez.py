@@ -426,6 +426,14 @@ def plot_all_beta_coefs(glm, coef_names, sftd_coef_names, plot_width=4, y_lims=N
 
     return
 
+
+def calc_l1(coeffs):
+    return np.sum(np.abs(coeffs))
+
+def calc_l2(coeffs):
+    return np.sum(np.square(coeffs))
+
+
 def get_trial_timestamp(df, trial_id_col='nTrial'):
     dummy_col_name = '1'
     timestamp_name = 'tim'
