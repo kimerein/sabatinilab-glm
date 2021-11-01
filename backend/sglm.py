@@ -83,9 +83,11 @@ class GLM():
                 See https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.TweedieRegressor.html otherwise
         
         Returns: N/A
+        
         """
 
-            
+        if 'warm_start' not in kwargs and (beta0_ is not None or isinstance(beta_, np.ndarray)):
+            kwargs['warm_start'] = True
 
         self.model_name = model_name
         if model_name in {'Normal', 'Gaussian'}:
@@ -231,6 +233,8 @@ class GLM():
         """
 
         self.model.fit(X, y, *args)
+
+        print('coef B:', self.model.coef_)
 
         self.coef_ = self.model.coef_ if self.model_name in {'Logistic', 'Multinomial', 'Gaussian', 'Normal',
                                                              'PCA Gaussian', 'PCA Normal'} else self.model.beta_

@@ -227,7 +227,7 @@ def to_profile():
         #######################
         #######################
 
-        kfold_cv_idx = sglm_ez.cv_idx_by_trial_id(X_setup, y=y_setup, trial_id_columns=['nTrial'], num_folds=10, test_size=0.2)
+        kfold_cv_idx = sglm_ez.cv_idx_by_trial_id(X_setup, y=y_setup, trial_id_columns=['nTrial'], num_folds=1, test_size=0.2)
 
         X_setup = X_setup[[_ for _ in X_setup.columns if _ not in ['nTrial']]]
         # X_setup = X_setup[[_ for _ in X_setup.columns]]
@@ -239,7 +239,7 @@ def to_profile():
             # 'l1_ratio': [0.0, 0.01, 0.1, 0.5, 0.9, 0.99, 1.0]
 
             'alpha': [0.0, 1e-100, 1e-30, 1e-10, 0.00001, 0.0001, 0.001, 0.01, 0.1, 1.0, 10.0, 100.0],
-            'l1_ratio': [0.0, 0.0, 0.0]
+            'l1_ratio': [0.0, 0.1, 1.0]
 
 
             # 'alpha': [0.1],
@@ -248,7 +248,7 @@ def to_profile():
 
         # Step 2: Create a dictionary for the fixed keyword arguments that do not require iteration...
         kwargs_fixed = {
-            'max_iter': -1,
+            'max_iter': 0,
             'fit_intercept': True
         }
 
