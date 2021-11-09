@@ -18,6 +18,8 @@ import sglm_cv
 import sglm_pp
 import sglm_ez
 
+import cProfile
+
 def to_profile():
 
     start = time.time()
@@ -48,23 +50,23 @@ def to_profile():
     # filename = 'Ach_only_WT53L_09032021xlsx.csv'
     # filename = 'Ach_only_WT53L_09062021xlsx.csv'
 
-    # files_list = [
-    #     'dlight_only_WT36L_12172020.csv',
-    #     'dlight_only_WT36L_12212020.csv',
-    #     'dlight_only_WT36L_12242020.csv',
-    #     'dlight_only_WT36L_12292020.csv',
-
-    #     'Ach_only_WT53L_08262021xlsx.csv',
-    #     'Ach_only_WT53L_09012021xlsx.csv',
-    #     'Ach_only_WT53L_09032021xlsx.csv',
-    #     'Ach_only_WT53L_09062021xlsx.csv',
-    # ]
-
     files_list = [
-        'dlight_only_WT35_12212020.csv',
-        # 'dlight_only_WT36L_12242020.csv',
-        'Ach_only_WT53L_09062021xlsx.csv'
+        'dlight_only_WT36L_12172020.csv',
+        'dlight_only_WT36L_12212020.csv',
+        'dlight_only_WT36L_12242020.csv',
+        'dlight_only_WT36L_12292020.csv',
+
+        'Ach_only_WT53L_08262021xlsx.csv',
+        'Ach_only_WT53L_09012021xlsx.csv',
+        'Ach_only_WT53L_09032021xlsx.csv',
+        'Ach_only_WT53L_09062021xlsx.csv',
     ]
+
+    # files_list = [
+    #     'dlight_only_WT35_12212020.csv',
+    #     # 'dlight_only_WT36L_12242020.csv',
+    #     'Ach_only_WT53L_09062021xlsx.csv'
+    # ]
 
     res = {}
 
@@ -227,7 +229,7 @@ def to_profile():
         #######################
         #######################
 
-        kfold_cv_idx = sglm_ez.cv_idx_by_trial_id(X_setup, y=y_setup, trial_id_columns=['nTrial'], num_folds=1, test_size=0.2)
+        kfold_cv_idx = sglm_ez.cv_idx_by_trial_id(X_setup, y=y_setup, trial_id_columns=['nTrial'], num_folds=50, test_size=0.2)
 
         X_setup = X_setup[[_ for _ in X_setup.columns if _ not in ['nTrial']]]
         # X_setup = X_setup[[_ for _ in X_setup.columns]]
@@ -235,11 +237,14 @@ def to_profile():
         # Step 1: Create a dictionary of lists for these relevant keywords...
         kwargs_iterations = {
             # 'alpha': reversed([0.0001, 0.001, 0.01, 0.1, 1.0, 10.0]),
-            # 'alpha': [0.0, 0.001, 0.01, 0.1, 1.0],
-            # 'l1_ratio': [0.0, 0.01, 0.1, 0.5, 0.9, 0.99, 1.0]
+            'alpha': [0.0, 0.01, 0.1, 0.5, 0.9, 1.0],
+            'l1_ratio': [0.0, 0.01, 0.1, 0.5, 0.9, 1.0]
 
-            'alpha': [0.0, 1e-100, 1e-30, 1e-10, 0.00001, 0.0001, 0.001, 0.01, 0.1, 1.0, 10.0, 100.0],
-            'l1_ratio': [0.0, 0.1, 1.0]
+            # 'alpha': [0.0, 0.0, 0.1, 0.1, 1.0, 1.0],#1e-100, 1e-30, 1e-10, 0.00001, 0.0001, 0.001, 0.01, 0.1, 1.0, 10.0, 100.0],
+            # 'l1_ratio': [0.0, 0.0, 0.1, 0.1, 1.0, 1.0]
+
+            # 'alpha': [0.0, 0.1, 1.0],#1e-100, 1e-30, 1e-10, 0.00001, 0.0001, 0.001, 0.01, 0.1, 1.0, 10.0, 100.0],
+            # 'l1_ratio': [0.0, 0.1, 1.0]
 
 
             # 'alpha': [0.1],
@@ -248,7 +253,8 @@ def to_profile():
 
         # Step 2: Create a dictionary for the fixed keyword arguments that do not require iteration...
         kwargs_fixed = {
-            'max_iter': 0,
+            # 'max_iter': 0,
+            'max_iter': 1000,
             'fit_intercept': True
         }
 
@@ -256,7 +262,7 @@ def to_profile():
 
         # Step 3: Generate iterable list of keyword sets for possible combinations
         glm_kwarg_lst = sglm_cv.generate_mult_params(kwargs_iterations, kwargs_fixed)
-        best_score, best_score_std, best_params, best_model, cv_results = sglm_ez.simple_cv_fit(X_setup, y_setup, kfold_cv_idx, glm_kwarg_lst, model_type='Normal', verbose=2, score_method=score_method)
+        best_score, best_score_std, best_params, best_model, cv_results = sglm_ez.simple_cv_fit(X_setup, y_setup, kfold_cv_idx, glm_kwarg_lst, model_type='Normal', verbose=0, score_method=score_method)
 
         print()
         print('---')
@@ -326,3 +332,5 @@ def to_profile():
                 print(lss_spc + ']')
 
 to_profile()
+
+# cProfile.run('to_profile()', sort='tottime')

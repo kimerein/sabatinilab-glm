@@ -186,7 +186,7 @@ def cv_glm_mult_params(X, y, cv_idx, model_name, glm_kwarg_lst, verbose=0, score
     print(f'> PCA GLM Built in {time.time() - start} seconds')
 
     # beta0_ = pca_glm.beta0_
-    # beta_ = pca_glm.beta_.copy()
+    # beta_ = pca_glm.beta_
     beta0_ = None
     beta_ = None
 

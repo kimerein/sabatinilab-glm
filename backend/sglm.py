@@ -13,6 +13,8 @@ from sklearn.decomposition import PCA
 
 from numba import njit, jit, prange
 
+import copy
+
 # TODO: Potentially add additional alternatives for different GLM API implementations (SKLearn, etc.)
 # TODO: Potentially add switching it to also allowing pandas DataFrames as the fitting function
 
@@ -83,7 +85,7 @@ class GLM():
                 See https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.TweedieRegressor.html otherwise
         
         Returns: N/A
-        
+
         """
 
         if 'warm_start' not in kwargs and (beta0_ is not None or isinstance(beta_, np.ndarray)):
@@ -95,9 +97,11 @@ class GLM():
                 kwargs.pop('alpha')
                 kwargs.pop('l1_ratio')
                 kwargs.pop('max_iter')
+                kwargs.pop('warm_start', None)
                 Base = LinearRegression
             elif 'l1_ratio' in kwargs and kwargs['l1_ratio'] == 0:
                 del kwargs['l1_ratio']
+                kwargs.pop('warm_start', None)
                 Base = Ridge
             elif 'l1_ratio' in kwargs and kwargs['l1_ratio'] == 1:
                 del kwargs['l1_ratio']
@@ -129,8 +133,9 @@ class GLM():
             self.model.intercept_ = beta0_
             self.beta0_ = beta0_
         if isinstance(beta_, np.ndarray):
-            self.model.coef_ = beta_
-            self.beta_ = beta_
+            # self.beta_ = copy.deepcopy(beta_)
+            self.beta_ = np.copy(beta_)
+            self.model.coef_ = self.beta_
         
         if score_method == 'r2':
             self.score = self.r2_score
@@ -231,10 +236,9 @@ class GLM():
         
         Returns: N/A
         """
-
         self.model.fit(X, y, *args)
 
-        print('coef B:', self.model.coef_)
+        # print('coef B:', self.model.coef_)
 
         self.coef_ = self.model.coef_ if self.model_name in {'Logistic', 'Multinomial', 'Gaussian', 'Normal',
                                                              'PCA Gaussian', 'PCA Normal'} else self.model.beta_
@@ -287,6 +291,7 @@ class GLM():
         """
         if verbose > 1:
             start = time.time()
+            # print('Init Coefficients:', self.model.intercept_, self.model.coef_)
             print(f'Fitting: {self.kwargs} — {id_fit}')
         
         self.fit(X, y, *args)
