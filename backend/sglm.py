@@ -128,7 +128,7 @@ class GLM():
         self.Base = Base
         self.kwargs = kwargs
         self.model = self.Base(*args, **kwargs)
-
+        
         if beta0_ is not None:
             self.model.intercept_ = beta0_
             self.beta0_ = beta0_

@@ -418,7 +418,15 @@ def plot_all_beta_coefs(glm, coef_names, sftd_coef_names, plot_width=4, y_lims=N
     for icn, coef_name in enumerate(coef_cols):
         print(icn)
         timeshifts, coefs = get_single_coef_set(coef_cols[coef_name], coef_lookup)
-        plot_single_coef_set(coef_name, timeshifts, coefs, axs[icn//plot_width, icn%plot_width], y_lims, binsize=binsize)
+        
+        if len(axs.shape) > 1:
+            axs_a = axs[icn//plot_width]
+        else:
+            axs_a = axs
+        
+        axs_tmp = axs_a[icn%plot_width]
+
+        plot_single_coef_set(coef_name, timeshifts, coefs, axs_tmp, y_lims, binsize=binsize)
     fig.tight_layout()
 
     if filename:
