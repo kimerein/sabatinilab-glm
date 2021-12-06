@@ -139,7 +139,7 @@ def to_profile():
         # 'lpxr', 'rpxr',
         # 'lpxnr', 'rpxnr',
         'll', 'rl',
-        # 'nr', 'r',
+        'nr', 'r',
         #'cpo',
         #'lpo',
         #'rpo',
@@ -193,9 +193,12 @@ def to_profile():
         # Select hyper parameters for GLM to use for model selection
         # Step 1: Create a dictionary of lists for these relevant keywords...
         kwargs_iterations = {
+            # # 'alpha': [0.0, 0.01, 0.1, 0.5, 0.9, 1.0],
             # 'alpha': [0.0, 0.01, 0.1, 0.5, 0.9, 1.0],
-            'alpha': [0.0, 0.01, 0.1, 0.5, 0.9, 1.0],
-            'l1_ratio': [0.0, 0.001, 0.01, 0.1, 0.5, 0.9, 1.0]
+            # 'l1_ratio': [0.0, 0.001, 0.01, 0.1, 0.5, 0.9, 1.0]
+
+            'alpha': [0.0, 1.0],
+            'l1_ratio': [0.0, 1.0]
         }
 
         # Step 2: Create a dictionary for the fixed keyword arguments that do not require iteration...
@@ -264,6 +267,41 @@ def to_profile():
                                         filename=f'{fn}_coeffs_R2_{np.round(holdout_score, 4)}.png',
                                         plot_name=f'{fn} — {best_params}'
                                         )
+        
+
+
+
+
+
+
+        tmp = X_holdout.set_index('nTrial').copy()
+        tmp_y = y_holdout.copy()
+        tmp_y.index = tmp.index
+        tmp[y_holdout.name] = tmp_y
+
+        tmp['1'] = 1
+        tmp['tim'] = tmp.groupby('nTrial')['1'].cumsum()
+        tmp['pred'] = glm.predict(tmp[X_setup.columns])
+
+        print(tmp)
+
+        entry_timing_r = tmp.groupby('nTrial')['rpn'].agg(lambda x: x.argmax()).astype(int)
+        entry_timing_l = tmp.groupby('nTrial')['lpn'].agg(lambda x: x.argmax()).astype(int)
+        entry_timing = (entry_timing_r > entry_timing_l)*entry_timing_r + (entry_timing_r < entry_timing_l)*entry_timing_l
+
+        adjusted_time = (tmp['tim'] - entry_timing)
+        print(adjusted_time)
+        tmp['adjusted_time'] = adjusted_time
+        adjusted_time.index = tmp.index
+
+        entry_timing_c = tmp.groupby('nTrial')['cpn'].agg(lambda x: x.argmax()).astype(int)
+        adjusted_time_c = (tmp['tim'] - entry_timing_c)
+        adjusted_time_c.index = tmp.index
+        tmp['adjusted_time_c'] = adjusted_time_c
+
+        splt.plot_avg_reconstructions(tmp, binsize = 50, min_time = -20, max_time = 30, min_signal = -3.0, max_signal = 3.0, file_name=f'figure_outputs/average_response_reconstruction_{filename[:-4]}.png')
+
+
 
     # For every file iterated, for every result value, for every model fitted, print the reslts
     print(f'Final Results:')
