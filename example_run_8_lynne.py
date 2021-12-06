@@ -79,6 +79,7 @@ def to_profile():
 
         print(df.columns)
 
+        trial_shift_bounds = 7
 
         df = df.rename({'center port occupancy': 'cpo',
                         'center port entry': 'cpn',
@@ -117,7 +118,7 @@ def to_profile():
 
         df['event_col'] = df['event_col'].bfill()
         
-        df['trial_start_flag'] = ((df['event_col'] == 1.0)&(df['event_col'].shift(-1) != df['event_col']) * 1.0).shift(-5) * 1.0
+        df['trial_start_flag'] = ((df['event_col'] == 1.0)&(df['event_col'].shift(-1) != df['event_col']) * 1.0).shift(-trial_shift_bounds) * 1.0
         df['nTrial'] = df['trial_start_flag'].cumsum()
 
 
@@ -135,7 +136,7 @@ def to_profile():
         df['event_col_end'] = df['event_col_d'].combine_first(df['event_col_e']).combine_first(df['trial_start_flag'].replace(0.0, np.nan)*2.0)
         df['event_col_end'] = df['event_col_end'].ffill()
         # df['trial_end_flag'] = ((df['event_col_start'] != 1.0)&(df['event_col_start'].shift(-1) == 1.0)&(df['event_col_start'].shift(-1) != df['event_col_start']) * 1.0).shift(5) * 1.0
-        df['trial_end_flag'] = ((df['event_col_end'] == 1.0)&(df['event_col_end'].shift(1) == 2.0)&(df['event_col_end'].shift(1) != df['event_col_end'])&(df['nTrial'] > 0) * 1.0).shift(5) * 1.0
+        df['trial_end_flag'] = ((df['event_col_end'] == 1.0)&(df['event_col_end'].shift(1) == 2.0)&(df['event_col_end'].shift(1) != df['event_col_end'])&(df['nTrial'] > 0) * 1.0).shift(trial_shift_bounds) * 1.0
         df['nEndTrial'] = df['trial_end_flag'].cumsum()
 
 
@@ -191,8 +192,8 @@ def to_profile():
         dfrel = dfrel.replace('False', 0).astype(float)
         dfrel = dfrel*1
         
-        neg_order = -10
-        pos_order = 10
+        neg_order = -7
+        pos_order = 7
 
         dfrel = sglm_ez.timeshift_cols(dfrel, X_cols[1:], neg_order=neg_order, pos_order=pos_order)
         X_cols_sftd = sglm_ez.add_timeshifts_to_col_list(X_cols, X_cols[1:], neg_order=neg_order, pos_order=pos_order)
@@ -238,7 +239,7 @@ def to_profile():
         kwargs_iterations = {
             # 'alpha': reversed([0.0001, 0.001, 0.01, 0.1, 1.0, 10.0]),
             'alpha': [0.0, 0.01, 0.1, 0.5, 0.9, 1.0],
-            'l1_ratio': [0.0, 0.01, 0.1, 0.5, 0.9, 1.0]
+            'l1_ratio': [0.01, 0.1, 0.5, 0.9]
 
             # 'alpha': [0.0, 0.0, 0.1, 0.1, 1.0, 1.0],#1e-100, 1e-30, 1e-10, 0.00001, 0.0001, 0.001, 0.01, 0.1, 1.0, 10.0, 100.0],
             # 'l1_ratio': [0.0, 0.0, 0.1, 0.1, 1.0, 1.0]
@@ -312,6 +313,7 @@ def to_profile():
                                         plot_width=2,
                                         y_lims=(-2.0, 2.0),
                                         # filename=f'{fn}_coeffs.png',
+                                        binsize=50,
                                         filename=f'{fn}_coeffs_R2_{np.round(holdout_score, 4)}.png',
                                         plot_name=f'{fn} — {best_params}'
                                         )
