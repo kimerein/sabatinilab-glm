@@ -203,7 +203,30 @@ def plot_single_avg_reconstruction(ci_setup_true, ci_setup_pred, ax, min_time, m
 
     return
 
+def get_time_alignment(x_label, adjusted_time, min_time=None, max_time=None, binsize=None):
+    """
+    Get the time alignment for the data
+    """
+
+    if binsize is not None:
+        min_time *= binsize
+        max_time *= binsize
+        x_label = x_label.replace(' __', ' (ms)')
+        plot_time = adjusted_time * binsize
+    else:
+        x_label = x_label.replace(' __', '')
+        plot_time = adjusted_time
+    
+    return plot_time, x_label, min_time, max_time
+
+    # tmp_backup['plot_time'] = tmp_backup['adjusted_time'] * binsize
+
 def plot_avg_reconstructions(tmp_backup,
+                             plt_col_lst = [['r', 'lpn', 'Rewarded, Left Port Entry', 'adjusted_time'],
+                                            ['r', 'rpn', 'Rewarded, Right Port Entry', 'adjusted_time'],
+                                            ['nr', 'lpn', 'Unrewarded, Left Port Entry', 'adjusted_time'],
+                                            ['nr', 'rpn', 'Unrewarded, Right Port Entry', 'adjusted_time'],
+                                            ['cpn', 'Center Port Entry', 'cpn_adjusted_time']],
                              binsize = 50,
                              min_time = -20, max_time = 30,
                              min_signal = -3.0, max_signal = 3.0,
@@ -229,54 +252,67 @@ def plot_avg_reconstructions(tmp_backup,
     x_label = 'Timesteps __ from Event'
     y_label = 'Response'
 
-    if binsize is not None:
-        min_time *= binsize
-        max_time *= binsize
-        x_label = x_label.replace(' __', ' (ms)')
-        tmp_backup['plot_time'] = tmp_backup['adjusted_time'] * binsize
-    else:
-        x_label = x_label.replace(' __', '')
-        tmp_backup['plot_time'] = tmp_backup['adjusted_time']
-
-    tmp = tmp_backup[tmp_backup['plot_time'].between(min_time, max_time)].copy()
+    max_i = len(plt_col_lst)//2
+    max_j = len(plt_col_lst)%2
 
     # plt.figure(figsize=(10,5))
     # fig, ax = plt.subplots(2,2)
-    fig, ax = plt.subplots(3,2)
+    fig, ax = plt.subplots(max_i+1, max_j+1)
     fig.suptitle(title)
     fig.set_figheight(20)
     fig.set_figwidth(40)
 
-    tmp['is_r_lpn_trial'] = sglm_ez.get_is_trial(tmp, ['nTrial'], ['r', 'lpn'])
-    ci_setup_true = sglm_ez.get_sem(tmp, tmp['is_r_lpn_trial'], 'plot_time', 'zsgdFF')
-    ci_setup_pred = sglm_ez.get_sem(tmp, tmp['is_r_lpn_trial'], 'plot_time', 'pred')
-    plot_single_avg_reconstruction(ci_setup_true, ci_setup_pred, ax[0,0], min_time, max_time, min_signal, max_signal, x_label, y_label, 'Rewarded, Left Port Entry')
+
+    for iplt_cols, plt_cols in enumerate(plt_col_lst):
+
+        i,j = iplt_cols//2, iplt_cols%2
+        
+        plot_time_name = plt_cols[-1]
+        plot_title = plt_cols[-2]
+        plot_cols = plt_cols[:-2]
 
 
-    tmp['is_r_rpn_trial'] = sglm_ez.get_is_trial(tmp, ['nTrial'], ['r', 'rpn'])
-    ci_setup_true = sglm_ez.get_sem(tmp, tmp['is_r_rpn_trial'], 'plot_time', 'zsgdFF')
-    ci_setup_pred = sglm_ez.get_sem(tmp, tmp['is_r_rpn_trial'], 'plot_time', 'pred')
-    plot_single_avg_reconstruction(ci_setup_true, ci_setup_pred, ax[0,1], min_time, max_time, min_signal, max_signal, x_label, y_label, 'Rewarded, Right Port Entry')
+
+        plot_time, x_label, min_time_revised, max_time_revised = get_time_alignment(x_label, tmp_backup[plot_time_name], min_time=min_time, max_time=max_time, binsize=binsize)
+        tmp_backup['plot_time'] = plot_time
+        tmp = tmp_backup[tmp_backup['plot_time'].between(min_time_revised, max_time_revised)].copy()
 
 
-    tmp['is_nr_lpn_trial'] = sglm_ez.get_is_trial(tmp, ['nTrial'], ['nr', 'lpn'])
-    ci_setup_true = sglm_ez.get_sem(tmp, tmp['is_nr_lpn_trial'], 'plot_time', 'zsgdFF')
-    ci_setup_pred = sglm_ez.get_sem(tmp, tmp['is_nr_lpn_trial'], 'plot_time', 'pred')
-    plot_single_avg_reconstruction(ci_setup_true, ci_setup_pred, ax[1,0], min_time, max_time, min_signal, max_signal, x_label, y_label, 'Unrewarded, Left Port Entry')
+
+        
+
+        is_plt_col_name = f'is_{"_".join(plot_cols)}_trial'
+
+        tmp[is_plt_col_name] = sglm_ez.get_is_trial(tmp, ['nTrial'], plot_cols)
+        ci_setup_true = sglm_ez.get_sem(tmp, tmp[is_plt_col_name], 'plot_time', 'zsgdFF')
+        ci_setup_pred = sglm_ez.get_sem(tmp, tmp[is_plt_col_name], 'plot_time', 'pred')
+        plot_single_avg_reconstruction(ci_setup_true, ci_setup_pred, ax[i,j], min_time_revised, max_time_revised, min_signal, max_signal, x_label, y_label, plot_title)
 
 
-    tmp['is_nr_rpn_trial'] = sglm_ez.get_is_trial(tmp, ['nTrial'], ['nr', 'rpn'])
-    ci_setup_true = sglm_ez.get_sem(tmp, tmp['is_nr_rpn_trial'], 'plot_time', 'zsgdFF')
-    ci_setup_pred = sglm_ez.get_sem(tmp, tmp['is_nr_rpn_trial'], 'plot_time', 'pred')
-    plot_single_avg_reconstruction(ci_setup_true, ci_setup_pred, ax[1,1], min_time, max_time, min_signal, max_signal, x_label, y_label, 'Unrewarded, Right Port Entry')
+        # tmp['is_r_rpn_trial'] = sglm_ez.get_is_trial(tmp, ['nTrial'], plt_cols)
+        # ci_setup_true = sglm_ez.get_sem(tmp, tmp['is_r_rpn_trial'], 'plot_time', 'zsgdFF')
+        # ci_setup_pred = sglm_ez.get_sem(tmp, tmp['is_r_rpn_trial'], 'plot_time', 'pred')
+        # plot_single_avg_reconstruction(ci_setup_true, ci_setup_pred, ax[0,1], min_time, max_time, min_signal, max_signal, x_label, y_label, 'Rewarded, Right Port Entry')
 
 
-    tmp['is_cpn_trial'] = sglm_ez.get_is_trial(tmp, ['nTrial'], ['cpn'])
-    ci_setup_true = sglm_ez.get_sem(tmp, tmp['is_cpn_trial'], 'plot_time', 'zsgdFF')
-    ci_setup_pred = sglm_ez.get_sem(tmp, tmp['is_cpn_trial'], 'plot_time', 'pred')
-    plot_single_avg_reconstruction(ci_setup_true, ci_setup_pred, ax[2,0], min_time, max_time, min_signal, max_signal, x_label, y_label, 'Center Port Entry')
+        # tmp['is_nr_lpn_trial'] = sglm_ez.get_is_trial(tmp, ['nTrial'], plt_cols)
+        # ci_setup_true = sglm_ez.get_sem(tmp, tmp['is_nr_lpn_trial'], 'plot_time', 'zsgdFF')
+        # ci_setup_pred = sglm_ez.get_sem(tmp, tmp['is_nr_lpn_trial'], 'plot_time', 'pred')
+        # plot_single_avg_reconstruction(ci_setup_true, ci_setup_pred, ax[1,0], min_time, max_time, min_signal, max_signal, x_label, y_label, 'Unrewarded, Left Port Entry')
 
-    ax[2,0].legend(['Mean Photometry Response',
+
+        # tmp['is_nr_rpn_trial'] = sglm_ez.get_is_trial(tmp, ['nTrial'], plt_cols)
+        # ci_setup_true = sglm_ez.get_sem(tmp, tmp['is_nr_rpn_trial'], 'plot_time', 'zsgdFF')
+        # ci_setup_pred = sglm_ez.get_sem(tmp, tmp['is_nr_rpn_trial'], 'plot_time', 'pred')
+        # plot_single_avg_reconstruction(ci_setup_true, ci_setup_pred, ax[1,1], min_time, max_time, min_signal, max_signal, x_label, y_label, 'Unrewarded, Right Port Entry')
+
+
+        # tmp['is_cpn_trial'] = sglm_ez.get_is_trial(tmp, ['nTrial'], plt_cols)
+        # ci_setup_true = sglm_ez.get_sem(tmp, tmp['is_cpn_trial'], 'plot_time', 'zsgdFF')
+        # ci_setup_pred = sglm_ez.get_sem(tmp, tmp['is_cpn_trial'], 'plot_time', 'pred')
+        # plot_single_avg_reconstruction(ci_setup_true, ci_setup_pred, ax[2,0], min_time, max_time, min_signal, max_signal, x_label, y_label, 'Center Port Entry')
+
+    ax[(i+1)//2,(j+1)%2].legend(['Mean Photometry Response',
                     'Predicted Photometry Response',
                     '95% SEM Confidence Interval'])
     

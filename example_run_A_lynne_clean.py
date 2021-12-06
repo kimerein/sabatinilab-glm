@@ -283,21 +283,21 @@ def to_profile():
         tmp['tim'] = tmp.groupby('nTrial')['1'].cumsum()
         tmp['pred'] = glm.predict(tmp[X_setup.columns])
 
-        print(tmp)
+        # print(tmp)
 
         entry_timing_r = tmp.groupby('nTrial')['rpn'].agg(lambda x: x.argmax()).astype(int)
         entry_timing_l = tmp.groupby('nTrial')['lpn'].agg(lambda x: x.argmax()).astype(int)
         entry_timing = (entry_timing_r > entry_timing_l)*entry_timing_r + (entry_timing_r < entry_timing_l)*entry_timing_l
 
         adjusted_time = (tmp['tim'] - entry_timing)
-        print(adjusted_time)
+        # print(adjusted_time)
         tmp['adjusted_time'] = adjusted_time
         adjusted_time.index = tmp.index
 
         entry_timing_c = tmp.groupby('nTrial')['cpn'].agg(lambda x: x.argmax()).astype(int)
         adjusted_time_c = (tmp['tim'] - entry_timing_c)
         adjusted_time_c.index = tmp.index
-        tmp['adjusted_time_c'] = adjusted_time_c
+        tmp['cpn_adjusted_time'] = adjusted_time_c
 
         splt.plot_avg_reconstructions(tmp, binsize = 50, min_time = -20, max_time = 30, min_signal = -3.0, max_signal = 3.0, file_name=f'figure_outputs/average_response_reconstruction_{filename[:-4]}.png')
 
