@@ -128,6 +128,8 @@ class GLM():
         self.Base = Base
         self.kwargs = kwargs
         self.model = self.Base(*args, **kwargs)
+
+        # print('>>> self.kwargs', self.kwargs, self.model)
         
         if beta0_ is not None:
             self.model.intercept_ = beta0_
@@ -237,6 +239,7 @@ class GLM():
         Returns: N/A
         """
         self.model.fit(X, y, *args)
+        # print('> self.kwargs', self.kwargs, self.model)
 
         # print('coef B:', self.model.coef_)
 

@@ -96,7 +96,7 @@ def plot_all_beta_coefs(glm, coef_names, sftd_coef_names, plot_width=4, y_lims=N
     """
     if y_lims is None:
         y_lims = (glm.coef_.min(), glm.coef_.max())
-    print(y_lims)
+    # print(y_lims)
 
     coef_lookup = {sftd_coef_names[i]:glm.coef_[i] for i in range(len(sftd_coef_names))}
     coef_cols = sglm_ez.get_coef_name_sets(coef_names, sftd_coef_names)
@@ -109,7 +109,7 @@ def plot_all_beta_coefs(glm, coef_names, sftd_coef_names, plot_width=4, y_lims=N
     fig.suptitle(f'Feature Coefficients by Timeshift{addl_plot_name}', fontsize=20)
 
     for icn, coef_name in enumerate(coef_cols):
-        print(icn)
+        # print(icn)
         timeshifts, coefs = sglm_ez.get_single_coef_set(coef_cols[coef_name], coef_lookup)
         
         if len(axs.shape) > 1:
@@ -190,6 +190,9 @@ def plot_power_spectra(y_true_full, y_hat_full):
 
 def plot_single_avg_reconstruction(ci_setup_true, ci_setup_pred, ax, min_time, max_time, min_signal, max_signal, x_label, y_label, title):
 
+    ci_setup_pred = ci_setup_pred[ci_setup_true.isna().sum(axis=1) == 0]
+    ci_setup_true = ci_setup_true[ci_setup_true.isna().sum(axis=1) == 0]
+
     ax.plot(ci_setup_true['mean'], color='b')
     ax.fill_between(ci_setup_true.index, ci_setup_true['lb'], ci_setup_true['ub'], color='b', alpha=.2)
 
@@ -231,7 +234,7 @@ def plot_avg_reconstructions(tmp_backup,
                              min_time = -20, max_time = 30,
                              min_signal = -3.0, max_signal = 3.0,
                              title='Average Photometry Response Aligned to Side Port Entry — Holdout Data Only',
-                             file_name='figure_outputs/average_response_reconstruction.png'):
+                             file_name=None):
     """
     Plot the average reconstruction of the data
     Args:
@@ -253,11 +256,11 @@ def plot_avg_reconstructions(tmp_backup,
     y_label = 'Response'
 
     max_i = len(plt_col_lst)//2
-    max_j = len(plt_col_lst)%2
+    max_j = 1
 
     # plt.figure(figsize=(10,5))
     # fig, ax = plt.subplots(2,2)
-    fig, ax = plt.subplots(max_i+1, max_j+1)
+    fig, ax = plt.subplots(max_i + len(plt_col_lst)%2, max_j+1)
     fig.suptitle(title)
     fig.set_figheight(20)
     fig.set_figwidth(40)
@@ -279,8 +282,6 @@ def plot_avg_reconstructions(tmp_backup,
 
 
 
-        
-
         is_plt_col_name = f'is_{"_".join(plot_cols)}_trial'
 
         tmp[is_plt_col_name] = sglm_ez.get_is_trial(tmp, ['nTrial'], plot_cols)
@@ -289,36 +290,14 @@ def plot_avg_reconstructions(tmp_backup,
         plot_single_avg_reconstruction(ci_setup_true, ci_setup_pred, ax[i,j], min_time_revised, max_time_revised, min_signal, max_signal, x_label, y_label, plot_title)
 
 
-        # tmp['is_r_rpn_trial'] = sglm_ez.get_is_trial(tmp, ['nTrial'], plt_cols)
-        # ci_setup_true = sglm_ez.get_sem(tmp, tmp['is_r_rpn_trial'], 'plot_time', 'zsgdFF')
-        # ci_setup_pred = sglm_ez.get_sem(tmp, tmp['is_r_rpn_trial'], 'plot_time', 'pred')
-        # plot_single_avg_reconstruction(ci_setup_true, ci_setup_pred, ax[0,1], min_time, max_time, min_signal, max_signal, x_label, y_label, 'Rewarded, Right Port Entry')
-
-
-        # tmp['is_nr_lpn_trial'] = sglm_ez.get_is_trial(tmp, ['nTrial'], plt_cols)
-        # ci_setup_true = sglm_ez.get_sem(tmp, tmp['is_nr_lpn_trial'], 'plot_time', 'zsgdFF')
-        # ci_setup_pred = sglm_ez.get_sem(tmp, tmp['is_nr_lpn_trial'], 'plot_time', 'pred')
-        # plot_single_avg_reconstruction(ci_setup_true, ci_setup_pred, ax[1,0], min_time, max_time, min_signal, max_signal, x_label, y_label, 'Unrewarded, Left Port Entry')
-
-
-        # tmp['is_nr_rpn_trial'] = sglm_ez.get_is_trial(tmp, ['nTrial'], plt_cols)
-        # ci_setup_true = sglm_ez.get_sem(tmp, tmp['is_nr_rpn_trial'], 'plot_time', 'zsgdFF')
-        # ci_setup_pred = sglm_ez.get_sem(tmp, tmp['is_nr_rpn_trial'], 'plot_time', 'pred')
-        # plot_single_avg_reconstruction(ci_setup_true, ci_setup_pred, ax[1,1], min_time, max_time, min_signal, max_signal, x_label, y_label, 'Unrewarded, Right Port Entry')
-
-
-        # tmp['is_cpn_trial'] = sglm_ez.get_is_trial(tmp, ['nTrial'], plt_cols)
-        # ci_setup_true = sglm_ez.get_sem(tmp, tmp['is_cpn_trial'], 'plot_time', 'zsgdFF')
-        # ci_setup_pred = sglm_ez.get_sem(tmp, tmp['is_cpn_trial'], 'plot_time', 'pred')
-        # plot_single_avg_reconstruction(ci_setup_true, ci_setup_pred, ax[2,0], min_time, max_time, min_signal, max_signal, x_label, y_label, 'Center Port Entry')
-
-    ax[(i+1)//2,(j+1)%2].legend(['Mean Photometry Response',
+    ax[i, j].legend(['Mean Photometry Response',
                     'Predicted Photometry Response',
                     '95% SEM Confidence Interval'])
     
     plt.tight_layout()
 
-    fig.savefig(file_name)
+    if file_name:
+        fig.savefig(file_name)
 
     return
 

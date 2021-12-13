@@ -118,7 +118,8 @@ def timeshift_cols(X, cols_to_shift, neg_order=0, pos_order=1):
     Returns: New DataFrame with all shifted cols included in output
     """    
     col_nums = sglm_pp.get_column_nums(X, cols_to_shift)
-    return sglm_pp.timeshift_multiple(X, shift_inx=col_nums, shift_amt_list=[0]+list(range(neg_order, 0))+list(range(1, pos_order + 1)))
+    timeshifted = sglm_pp.timeshift_multiple(X, shift_inx=col_nums, shift_amt_list=[0]+list(range(neg_order, 0))+list(range(1, pos_order + 1)))
+    return timeshifted
 
 
 def add_timeshifts_to_col_list(all_cols, shifted_cols, neg_order=0, pos_order=1):
