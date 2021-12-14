@@ -471,9 +471,16 @@ def concat_pandas_shifts(shift_amt_list: List[int],
     Returns:
         Final concatenated (column-wise) dataset of all timeshifts
     """
-    ret = pd.DataFrame()
+    # cols = []
+    # for _ in shifted_list:
+    #     cols.extend(list(_.columns))
+    
+    # ret = pd.DataFrame()
+    ret = []
     for isa, shift_amt in enumerate(shift_amt_list):
         col_names = shifted_list[isa].columns
         sft_col_names = [f"{_}_{shift_amt}" for _ in col_names] if shift_amt != 0 else col_names
-        ret[sft_col_names] = shifted_list[isa][col_names]
+        # ret[sft_col_names] = shifted_list[isa][col_names].copy()
+        ret.append(shifted_list[isa][col_names].rename({col_names[i]:sft_col_names[i] for i in range(len(sft_col_names))}, axis=1))
+    ret = pd.concat(ret, axis=1)
     return ret

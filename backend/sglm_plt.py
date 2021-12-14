@@ -120,6 +120,7 @@ def plot_all_beta_coefs(glm, coef_names, sftd_coef_names, plot_width=4, y_lims=N
         axs_tmp = axs_a[icn%plot_width]
 
         plot_single_coef_set(coef_name, timeshifts, coefs, axs_tmp, y_lims, binsize=binsize)
+    
     fig.tight_layout()
 
     if filename:
@@ -199,7 +200,8 @@ def plot_single_avg_reconstruction(ci_setup_true, ci_setup_pred, ax, min_time, m
     ax.plot(ci_setup_pred['mean'], color='r')
     ax.set_xlim((min_time, max_time))
     ax.set_ylim((min_signal, max_signal))
-    ax.title.set_text(title)
+    trial_num = ci_setup_true['size'].max()
+    ax.title.set_text(f'{title} — {trial_num} Trials')
     ax.set_xlabel(x_label)
     ax.set_ylabel(y_label)
     ax.grid()

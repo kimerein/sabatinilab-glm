@@ -215,7 +215,7 @@ def cv_idx_by_timeframe(X, y=None, timesteps_per_bucket=20, num_folds=10, test_s
     return cv_idx
 
 
-def holdout_split_by_trial_id(X, y=None, id_cols=['nTrial', 'iBlock'], perc_holdout=0.2):
+def holdout_split_by_trial_id(X, y=None, id_cols=['nTrial', 'iBlock'], strat_col=None, strat_mode=None, perc_holdout=0.2):
     """
     Create a True/False pd.Series using Group ID columns to identify the holdout data to
     be used via GroupShuffleSplit.
@@ -229,6 +229,14 @@ def holdout_split_by_trial_id(X, y=None, id_cols=['nTrial', 'iBlock'], perc_hold
             Response Series
         id_cols : list(str)
             Columns to use to identify bucketing identifiers
+        strat_col : str
+            Column to use to stratify/balance the holdout data
+        strat_mode : str
+            Mode to use to stratify the holdout data
+            in the set of ['balanced_train', 'balanced_test', 'stratify']
+                balanced_train: Have an equal split of classes in the training set
+                balanced_test: Have an equal split of classes in the test set
+                stratify: Stratify the classes such that they are proportionally represented in the training & holdout sets
         perc_holdout : int
             Percentage of group identifiers to holdout as test set
     
@@ -242,10 +250,56 @@ def holdout_split_by_trial_id(X, y=None, id_cols=['nTrial', 'iBlock'], perc_hold
             bucket_ids = bucket_ids + '_' + X[idc].astype(str)
     bucket_ids = bucket_ids.astype("category").cat.codes
 
-    num_bucket_ids = int(bucket_ids.max() + 1)
-    num_buckets_for_test = int(num_bucket_ids * perc_holdout)
 
-    test_ids = np.random.choice(num_bucket_ids, size=num_buckets_for_test)
+    num_bucket_ids = int(bucket_ids.max() + 1)
+
+    if strat_col is not None:
+
+        strat_df = X[[strat_col]].copy()
+        strat_df['bucket_id'] = bucket_ids
+
+        strat_groups = strat_df[strat_col].unique()
+        distinct_buckets = [pd.Series(strat_df[strat_df[strat_col] == _]['bucket_id'].unique()) for _ in strat_groups]
+        bucket_sizes = np.array([len(_) for _ in distinct_buckets])
+
+        min_bucket_size = bucket_sizes.min()
+        bucket_totals = bucket_sizes.sum()
+
+        # print(set_sizes)
+        train_distinct_buckets = []
+        test_distinct_buckets = []
+
+        if strat_mode == 'balanced_train':
+
+            num_balanced_train_selection = int(min_bucket_size * (1 - perc_holdout))
+            for bucket in distinct_buckets:
+                train_distinct_buckets.append(np.random.choice(bucket, num_balanced_train_selection, replace=False))
+                test_distinct_buckets.append(bucket[~bucket.isin(train_distinct_buckets[-1])])
+            test_ids = np.concatenate(test_distinct_buckets)
+            pass
+
+        elif strat_mode == 'balanced_test':
+
+            num_balanced_test_selection = int(min_bucket_size * perc_holdout)
+            for bucket in distinct_buckets:
+                test_distinct_buckets.append(np.random.choice(bucket, num_balanced_test_selection, replace=False))
+                train_distinct_buckets.append(bucket[~bucket.isin(test_distinct_buckets[-1])])
+            test_ids = np.concatenate(test_distinct_buckets)
+            pass
+
+        elif strat_mode == 'stratify':
+            for bucket in distinct_buckets:
+                test_distinct_buckets.append(np.random.choice(bucket, int(len(bucket)*perc_holdout), replace=False))
+                train_distinct_buckets.append(bucket[~bucket.isin(test_distinct_buckets[-1])])
+            test_ids = np.concatenate(test_distinct_buckets)
+            pass
+
+        else:
+            raise ValueError(f'Invalid strat_mode: {strat_mode}')
+    else:
+        num_buckets_for_test = int(num_bucket_ids * perc_holdout)
+        test_ids = np.random.choice(num_bucket_ids, size=num_buckets_for_test)
+    
     holdout = bucket_ids.isin(test_ids)
 
     return holdout
@@ -371,7 +425,7 @@ def get_trial_timestamp(df, trial_id_col='nTrial'):
 def get_first_timestamp_abv_threshold(df, thresh_col, trial_id_col='nTrial', threshold=0.0):
     tmp = df.copy()
     tmp['above_flag'] = (tmp[thresh_col] > threshold)*1.0
-    above_loc = tmp.groupby('nTrial')['above_flag'].transform(lambda x: x.argmax()).astype(int)
+    above_loc = tmp.groupby(trial_id_col)['above_flag'].transform(lambda x: x.argmax()).astype(int)
     return above_loc
 
 def get_is_trial(X, gb_name=['nTrial'], col_names=['r']):

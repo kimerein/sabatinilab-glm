@@ -45,21 +45,23 @@ def define_trial_starts_ends(df, trial_shift_bounds=7):
     df['nEndTrial'] = df['trial_end_flag'].cumsum()
     return df.drop(['event_col_a', 'event_col_b', 'event_col_c', 'event_col_d', 'event_col_e'], axis=1)
 
+
+
 def to_profile():
 
     start = time.time()
 
     # List of files in directory "dir_path" to be processed
     files_list = [
-        'dlight_only_WT36L_12172020.csv',
+        # 'dlight_only_WT36L_12172020.csv',
         'dlight_only_WT36L_12212020.csv',
-        'dlight_only_WT36L_12242020.csv',
-        'dlight_only_WT36L_12292020.csv',
+        # 'dlight_only_WT36L_12242020.csv',
+        # 'dlight_only_WT36L_12292020.csv',
 
-        'Ach_only_WT53L_08262021xlsx.csv',
-        'Ach_only_WT53L_09012021xlsx.csv',
-        'Ach_only_WT53L_09032021xlsx.csv',
-        'Ach_only_WT53L_09062021xlsx.csv',
+        # 'Ach_only_WT53L_08262021xlsx.csv',
+        # 'Ach_only_WT53L_09012021xlsx.csv',
+        # 'Ach_only_WT53L_09032021xlsx.csv',
+        # 'Ach_only_WT53L_09062021xlsx.csv',
     ]
     res = {}
 
@@ -102,7 +104,6 @@ def to_profile():
 
         df = define_trial_starts_ends(df)
 
-        wi_trial_keep = (df['nTrial'] != df['nEndTrial'])
 
         if 'index' in df.columns:
             df = df.drop('index', axis=1)
@@ -131,42 +132,77 @@ def to_profile():
         'nTrial',
         #    'index',
         
-        'cpn', 'cpx',
-        'lpn', 'rpn',
-        # 'lpnr', 'rpnr',
-        # 'lpnnr', 'rpnnr',
+        # 'cpn', 'cpx',
+        
+        # 'lpn', 'rpn',
+        'lpnr', 'rpnr',
+        'lpnnr', 'rpnnr',
+
         'lpx', 'rpx',
         # 'lpxr', 'rpxr',
         # 'lpxnr', 'rpxnr',
         'll', 'rl',
-        'nr', 'r',
+        # 'nr', 'r',
         #'cpo',
         #'lpo',
         #'rpo',
         ]
 
+        # ignore_cols = ['nEndTrial', 'r', 'nr', 'wi_trial_flag', 'rpn', 'lpn']
+        # ignore_cols = ['rpn', 'lpn']
+
+
         # Select column name to use for outcome variable
         y_col = 'zsgdFF'
 
         # Simplify dataframe fro training
-        dfrel = df[X_cols + [y_col]].copy()
+        dfrel = df.copy()
+        # dfrel = df[X_cols + [y_col]].copy()
         dfrel = dfrel.replace('False', 0).astype(float)
         dfrel = dfrel*1
         
+
+
+
+
+        # exp_decay_delta_rt = np.convolve(dfrel['rpn'], np.exp(-np.arange(4)), mode='full')[:len(dfrel)]
+        # exp_decay_delta_lft = np.convolve(dfrel['lpn'], np.exp(-np.arange(10)/3), mode='full')[:len(dfrel)]
+        # exp_decay_delta_ll = np.convolve(dfrel['ll'], 0.3*np.exp(-np.arange(3)), mode='full')[:len(dfrel)]
+        # exp_decay_delta_rl = np.convolve(dfrel['rl'], 0.5*np.exp(-np.arange(5)/3), mode='full')[:len(dfrel)]
+        # noise = np.random.normal(0, 0.1, len(dfrel))
+        # dfrel['zsgdFF'] = exp_decay_delta_rt + exp_decay_delta_lft + exp_decay_delta_ll + exp_decay_delta_rl + noise
+
+
+
         # Timeshift X_cols forward by pos_order times and backward by neg_order times
         neg_order = -7
-        pos_order = 7
+        pos_order = 20
         dfrel = sglm_ez.timeshift_cols(dfrel, X_cols[1:], neg_order=neg_order, pos_order=pos_order)
         X_cols_sftd = sglm_ez.add_timeshifts_to_col_list(X_cols, X_cols[1:], neg_order=neg_order, pos_order=pos_order)
 
+        # print('dfrel', list(dfrel.columns))
+
         # Drop NAs for non-existant timeshifts
         dfrel = dfrel.dropna()
+
+        wi_trial_keep = (dfrel['nTrial'] != dfrel['nEndTrial'])
+
         X_setup = dfrel[X_cols_sftd].copy()
         y_setup = dfrel[y_col].copy()
 
         # Fit GLM only on the non-ITI data
         X_setup = X_setup[wi_trial_keep]
         y_setup = y_setup[wi_trial_keep]
+        dfrel_setup = dfrel[wi_trial_keep].copy()
+
+
+
+
+
+
+
+
+
 
         # Split data into setup (training) and holdout (test) sets
         holdout = sglm_ez.holdout_split_by_trial_id(X_setup, y_setup, id_cols=['nTrial'], perc_holdout=0.2)
@@ -175,6 +211,10 @@ def to_profile():
         X_setup = X_setup.loc[~holdout]
         y_setup = y_setup.loc[~holdout]
 
+        dfrel_holdout = dfrel_setup.loc[holdout]
+        dfrel_setup = dfrel_setup.loc[~holdout]
+
+        # print(list(dfrel.columns))
 
         #######################
         #######################
@@ -194,11 +234,11 @@ def to_profile():
         # Step 1: Create a dictionary of lists for these relevant keywords...
         kwargs_iterations = {
             # # 'alpha': [0.0, 0.01, 0.1, 0.5, 0.9, 1.0],
-            # 'alpha': [0.0, 0.01, 0.1, 0.5, 0.9, 1.0],
-            # 'l1_ratio': [0.0, 0.001, 0.01, 0.1, 0.5, 0.9, 1.0]
+            'alpha': [0.0, 0.001, 0.01, 0.1, 0.5, 0.9, 1.0, 10.0, 100.0],
+            'l1_ratio': [0.0, 0.001, 0.01, 0.1, 0.5, 0.9, 1.0],
 
-            'alpha': [0.0, 1.0],
-            'l1_ratio': [0.0, 1.0]
+            # 'alpha': [0.0, 0.001],
+            # 'l1_ratio': [0.0, 0.001]
         }
 
         # Step 2: Create a dictionary for the fixed keyword arguments that do not require iteration...
@@ -209,6 +249,7 @@ def to_profile():
 
         # Step 3: Generate iterable list of keyword sets for possible combinations
         glm_kwarg_lst = sglm_cv.generate_mult_params(kwargs_iterations, kwargs_fixed)
+
         best_score, best_score_std, best_params, best_model, cv_results = sglm_ez.simple_cv_fit(X_setup, y_setup, kfold_cv_idx, glm_kwarg_lst, model_type='Normal', verbose=0, score_method=score_method)
 
         print()
@@ -253,6 +294,7 @@ def to_profile():
                                               _['glm_kwargs']) for _ in cv_results['full_cv_results']], key=lambda x: -x[0])
                         }
         print(f'Holdout Score: {holdout_score}')
+        # print('Keys:',)
 
         # Generate and save plots of the beta coefficients
         X_cols_plot = [_ for _ in X_cols if _ in X_setup.columns]
@@ -269,37 +311,101 @@ def to_profile():
                                         )
         
 
+        # dfrel_holdout
+        # dfrel_setup
+
+
+        # print('dfrel', list(X_setup.columns))
+
+        
+        dfrel_holdout['nn'] = dfrel_holdout[['lpn', 'rpn']].sum(axis=1)
+        dfrel_holdout['xx'] = dfrel_holdout[['lpx', 'rpx']].sum(axis=1)
+
+        first_trans = dfrel_holdout.groupby('nTrial')[['nn', 'xx', 'lpn', 'rpn', 'lpx', 'rpx', 'cpn']].cumsum()
+        first_trans = ((first_trans == 1)*1).diff()
+        first_trans *= first_trans >= 0
+        first_trans['lpn'] = dfrel_holdout['nn']*dfrel_holdout['lpn']
+        first_trans['rpn'] = dfrel_holdout['nn']*dfrel_holdout['rpn']
+        first_trans['lpx'] = dfrel_holdout['xx']*dfrel_holdout['lpx']
+        first_trans['rpx'] = dfrel_holdout['xx']*dfrel_holdout['rpx']
+
+        first_trans = first_trans.rename({_k:f'ft_{_k}' for _k in first_trans.columns}, axis=1)
+        dfrel_holdout[first_trans.columns] = first_trans
+
+
+
+        dfrel_holdout['ft_r_rpn'] = dfrel_holdout['ft_rpn'] * dfrel_holdout['r']
+        dfrel_holdout['ft_r_lpn'] = dfrel_holdout['ft_lpn'] * dfrel_holdout['r']
+        dfrel_holdout['ft_nr_rpn'] = dfrel_holdout['ft_rpn'] * dfrel_holdout['nr']
+        dfrel_holdout['ft_nr_lpn'] = dfrel_holdout['ft_lpn'] * dfrel_holdout['nr']
 
 
 
 
 
-        tmp = X_holdout.set_index('nTrial').copy()
-        tmp_y = y_holdout.copy()
-        tmp_y.index = tmp.index
-        tmp[y_holdout.name] = tmp_y
 
-        tmp['1'] = 1
-        tmp['tim'] = tmp.groupby('nTrial')['1'].cumsum()
-        tmp['pred'] = glm.predict(tmp[X_setup.columns])
+        for fitted_model_dict in cv_results['full_cv_results']:
+            fitted_model = fitted_model_dict['model']
+            
+            # tmp_holdout_score = fitted_model.r2_score(X_holdout[X_setup.columns], y_holdout)
+            tmp_holdout_score = fitted_model.r2_score(dfrel_holdout[X_setup.columns], y_holdout)
 
-        # print(tmp)
+            # print("fitted_model_dict['glm_kwargs']",fitted_model_dict['glm_kwargs'])
 
-        entry_timing_r = tmp.groupby('nTrial')['rpn'].agg(lambda x: x.argmax()).astype(int)
-        entry_timing_l = tmp.groupby('nTrial')['lpn'].agg(lambda x: x.argmax()).astype(int)
-        entry_timing = (entry_timing_r > entry_timing_l)*entry_timing_r + (entry_timing_r < entry_timing_l)*entry_timing_l
+            tmp = dfrel_holdout.set_index('nTrial').copy()
 
-        adjusted_time = (tmp['tim'] - entry_timing)
-        # print(adjusted_time)
-        tmp['adjusted_time'] = adjusted_time
-        adjusted_time.index = tmp.index
 
-        entry_timing_c = tmp.groupby('nTrial')['cpn'].agg(lambda x: x.argmax()).astype(int)
-        adjusted_time_c = (tmp['tim'] - entry_timing_c)
-        adjusted_time_c.index = tmp.index
-        tmp['cpn_adjusted_time'] = adjusted_time_c
 
-        splt.plot_avg_reconstructions(tmp, binsize = 50, min_time = -20, max_time = 30, min_signal = -3.0, max_signal = 3.0, file_name=f'figure_outputs/average_response_reconstruction_{filename[:-4]}.png')
+
+
+
+
+            # tmp = X_holdout.set_index('nTrial').copy()
+            tmp_y = y_holdout.copy()
+            tmp_y.index = tmp.index
+            tmp[y_holdout.name] = tmp_y
+
+            tmp['1'] = 1
+            tmp['tim'] = tmp.groupby('nTrial')['1'].cumsum()
+            # tmp['pred'] = glm.predict(tmp[X_setup.columns])
+            tmp['pred'] = fitted_model.predict(tmp[X_setup.columns])
+
+            # print(tmp)
+
+            entry_timing_r = tmp.groupby('nTrial')['ft_rpn'].transform(lambda x: x.argmax()).astype(int)
+            entry_timing_l = tmp.groupby('nTrial')['ft_lpn'].transform(lambda x: x.argmax()).astype(int)
+            entry_timing = (entry_timing_r > entry_timing_l)*entry_timing_r + (entry_timing_r < entry_timing_l)*entry_timing_l
+
+            adjusted_time = (tmp['tim'] - entry_timing)
+            # print(adjusted_time)
+            tmp['adjusted_time'] = adjusted_time
+            adjusted_time.index = tmp.index
+
+            entry_timing_c = tmp.groupby('nTrial')['ft_cpn'].transform(lambda x: x.argmax()).astype(int)
+            adjusted_time_c = (tmp['tim'] - entry_timing_c)
+            adjusted_time_c.index = tmp.index
+            tmp['cpn_adjusted_time'] = adjusted_time_c
+
+            kwarg_info = "_".join([f"{_k}_{fitted_model_dict['glm_kwargs'][_k]}" for _k in fitted_model_dict["glm_kwargs"]])
+
+            splt.plot_avg_reconstructions(tmp, binsize = 50, min_time = -20, max_time = 30, min_signal = -3.0, max_signal = 3.0, file_name=f'figure_outputs/average_response_reconstruction_{filename[:-4]}_{kwarg_info}.png')
+
+            splt.plot_all_beta_coefs(fitted_model, X_cols_plot,
+                                            X_cols_sftd_plot,
+                                            plot_width=2,
+                                            y_lims=(-2.0, 2.0),
+                                            # filename=f'{fn}_coeffs.png',
+                                            binsize=50,
+                                            filename=f'figure_outputs/{fn}_{filename[:-4]}_{kwarg_info}_coeffs_R2_{np.round(tmp_holdout_score, 4)}.png',
+                                            plot_name=f'{fn} — {kwarg_info}'
+                                            )
+
+            
+            # print('entry_timing_r',entry_timing_r)
+            # print('entry_timing_l',entry_timing_l)
+            # print('entry_timing_c',entry_timing_c)
+            
+            
 
 
 
