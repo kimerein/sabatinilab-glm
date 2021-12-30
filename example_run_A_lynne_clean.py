@@ -206,6 +206,7 @@ def to_profile():
 
         # Split data into setup (training) and holdout (test) sets
         holdout = sglm_ez.holdout_split_by_trial_id(X_setup, y_setup, id_cols=['nTrial'], perc_holdout=0.2)
+        # holdout = sglm_ez.holdout_split_by_trial_id(X_setup, y_setup, id_cols=['nTrial'], strat_col='strat_id', strat_mode='stratify', perc_holdout=0.2)
         X_holdout = X_setup.loc[holdout]
         y_holdout = y_setup.loc[holdout]
         X_setup = X_setup.loc[~holdout]
