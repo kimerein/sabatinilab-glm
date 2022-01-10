@@ -229,7 +229,7 @@ def holdout_splits(X_setup, y_setup, dfrel_setup, id_cols=['nTrial'], perc_holdo
     dfrel_setup = dfrel_setup.loc[~holdout]
     return X_setup, y_setup, X_holdout, y_holdout, dfrel_setup, dfrel_holdout
 
-def print_best_model_info(best_score, best_params, best_model, start):
+def print_best_model_info(X_setup, best_score, best_params, best_model, start):
     # Print out all non-zero coefficients
     print('Non-Zero Coeffs:')
     epsilon = 1e-10
@@ -276,7 +276,7 @@ def print_best_model_info(best_score, best_params, best_model, start):
     # 'sl',
     # ]
 
-def training_fit_holdout_score(X_setup, y_setup, X_holdout, y_holdout, best_params)
+def training_fit_holdout_score(X_setup, y_setup, X_holdout, y_holdout, best_params):
     '''
     Fit GLM on training data, and score on holdout data
     Args:
@@ -326,7 +326,7 @@ def get_first_entry_time(tmp, X_setup):
     adjusted_time_c = (tmp['tim'] - entry_timing_c)
     adjusted_time_c.index = tmp.index
     tmp['cpn_adjusted_time'] = adjusted_time_c
-    return
+    return tmp
 
 
 def to_profile():
@@ -414,8 +414,8 @@ def to_profile():
         # Select hyper parameters for GLM to use for model selection
         # Step 1: Create a dictionary of lists for these relevant keywords...
         kwargs_iterations = {
-            'alpha': [0.0, 0.001, 0.01, 0.1, 0.5, 0.9, 1.0, 10.0, 100.0],
-            'l1_ratio': [0.0, 0.001, 0.01, 0.1, 0.5, 0.9, 1.0],
+            'alpha': [0.0, 1.0],
+            'l1_ratio': [0.0, 0.001],
         }
 
         # Step 2: Create a dictionary for the fixed keyword arguments that do not require iteration...
@@ -432,7 +432,7 @@ def to_profile():
         print('---')
         print()
 
-        print_best_model_info(best_score, best_params, best_model, start)
+        print_best_model_info(X_setup, best_score, best_params, best_model, start)
 
 
         glm, holdout_score, holdout_neg_mse_score = training_fit_holdout_score(X_setup, y_setup, X_holdout, y_holdout, best_params)
@@ -509,8 +509,8 @@ def to_profile():
 
             tmp = dfrel_holdout.set_index('nTrial').copy()
             tmp['pred'] = fitted_model.predict(tmp[X_setup.columns])
-            tmp = get_first_entry_time(tmp, X_setup, fitted_model)
-
+            tmp = get_first_entry_time(tmp, X_setup)
+            
             # tmp = X_holdout.set_index('nTrial').copy()
             tmp_y = y_holdout.copy()
             tmp_y.index = tmp.index
