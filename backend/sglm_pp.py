@@ -484,3 +484,62 @@ def concat_pandas_shifts(shift_amt_list: List[int],
         ret.append(shifted_list[isa][col_names].rename({col_names[i]:sft_col_names[i] for i in range(len(sft_col_names))}, axis=1))
     ret = pd.concat(ret, axis=1)
     return ret
+
+def min_max_scale(X: float, lower_bound: float, upper_bound: float) -> Union[np.ndarray, pd.DataFrame]:
+    """
+    Scale values of X based on lower and upper bounds.
+    
+    JZ 2020
+    
+    Args:
+        X: Input data
+        lower_bound: Lower bound of scaling
+        upper_bound: Upper bound of scaling
+    
+    Returns:
+        Scaled value
+    """
+    return (X - lower_bound) / (upper_bound - lower_bound)
+
+def lambda_min_max(X: pd.Series) -> float:
+    """
+    Lambda function for min_max_scale to be used with apply. Returns scaled value of center data point by 5th & 95th percentiles.
+    
+    JZ 2020
+
+    Args:
+        X: Input data
+    
+    Returns:
+        Scaled value
+    """
+    lower_bound = X.quantile(0.05) # X.min()
+    upper_bound = X.quantile(0.95) # X.max()
+    return min_max_scale(X.iloc[(len(X) + 1)//2 - 1], lower_bound, upper_bound)
+
+    # return min_max_scale(X.iloc[-1], X.min(), X.max())
+
+def detrend_data(X: pd.DataFrame, detrend_col: str, grouping_cols: List[str], window: int, standardize: Optional[bool]=False) -> pd.DataFrame:
+    """
+    Detrend data by removing a trend from a column.
+    
+    JZ 2020
+    
+    Args:
+        X: Input data
+        detrend_col: Column to detrend
+        grouping_cols: Columns to group by
+        window: Window size for detrending
+    
+    Returns:
+        Detrended data
+    """
+    if grouping_cols:
+        ret = X.groupby(grouping_cols)[detrend_col].rolling(window=window*2, center=True).apply(lambda_min_max)
+    else:
+        ret = X[detrend_col].rolling(window=window*2, center=True).apply(lambda_min_max)
+
+    # if standardize:
+    #     ret = (ret - ret.mean()) / ret.std()
+    
+    return ret

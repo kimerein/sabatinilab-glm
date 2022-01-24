@@ -81,7 +81,13 @@ def rename_columns(df):
                     'zscored green (dLight1.1)': 'zsgdFF',
 
                     'dF/F green (dlight1.1)': 'gdFF',
-                    'zscored green (dlight1.1)': 'zsgdFF'
+                    'zscored green (dlight1.1)': 'zsgdFF',
+
+                    'dF/F (dlight1.1)': 'gdFF',
+                    'zscore dF/F (dlight)': 'zsgdFF',
+
+                    'zscore dF/F (Ach)': 'zsgdFF',
+                    'zscore dF/F (rGRAB-DA)' : 'zsgdFF',
                     }, axis=1)
     return df
 
@@ -297,7 +303,7 @@ def training_fit_holdout_score(X_setup, y_setup, X_holdout, y_holdout, best_para
 
     return glm, holdout_score, holdout_neg_mse_score
 
-def get_first_entry_time(tmp, X_setup):
+def get_first_entry_time(tmp, _=None):
     '''
     Get first entry time
     Args:
@@ -333,18 +339,28 @@ def to_profile():
 
     start = time.time()
 
-    # List of files in directory "dir_path" to be processed
-    files_list = [
-        'dlight_only_WT36L_12172020.csv',
-        'dlight_only_WT36L_12212020.csv',
-        'dlight_only_WT36L_12242020.csv',
-        'dlight_only_WT36L_12292020.csv',
+    # # List of files in directory "dir_path" to be processed
+    # files_list = [
+    #     'dlight_only_WT36L_12172020.csv',
+    #     'dlight_only_WT36L_12212020.csv',
+    #     'dlight_only_WT36L_12242020.csv',
+    #     'dlight_only_WT36L_12292020.csv',
 
-        # 'Ach_only_WT53L_08262021xlsx.csv',
-        # 'Ach_only_WT53L_09012021xlsx.csv',
-        # 'Ach_only_WT53L_09032021xlsx.csv',
-        # 'Ach_only_WT53L_09062021xlsx.csv',
-    ]
+    #     # 'Ach_only_WT53L_08262021xlsx.csv',
+    #     # 'Ach_only_WT53L_09012021xlsx.csv',
+    #     # 'Ach_only_WT53L_09032021xlsx.csv',
+    #     # 'Ach_only_WT53L_09062021xlsx.csv',
+    # ]
+
+    files_list = [  #'dlight_only_WT63_11082021.csv',
+                    #'dlight_only_WT63_11162021.csv',
+                    #'dlight_only_WT63_11182021.csv',
+
+                    'Ach_rDAh_WT63_11082021.csv',
+                    'Ach_rDAh_WT63_11162021.csv',
+                    'Ach_rDAh_WT63_11182021.csv'
+                    ]
+
     res = {}
 
     # Loop through files to be processed
@@ -354,9 +370,41 @@ def to_profile():
         df = pd.read_csv(f'{dir_path}/../{filename}')
         df = df[[_ for _ in df.columns if 'Unnamed' not in _]]
         df = rename_columns(df)
+
+        print(df.columns)
+
+        tmp = sglm_pp.detrend_data(df, 'zsgdFF', [], 200)
+        df['zsgdFF'] = tmp
+        df = df.dropna()
+
         df = define_trial_starts_ends(df)
         df = set_reward_flags(df)
         df = set_port_entry_exit_rewarded_unrewarded_indicators(df)
+        
+        # df['nn'] = df[['lpn', 'rpn']].sum(axis=1)
+        # df['xx'] = df[['lpx', 'rpx']].sum(axis=1)
+
+        # first_trans = df.groupby('nTrial')[['nn', 'xx', 'lpn', 'rpn', 'lpx', 'rpx', 'cpn']].cumsum()
+        # first_trans = ((first_trans == 1)*1).diff()
+        # first_trans *= first_trans >= 0
+        # first_trans['lpn'] = df['nn']*df['lpn']
+        # first_trans['rpn'] = df['nn']*df['rpn']
+        # first_trans['lpx'] = df['xx']*df['lpx']
+        # first_trans['rpx'] = df['xx']*df['rpx']
+
+        # df[first_trans.columns] = first_trans
+
+
+
+        # df['ft_r_rpn'] = df['ft_rpn'] * df['r']
+        # df['ft_r_lpn'] = df['ft_lpn'] * df['r']
+        # df['ft_nr_rpn'] = df['ft_rpn'] * df['nr']
+        # df['ft_nr_lpn'] = df['ft_lpn'] * df['nr']
+
+
+
+
+
         df = define_side_agnostic_events(df)
 
         if 'index' in df.columns:
@@ -414,8 +462,11 @@ def to_profile():
         # Select hyper parameters for GLM to use for model selection
         # Step 1: Create a dictionary of lists for these relevant keywords...
         kwargs_iterations = {
-            'alpha': [0.0, 1.0],
-            'l1_ratio': [0.0, 0.001],
+            # 'alpha': [0.0, 1.0],
+            # 'l1_ratio': [0.0, 0.001],
+
+            'alpha': [0.001, 0.01, 0.1, 0.5, 0.9, 1.0],
+            'l1_ratio': [0.0, 0.001, 0.01],
         }
 
         # Step 2: Create a dictionary for the fixed keyword arguments that do not require iteration...
@@ -454,8 +505,9 @@ def to_profile():
         # Generate and save plots of the beta coefficients
         X_cols_plot = [_ for _ in X_cols if _ in X_setup.columns]
         X_cols_sftd_plot = [_ for _ in X_cols_sftd if _ in X_setup.columns]
+
         fn = filename.split(".")[0]
-        splt.plot_all_beta_coefs(glm, X_cols_plot,
+        splt.plot_all_beta_coefs(glm.coef_, X_cols_plot,
                                         X_cols_sftd_plot,
                                         plot_width=2,
                                         y_lims=(-2.0, 2.0),
@@ -501,6 +553,15 @@ def to_profile():
 
         for fitted_model_dict in cv_results['full_cv_results']:
             fitted_model = fitted_model_dict['model']
+            kwarg_info = "_".join([f"{_k}_{fitted_model_dict['glm_kwargs'][_k]}" for _k in fitted_model_dict["glm_kwargs"]])
+
+
+
+            model_coef = fitted_model.coef_
+            model_intercept = fitted_model.intercept_
+
+            np.save(f'figure_outputs/coeffs_{filename[:-4]}_{kwarg_info}.npy', model_coef)
+            np.save(f'figure_outputs/intercept_{filename[:-4]}_{kwarg_info}.npy', model_intercept)
             
             # tmp_holdout_score = fitted_model.r2_score(X_holdout[X_setup.columns], y_holdout)
             tmp_holdout_score = fitted_model.r2_score(dfrel_holdout[X_setup.columns], y_holdout)
@@ -516,11 +577,10 @@ def to_profile():
             tmp_y.index = tmp.index
             tmp[y_holdout.name] = tmp_y
 
-
-            kwarg_info = "_".join([f"{_k}_{fitted_model_dict['glm_kwargs'][_k]}" for _k in fitted_model_dict["glm_kwargs"]])
+            tmp.to_csv(f'figure_outputs/tmp_data_{filename[:-4]}_{kwarg_info}.npy')
 
             splt.plot_avg_reconstructions(tmp, binsize = 50, min_time = -20, max_time = 30, min_signal = -3.0, max_signal = 3.0, file_name=f'figure_outputs/avg_resp_reconstruction_{filename[:-4]}_{kwarg_info}_R2_{np.round(tmp_holdout_score, 4)}.png')
-            splt.plot_all_beta_coefs(fitted_model, X_cols_plot,
+            splt.plot_all_beta_coefs(fitted_model.coef_, X_cols_plot,
                                             X_cols_sftd_plot,
                                             plot_width=2,
                                             y_lims=(-2.0, 2.0),
@@ -529,15 +589,15 @@ def to_profile():
                                             filename=f'figure_outputs/betas_{filename[:-4]}_{kwarg_info}_coeffs_R2_{np.round(tmp_holdout_score, 4)}.png',
                                             plot_name=f'{fn} — {kwarg_info}'
                                             )
-
             
+    
+
             # print('entry_timing_r',entry_timing_r)
             # print('entry_timing_l',entry_timing_l)
             # print('entry_timing_c',entry_timing_c)
             
             
-
-
+    
 
     # For every file iterated, for every result value, for every model fitted, print the reslts
     print(f'Final Results:')
@@ -556,6 +616,12 @@ def to_profile():
                           f'Params: {v_[4]}'))
                 print(lss_spc + ']')
 
-to_profile()
 
-# cProfile.run('to_profile()', sort='tottime')
+    print('X_cols_plot:', X_cols_plot)
+    print('X_cols_sftd_plot:', X_cols_sftd_plot)
+
+
+if __name__ == '__main__':
+    to_profile()
+
+    # cProfile.run('to_profile()', sort='tottime')

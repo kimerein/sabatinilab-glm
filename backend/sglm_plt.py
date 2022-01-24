@@ -54,7 +54,7 @@ def reconstruct_signal(glm, X, y_true=-1):
     return y_true, pred
 
 
-def plot_single_coef_set(name, timeshifts, coefs, ax=None, y_lims=None, binsize=None):
+def plot_single_coef_set(name, timeshifts, coefs, ax=None, y_lims=None, binsize=None, label=None):
     # Binsize in Milliseconds
     x_vals = np.array(timeshifts)
     x_label = 'Timeshifts'
@@ -63,7 +63,10 @@ def plot_single_coef_set(name, timeshifts, coefs, ax=None, y_lims=None, binsize=
         x_vals *= binsize
         x_label += ' (ms)'
 
-    ax.plot(x_vals, coefs)
+    if label:
+        ax.plot(x_vals, coefs, label=label)
+    else:
+        ax.plot(x_vals, coefs)
 
     ax.set_ylim(y_lims)
     ax.set_title(name)
@@ -73,7 +76,7 @@ def plot_single_coef_set(name, timeshifts, coefs, ax=None, y_lims=None, binsize=
     ax.grid()
     return
 
-def plot_all_beta_coefs(glm, coef_names, sftd_coef_names, plot_width=4, y_lims=None, filename='', plot_name='', binsize=None):
+def plot_all_beta_coefs(coeffs, coef_names, sftd_coef_names, plot_width=4, y_lims=None, filename='', plot_name='', binsize=None, fig=None, axs=None, label=None):
     """
     Plot all beta coefficients for a given model
     Args:
@@ -95,18 +98,19 @@ def plot_all_beta_coefs(glm, coef_names, sftd_coef_names, plot_width=4, y_lims=N
             Binsize in milliseconds
     """
     if y_lims is None:
-        y_lims = (glm.coef_.min(), glm.coef_.max())
+        y_lims = (coeffs.min(), coeffs.max())
     # print(y_lims)
 
-    coef_lookup = {sftd_coef_names[i]:glm.coef_[i] for i in range(len(sftd_coef_names))}
+    coef_lookup = {sftd_coef_names[i]:coeffs[i] for i in range(len(sftd_coef_names))}
     coef_cols = sglm_ez.get_coef_name_sets(coef_names, sftd_coef_names)
     
-    fig, axs = plt.subplots(len(coef_cols)//plot_width + (len(coef_cols)%plot_width > 0)*1, plot_width)
-    fig.set_figheight(20)
-    fig.set_figwidth(20)
+    if fig is None or axs is None:
+        fig, axs = plt.subplots(len(coef_cols)//plot_width + (len(coef_cols)%plot_width > 0)*1, plot_width)
+        fig.set_figheight(20)
+        fig.set_figwidth(20)
 
-    addl_plot_name = ' — ' + plot_name if plot_name else ''
-    fig.suptitle(f'Feature Coefficients by Timeshift{addl_plot_name}', fontsize=20)
+        addl_plot_name = ' — ' + plot_name if plot_name else ''
+        fig.suptitle(f'Feature Coefficients by Timeshift{addl_plot_name}', fontsize=20)
 
     for icn, coef_name in enumerate(coef_cols):
         # print(icn)
@@ -119,14 +123,14 @@ def plot_all_beta_coefs(glm, coef_names, sftd_coef_names, plot_width=4, y_lims=N
         
         axs_tmp = axs_a[icn%plot_width]
 
-        plot_single_coef_set(coef_name, timeshifts, coefs, axs_tmp, y_lims, binsize=binsize)
+        plot_single_coef_set(coef_name, timeshifts, coefs, axs_tmp, y_lims, binsize=binsize, label=label)
     
     fig.tight_layout()
 
     if filename:
         fig.savefig(filename)
 
-    return
+    return fig, axs
 
 
 def plot_power_spectra(y_true_full, y_hat_full):
@@ -227,10 +231,10 @@ def get_time_alignment(x_label, adjusted_time, min_time=None, max_time=None, bin
     # tmp_backup['plot_time'] = tmp_backup['adjusted_time'] * binsize
 
 def plot_avg_reconstructions(tmp_backup,
-                             plt_col_lst = [['r', 'lpn', 'Rewarded, Left Port Entry', 'adjusted_time'],
-                                            ['r', 'rpn', 'Rewarded, Right Port Entry', 'adjusted_time'],
-                                            ['nr', 'lpn', 'Unrewarded, Left Port Entry', 'adjusted_time'],
-                                            ['nr', 'rpn', 'Unrewarded, Right Port Entry', 'adjusted_time'],
+                             plt_col_lst = [['r', 'ft_lpn', 'Rewarded, Left Port Entry', 'adjusted_time'],
+                                            ['r', 'ft_rpn', 'Rewarded, Right Port Entry', 'adjusted_time'],
+                                            ['nr', 'ft_lpn', 'Unrewarded, Left Port Entry', 'adjusted_time'],
+                                            ['nr', 'ft_rpn', 'Unrewarded, Right Port Entry', 'adjusted_time'],
                                             ['cpn', 'Center Port Entry', 'cpn_adjusted_time']],
                              binsize = 50,
                              min_time = -20, max_time = 30,
