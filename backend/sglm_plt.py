@@ -55,6 +55,22 @@ def reconstruct_signal(glm, X, y_true=-1):
 
 
 def plot_single_coef_set(name, timeshifts, coefs, ax=None, y_lims=None, binsize=None, label=None):
+    """
+    Plot a single set of coefficients
+    Args:
+        name : str
+            Name of single coefficient plot
+        timeshifts : List[float]
+            List of timeshifts
+        coefs : List[float]
+            List of coefficients
+        ax : matplotlib.axes.Axes
+            Axes to plot on
+        y_lims : List[float]
+            Limits of y-axis
+        binsize : int
+            Binsize in milliseconds
+    """
     # Binsize in Milliseconds
     x_vals = np.array(timeshifts)
     x_label = 'Timeshifts'
@@ -96,6 +112,15 @@ def plot_all_beta_coefs(coeffs, coef_names, sftd_coef_names, plot_width=4, y_lim
             Name of plot
         binsize : int
             Binsize in milliseconds
+        fig : matplotlib.figure.Figure
+            Figure to plot on
+        axs : List[matplotlib.axes.Axes]
+            Axes to plot on
+    Returns:
+        fig : matplotlib.figure.Figure
+            Figure containing plot
+        axs : List[matplotlib.axes.Axes]
+            Axes containing plots
     """
     if y_lims is None:
         y_lims = (coeffs.min(), coeffs.max())
@@ -194,6 +219,30 @@ def plot_power_spectra(y_true_full, y_hat_full):
     return
 
 def plot_single_avg_reconstruction(ci_setup_true, ci_setup_pred, ax, min_time, max_time, min_signal, max_signal, x_label, y_label, title):
+    """
+    Plot the average reconstruction of a single CI setup
+    Args:
+        ci_setup_true : pd.DataFrame
+            CI setup with true signal
+        ci_setup_pred : pd.DataFrame
+            CI setup with predicted signal
+        ax : matplotlib.axes.Axes
+            Axes to plot on
+        min_time : float
+            Minimum time to plot
+        max_time : float
+            Maximum time to plot
+        min_signal : float
+            Minimum signal to plot
+        max_signal : float
+            Maximum signal to plot
+        x_label : str
+            Label for x-axis
+        y_label : str
+            Label for y-axis
+        title : str
+            Title for plot
+    """
 
     ci_setup_pred = ci_setup_pred[ci_setup_true.isna().sum(axis=1) == 0]
     ci_setup_true = ci_setup_true[ci_setup_true.isna().sum(axis=1) == 0]
@@ -202,6 +251,7 @@ def plot_single_avg_reconstruction(ci_setup_true, ci_setup_pred, ax, min_time, m
     ax.fill_between(ci_setup_true.index, ci_setup_true['lb'], ci_setup_true['ub'], color='b', alpha=.2)
 
     ax.plot(ci_setup_pred['mean'], color='r')
+    ax.fill_between(ci_setup_pred.index, ci_setup_pred['lb'], ci_setup_pred['ub'], color='r', alpha=.2)
     ax.set_xlim((min_time, max_time))
     ax.set_ylim((min_signal, max_signal))
     trial_num = ci_setup_true['size'].max()
@@ -215,6 +265,28 @@ def plot_single_avg_reconstruction(ci_setup_true, ci_setup_pred, ax, min_time, m
 def get_time_alignment(x_label, adjusted_time, min_time=None, max_time=None, binsize=None):
     """
     Get the time alignment for the data
+    Args:
+        x_label : str
+            Label for x-axis
+        adjusted_time : pd.Series
+            Time series with adjusted time
+        min_time : float
+            Minimum time to plot
+        max_time : float
+            Maximum time to plot
+        binsize : float
+            Size of bins to use
+    Returns:
+        plot_time : np.ndarray
+            Adjusted time at each point
+        x_label : str
+            Label for x-axis
+        min_time : float
+            Minimum time to plot (adjusted to ms if provided)
+        max_time : float
+            Maximum time to plot (adjusted to ms if provided)
+        binsize : float
+            Size of bins to use (adjusted to ms if provided)
     """
 
     if binsize is not None:
@@ -231,6 +303,7 @@ def get_time_alignment(x_label, adjusted_time, min_time=None, max_time=None, bin
     # tmp_backup['plot_time'] = tmp_backup['adjusted_time'] * binsize
 
 def plot_avg_reconstructions(tmp_backup,
+                             y_col='zsgdFF',
                              plt_col_lst = [['r', 'ft_lpn', 'Rewarded, Left Port Entry', 'adjusted_time'],
                                             ['r', 'ft_rpn', 'Rewarded, Right Port Entry', 'adjusted_time'],
                                             ['nr', 'ft_lpn', 'Unrewarded, Left Port Entry', 'adjusted_time'],
@@ -246,8 +319,10 @@ def plot_avg_reconstructions(tmp_backup,
     Args:
         tmp_backup : pd.DataFrame
             Dataframe of the data
+        y_col : str
+            Column to plot on y axis
         binsize : int
-            Size of the bins to average over
+            Size of the bins for each timestep
         min_time : int
             Minimum time to plot
         max_time : int
@@ -256,6 +331,10 @@ def plot_avg_reconstructions(tmp_backup,
             Minimum signal to plot
         max_signal : float
             Maximum signal to plot
+        title : str
+            Title for plot
+        file_name : str
+            Name of file to save as plot
     """
 
     x_label = 'Timesteps __ from Event'
@@ -291,7 +370,7 @@ def plot_avg_reconstructions(tmp_backup,
         is_plt_col_name = f'is_{"_".join(plot_cols)}_trial'
 
         tmp[is_plt_col_name] = sglm_ez.get_is_trial(tmp, ['nTrial'], plot_cols)
-        ci_setup_true = sglm_ez.get_sem(tmp, tmp[is_plt_col_name], 'plot_time', 'zsgdFF')
+        ci_setup_true = sglm_ez.get_sem(tmp, tmp[is_plt_col_name], 'plot_time', y_col)
         ci_setup_pred = sglm_ez.get_sem(tmp, tmp[is_plt_col_name], 'plot_time', 'pred')
         plot_single_avg_reconstruction(ci_setup_true, ci_setup_pred, ax[i,j], min_time_revised, max_time_revised, min_signal, max_signal, x_label, y_label, plot_title)
 
