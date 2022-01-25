@@ -209,10 +209,12 @@ def create_setup_dfs(dfrel, X_cols_sftd, y_col, drop_iti=True):
         dfrel: full dataframe
         X_cols_sftd: list of post-shifted columns
         y_col: response column
+        drop_iti: whether to drop iti columns
     Returns:
         X_setup: setup prediction dataframe
         y_setup: setup response column
         dfrel_setup: full setup dataframe
+        wi_trial_keep: boolean array of which timesteps fall within the trial (True for within trial, False for ITI)
     '''
     wi_trial_keep = (dfrel['nTrial'] != dfrel['nEndTrial'])
 
@@ -230,9 +232,9 @@ def create_setup_dfs(dfrel, X_cols_sftd, y_col, drop_iti=True):
         y_setup = y_setup.copy()
         dfrel_setup = dfrel.copy()
 
-    return X_setup, y_setup, dfrel_setup
+    return X_setup, y_setup, dfrel_setup, wi_trial_keep
 
-def holdout_splits(X_setup, y_setup, dfrel_setup, id_cols=['nTrial'], perc_holdout=0.2):
+def holdout_splits(X_setup, y_setup, dfrel_setup, id_cols=['nTrial'], perc_holdout=0.2, drop_iti_train=False, drop_iti_holdout=True, wi_trial_keep=None):
     '''
     Create holdout splits
     Args:
@@ -241,6 +243,9 @@ def holdout_splits(X_setup, y_setup, dfrel_setup, id_cols=['nTrial'], perc_holdo
         dfre_setup: full setup dataframe
         id_cols: list of columns to use as trial identifiers
         perc_holdout: percentage of data to holdout
+        drop_iti_train: whether to drop iti columns in training data
+        drop_iti_holdout: whether to drop iti columns in holdout data
+        wi_trial_keep: boolean array of which timesteps fall within the trial (True for within trial, False for ITI)
     Returns:
         X_setup: setup prediction dataframe
         y_setup: setup response column
@@ -256,9 +261,20 @@ def holdout_splits(X_setup, y_setup, dfrel_setup, id_cols=['nTrial'], perc_holdo
     y_holdout = y_setup.loc[holdout]
     X_setup = X_setup.loc[~holdout]
     y_setup = y_setup.loc[~holdout]
-
     dfrel_holdout = dfrel_setup.loc[holdout]
     dfrel_setup = dfrel_setup.loc[~holdout]
+
+    if drop_iti_train:
+        wi_trial_keep_tr = wi_trial_keep.loc[~holdout]
+        X_setup = X_setup[wi_trial_keep_tr]
+        y_setup = y_setup[wi_trial_keep_tr]
+        dfrel_setup = dfrel_setup[wi_trial_keep_tr]
+    if drop_iti_holdout:
+        wi_trial_keep_holdout = wi_trial_keep.loc[holdout]
+        X_holdout = X_holdout[wi_trial_keep_holdout]
+        y_holdout = y_holdout[wi_trial_keep_holdout]
+        dfrel_holdout = dfrel_holdout[wi_trial_keep_holdout]
+
     return X_setup, y_setup, X_holdout, y_holdout, dfrel_setup, dfrel_holdout
 
 def print_best_model_info(X_setup, best_score, best_params, best_model, start):
@@ -405,7 +421,7 @@ def to_profile():
     for filename in files_list:
 
         # Select column name to use for outcome variable
-        y_col = 'zsgdFF'
+        y_col = 'zsrdFF'
         
         # Load file
         df = pd.read_csv(f'{dir_path}/../{filename}')
@@ -479,12 +495,12 @@ def to_profile():
 
         # Create setup dfs by dropping the inter-trial intervals (if drop_iti=False)
         # X_setup, y_setup, dfrel_setup = create_setup_dfs(dfrel, X_cols_sftd, y_col)
-        X_setup, y_setup, dfrel_setup = create_setup_dfs(dfrel, X_cols_sftd, y_col, drop_iti=False)
+        X_setup, y_setup, dfrel_setup, wi_trial_keep = create_setup_dfs(dfrel, X_cols_sftd, y_col, drop_iti=False)
 
         # Split data into setup (training) and holdout (test) sets
         np.random.seed(30186)
         random.seed(30186)
-        X_setup, y_setup, X_holdout, y_holdout, dfrel_setup, dfrel_holdout = holdout_splits(X_setup, y_setup, dfrel_setup, id_cols=['nTrial'], perc_holdout=0.2)
+        X_setup, y_setup, X_holdout, y_holdout, dfrel_setup, dfrel_holdout = holdout_splits(X_setup, y_setup, dfrel_setup, id_cols=['nTrial'], perc_holdout=0.2, drop_iti_train=False, drop_iti_holdout=True, wi_trial_keep=wi_trial_keep)
 
         #######################
         #######################
@@ -553,7 +569,7 @@ def to_profile():
                                         y_lims=(-2.0, 2.0),
                                         # filename=f'{fn}_coeffs.png',
                                         binsize=50,
-                                        filename=f'{fn}_{y_col}_coeffs_R2_{np.round(holdout_score, 4)}.png',
+                                        filename=f'model_outputs/best_coeffs/{fn}_{y_col}_coeffs_R2_{np.round(holdout_score, 4)}.png',
                                         plot_name=f'{fn} — {y_col} — {best_params}'
                                         )
         
@@ -598,7 +614,7 @@ def to_profile():
                                       max_time = 30,
                                       min_signal = -3.0,
                                       max_signal = 3.0,
-                                      file_name=f'{fn}_{y_col}_arr_R2_{np.round(holdout_score, 4)}.png')
+                                      file_name=f'model_outputs/best_reconstructions/{fn}_{y_col}_arr_R2_{np.round(holdout_score, 4)}.png')
     
 
 
@@ -612,8 +628,8 @@ def to_profile():
             model_coef = fitted_model.coef_
             model_intercept = fitted_model.intercept_
 
-            np.save(f'figure_outputs/coeffs_{filename[:-4]}_{y_col}_{kwarg_info}.npy', model_coef)
-            np.save(f'figure_outputs/intercept_{filename[:-4]}_{y_col}_{kwarg_info}.npy', model_intercept)
+            np.save(f'model_outputs/all_models/coeffs_{filename[:-4]}_{y_col}_{kwarg_info}.npy', model_coef)
+            np.save(f'model_outputs/all_models/intercept_{filename[:-4]}_{y_col}_{kwarg_info}.npy', model_intercept)
             
             # tmp_holdout_score = fitted_model.r2_score(X_holdout[X_setup.columns], y_holdout)
             tmp_holdout_score = fitted_model.r2_score(dfrel_holdout[X_setup.columns], y_holdout)
@@ -629,7 +645,7 @@ def to_profile():
             tmp_y.index = tmp.index
             tmp[y_holdout.name] = tmp_y
 
-            tmp.to_csv(f'figure_outputs/tmp_data_{filename[:-4]}_{y_col}_{kwarg_info}.csv')
+            tmp.to_csv(f'model_outputs/all_data/tmp_data_{filename[:-4]}_{y_col}_{kwarg_info}.csv')
 
             splt.plot_avg_reconstructions(tmp,
                                           y_col=y_col,
@@ -638,14 +654,14 @@ def to_profile():
                                           max_time = 30,
                                           min_signal = -3.0,
                                           max_signal = 3.0,
-                                          file_name=f'figure_outputs/avg_resp_reconstruction_{filename[:-4]}_{y_col}_{kwarg_info}_R2_{np.round(tmp_holdout_score, 4)}.png')
+                                          file_name=f'model_outputs/all_reconstructions/avg_resp_reconstruction_{filename[:-4]}_{y_col}_{kwarg_info}_R2_{np.round(tmp_holdout_score, 4)}.png')
             splt.plot_all_beta_coefs(fitted_model.coef_, X_cols_plot,
                                             X_cols_sftd_plot,
                                             plot_width=2,
                                             y_lims=(-2.0, 2.0),
                                             # filename=f'{fn}_coeffs.png',
                                             binsize=50,
-                                            filename=f'figure_outputs/betas_{filename[:-4]}_{y_col}_{kwarg_info}_coeffs_R2_{np.round(tmp_holdout_score, 4)}.png',
+                                            filename=f'model_outputs/all_coeffs/betas_{filename[:-4]}_{y_col}_{kwarg_info}_coeffs_R2_{np.round(tmp_holdout_score, 4)}.png',
                                             plot_name=f'{fn} — {y_col} — {kwarg_info}'
                                             )
             
