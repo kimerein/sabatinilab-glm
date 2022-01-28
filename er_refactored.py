@@ -202,7 +202,7 @@ def timeshift_vals(dfrel, X_cols, neg_order=-7, pos_order=20):
 #     return setup_dfs
 
 
-def create_setup_dfs(dfrel, X_cols_sftd, y_col, drop_iti=True):
+def create_setup_dfs(dfrel, X_cols_sftd, y_col, drop_iti=False):
     '''
     Create setup dataframes
     Args:
@@ -234,7 +234,7 @@ def create_setup_dfs(dfrel, X_cols_sftd, y_col, drop_iti=True):
 
     return X_setup, y_setup, dfrel_setup, wi_trial_keep
 
-def holdout_splits(X_setup, y_setup, dfrel_setup, id_cols=['nTrial'], perc_holdout=0.2, drop_iti_train=False, drop_iti_holdout=True, wi_trial_keep=None):
+def holdout_splits(X_setup, y_setup, dfrel_setup, id_cols=['nTrial'], perc_holdout=0.2, drop_iti_train=False, drop_iti_holdout=False, wi_trial_keep=None):
     '''
     Create holdout splits
     Args:
@@ -421,7 +421,7 @@ def to_profile():
     for filename in files_list:
 
         # Select column name to use for outcome variable
-        y_col = 'zsrdFF'
+        y_col = 'zsgdFF'
         
         # Load file
         df = pd.read_csv(f'{dir_path}/../{filename}')
@@ -435,6 +435,9 @@ def to_profile():
         df = df.dropna()
 
         df = define_trial_starts_ends(df)
+
+        print('Percent of Data in ITI:', (df['nTrial'] == df['nEndTrial']).mean())
+
         df = set_reward_flags(df)
         df = set_port_entry_exit_rewarded_unrewarded_indicators(df)
         
@@ -489,6 +492,7 @@ def to_profile():
 
         # Timeshift X_cols forward by pos_order times and backward by neg_order times
         dfrel, X_cols_sftd = timeshift_vals(dfrel, X_cols, neg_order=-7, pos_order=20)
+        # dfrel, X_cols_sftd = timeshift_vals(dfrel, X_cols, neg_order=-7, pos_order=7)
 
         # Drop NAs for non-existant timeshifts
         dfrel = dfrel.dropna()
@@ -500,7 +504,7 @@ def to_profile():
         # Split data into setup (training) and holdout (test) sets
         np.random.seed(30186)
         random.seed(30186)
-        X_setup, y_setup, X_holdout, y_holdout, dfrel_setup, dfrel_holdout = holdout_splits(X_setup, y_setup, dfrel_setup, id_cols=['nTrial'], perc_holdout=0.2, drop_iti_train=False, drop_iti_holdout=True, wi_trial_keep=wi_trial_keep)
+        X_setup, y_setup, X_holdout, y_holdout, dfrel_setup, dfrel_holdout = holdout_splits(X_setup, y_setup, dfrel_setup, id_cols=['nTrial'], perc_holdout=0.2, drop_iti_train=False, drop_iti_holdout=False, wi_trial_keep=wi_trial_keep)
 
         #######################
         #######################
@@ -518,11 +522,14 @@ def to_profile():
         # Select hyper parameters for GLM to use for model selection
         # Step 1: Create a dictionary of lists for these relevant keywords...
         kwargs_iterations = {
-            # 'alpha': [0.0, 1.0],
-            # 'l1_ratio': [0.0, 0.001],
+            # # 'alpha': [0.0, 1.0],
+            # # 'l1_ratio': [0.0, 0.001],
+
+            # 'alpha': [0.001, 0.01, 0.1, 0.5, 0.9, 1.0],
+            # 'l1_ratio': [0.0, 0.001, 0.01],
 
             'alpha': [0.001, 0.01, 0.1, 0.5, 0.9, 1.0],
-            'l1_ratio': [0.0, 0.001, 0.01],
+            'l1_ratio': [0.0, 0.001,],
         }
 
         # Step 2: Create a dictionary for the fixed keyword arguments that do not require iteration...
