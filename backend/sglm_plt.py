@@ -126,6 +126,8 @@ def plot_all_beta_coefs(coeffs, coef_names, sftd_coef_names, plot_width=4, y_lim
         y_lims = (coeffs.min(), coeffs.max())
     # print(y_lims)
 
+    print('len(sftd_coef_names)', len(sftd_coef_names))
+
     coef_lookup = {sftd_coef_names[i]:coeffs[i] for i in range(len(sftd_coef_names))}
     coef_cols = sglm_ez.get_coef_name_sets(coef_names, sftd_coef_names)
     

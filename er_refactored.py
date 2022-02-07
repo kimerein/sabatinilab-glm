@@ -19,137 +19,10 @@ import sglm_cv
 import sglm_pp
 import sglm_ez
 import sglm_plt as splt
+import lynne_pp as lpp
 
 import cProfile
 
-def define_trial_starts_ends(df, trial_shift_bounds=7):
-    '''
-    Define trial starts and ends.
-    Args:
-        df: dataframe on which to define trial starts and ends
-        trial_shift_bounds: define how many timesteps before / after first / last event to include as non-ITI
-    Returns:
-        dataframe with added nTrial and nEndTrial columns to identify the number of the trial counts for start & end
-    '''
-    df['event_col_a'] = ((df['cpo'].diff() > 0)*1).replace(0, np.nan) * 1.0
-    df['event_col_b'] = df['nr'].replace(0, np.nan) * 2.0
-    df['event_col_c'] = df['r'].replace(0, np.nan) * 3.0
-    df['event_col'] = df['event_col_a'].combine_first(df['event_col_b']).combine_first(df['event_col_c'])
-    df['event_col'] = df['event_col'].bfill()
-    df['trial_start_flag'] = ((df['event_col'] == 1.0)&(df['event_col'].shift(-1) != df['event_col']) * 1.0).shift(-trial_shift_bounds) * 1.0
-    df['nTrial'] = df['trial_start_flag'].cumsum()
-    df['event_col_d'] = ((df['lpx'] > 0)*1.0).replace(0, np.nan) * 1.0
-    df['event_col_e'] = ((df['rpx'] > 0)*1.0).replace(0, np.nan) * 1.0
-    df['event_col_end'] = df['event_col_d'].combine_first(df['event_col_e']).combine_first(df['trial_start_flag'].replace(0.0, np.nan)*2.0)
-    df['event_col_end'] = df['event_col_end'].ffill()
-    df['trial_end_flag'] = ((df['event_col_end'] == 1.0)&(df['event_col_end'].shift(1) == 2.0)&(df['event_col_end'].shift(1) != df['event_col_end'])&(df['nTrial'] > 0) * 1.0).shift(trial_shift_bounds) * 1.0
-    df['nEndTrial'] = df['trial_end_flag'].cumsum()
-    return df.drop(['event_col_a', 'event_col_b', 'event_col_c', 'event_col_d', 'event_col_e'], axis=1)
-
-
-def rename_columns(df):
-    '''
-    Simplify variable names to match the GLM
-    Args:
-        df: dataframe with entry, exit, lick, reward, and dFF columns
-    Returns:
-        dataframe with renamed columns
-    '''
-    # Simplify variable names
-    df = df.rename({'center port occupancy': 'cpo',
-                    'center port entry': 'cpn',
-                    'center port exit': 'cpx',
-
-                    'left port occupancy': 'lpo',
-                    'left port entry': 'lpn',
-                    'left port exit': 'lpx',
-                    'left licks': 'll',
-
-                    'right port occupancy': 'rpo',
-                    'right port entry': 'rpn',
-                    'right port exit': 'rpx',
-                    'right licks': 'rl',
-
-                    'no reward': 'nr',
-                    'reward': 'r',
-
-
-                    'dF/F green (Ach3.0)': 'gdFF',
-                    'zscored green (Ach3.0)': 'zsgdFF',
-
-                    'dF/F green (dLight1.1)': 'gdFF',
-                    'zscored green (dLight1.1)': 'zsgdFF',
-
-                    'dF/F green (dlight1.1)': 'gdFF',
-                    'zscored green (dlight1.1)': 'zsgdFF',
-
-                    'dF/F (dlight1.1)': 'gdFF',
-                    'zscore dF/F (dlight)': 'zsgdFF',
-
-                    'zscore dF/F (Ach)': 'zsgdFF',
-                    'zscore dF/F (Ach3.0)': 'zsgdFF',
-
-                    'zscore dF/F (rGRAB-DA)' : 'zsrdFF',
-                    }, axis=1)
-    return df
-
-def set_reward_flags(df):
-    '''
-    Set reward flags
-    Args:
-        df: dataframe with nTrial, r, and nr columns
-    Returns:
-        dataframe with added rewarded trial and not rewarded trial columns
-    '''
-    # Identify rewarded vs. unrewarded trials
-    df['r_trial'] = df.groupby('nTrial')['r'].transform(np.sum)
-    df['nr_trial'] = df.groupby('nTrial')['nr'].transform(np.sum)
-    return df
-
-def set_port_entry_exit_rewarded_unrewarded_indicators(df):
-    '''
-    Set port entry, exit, and intersecting reward / non-reward indicators
-    Args:
-        df: dataframe with right / left port entry / exit columns and reward/no_reward indicators
-    Returns:
-        dataframe with right / left, rewarded / unrewarded intersection indicators
-    '''
-    # Identify combined reward vs. non-rewarded / left vs. right / entries vs. exits
-    df = df.assign(**{
-        'rpxr':df['r_trial']*df['rpx'],
-        'rpxnr':df['nr_trial']*df['rpx'],
-        'lpxr':df['r_trial']*df['lpx'],
-        'lpxnr':df['nr_trial']*df['lpx'],
-
-        'rpnr':df['r_trial']*df['rpn'],
-        'rpnnr':df['nr_trial']*df['rpn'],
-        'lpnr':df['r_trial']*df['lpn'],
-        'lpnnr':df['nr_trial']*df['lpn'],
-
-    })
-    return df
-
-def define_side_agnostic_events(df):
-    '''
-    Define side agnostic events
-    Args:
-        df: dataframe with left / right entry / exit and rewarded / unrewarded indicators
-    Returns:
-        dataframe with added port entry/exit, and reward indicators
-    '''
-    df = df.assign(**{
-        'spn':df['rpn']+df['lpn'],
-        'spx':df['rpx']+df['lpx'],
-
-        'spnr':df['rpnr']+df['lpnr'],
-        'spnnr':df['rpnnr']+df['lpnnr'],
-        'spxr':df['rpxr']+df['lpxr'],
-        'spxnr':df['rpxnr']+df['lpxnr'],
-
-        'sl':df['rl']+df['ll'],
-    })
-
-    return df
 
 def overwrite_response_with_toy(dfrel, y_col='zsgdFF'):
     '''
@@ -264,18 +137,19 @@ def holdout_splits(X_setup, y_setup, dfrel_setup, id_cols=['nTrial'], perc_holdo
     dfrel_holdout = dfrel_setup.loc[holdout]
     dfrel_setup = dfrel_setup.loc[~holdout]
 
+    wi_trial_keep_tr = wi_trial_keep.loc[~holdout]
+    wi_trial_keep_holdout = wi_trial_keep.loc[holdout]
+
     if drop_iti_train:
-        wi_trial_keep_tr = wi_trial_keep.loc[~holdout]
         X_setup = X_setup[wi_trial_keep_tr]
         y_setup = y_setup[wi_trial_keep_tr]
         dfrel_setup = dfrel_setup[wi_trial_keep_tr]
     if drop_iti_holdout:
-        wi_trial_keep_holdout = wi_trial_keep.loc[holdout]
         X_holdout = X_holdout[wi_trial_keep_holdout]
         y_holdout = y_holdout[wi_trial_keep_holdout]
         dfrel_holdout = dfrel_holdout[wi_trial_keep_holdout]
 
-    return X_setup, y_setup, X_holdout, y_holdout, dfrel_setup, dfrel_holdout
+    return X_setup, y_setup, X_holdout, y_holdout, dfrel_setup, dfrel_holdout, wi_trial_keep_tr, wi_trial_keep_holdout
 
 def print_best_model_info(X_setup, best_score, best_params, best_model, start):
     """
@@ -334,7 +208,7 @@ def print_best_model_info(X_setup, best_score, best_params, best_model, start):
     # 'sl',
     # ]
 
-def training_fit_holdout_score(X_setup, y_setup, X_holdout, y_holdout, best_params):
+def training_fit_holdout_score(X_setup, y_setup, X_holdout, y_holdout, best_params, wi_trial_keep_tr, wi_trial_keep_holdout):
     '''
     Fit GLM on training data, and score on holdout data
     Args:
@@ -352,8 +226,8 @@ def training_fit_holdout_score(X_setup, y_setup, X_holdout, y_holdout, best_para
     glm = sglm_ez.fit_GLM(X_setup, y_setup, **best_params)
 
     # Get the R^2 and MSE scores for the best model on the holdout (test) data
-    holdout_score = glm.r2_score(X_holdout[X_setup.columns], y_holdout)
-    holdout_neg_mse_score = glm.neg_mse_score(X_holdout[X_setup.columns], y_holdout)
+    holdout_score = glm.r2_score(X_holdout[X_setup.columns][wi_trial_keep_holdout], y_holdout[wi_trial_keep_holdout])
+    holdout_neg_mse_score = glm.neg_mse_score(X_holdout[X_setup.columns][wi_trial_keep_holdout], y_holdout[wi_trial_keep_holdout])
 
     return glm, holdout_score, holdout_neg_mse_score
 
@@ -417,269 +291,272 @@ def to_profile():
 
     res = {}
 
-    # Loop through files to be processed
-    for filename in files_list:
+    for y_col in ['zsrdFF', 'zsgdFF']:
 
-        # Select column name to use for outcome variable
-        y_col = 'zsgdFF'
-        
-        # Load file
-        df = pd.read_csv(f'{dir_path}/../{filename}')
-        df = df[[_ for _ in df.columns if 'Unnamed' not in _]]
-        print(df.columns)
-        df = rename_columns(df)
+        # Loop through files to be processed
+        for filename in files_list:
 
-
-        tmp = sglm_pp.detrend_data(df, y_col, [], 200)
-        df[y_col] = tmp
-        df = df.dropna()
-
-        df = define_trial_starts_ends(df)
-
-        print('Percent of Data in ITI:', (df['nTrial'] == df['nEndTrial']).mean())
-
-        df = set_reward_flags(df)
-        df = set_port_entry_exit_rewarded_unrewarded_indicators(df)
-        
-        # df['nn'] = df[['lpn', 'rpn']].sum(axis=1)
-        # df['xx'] = df[['lpx', 'rpx']].sum(axis=1)
-
-        # first_trans = df.groupby('nTrial')[['nn', 'xx', 'lpn', 'rpn', 'lpx', 'rpx', 'cpn']].cumsum()
-        # first_trans = ((first_trans == 1)*1).diff()
-        # first_trans *= first_trans >= 0
-        # first_trans['lpn'] = df['nn']*df['lpn']
-        # first_trans['rpn'] = df['nn']*df['rpn']
-        # first_trans['lpx'] = df['xx']*df['lpx']
-        # first_trans['rpx'] = df['xx']*df['rpx']
-
-        # df[first_trans.columns] = first_trans
-
-
-
-        # df['ft_r_rpn'] = df['ft_rpn'] * df['r']
-        # df['ft_r_lpn'] = df['ft_lpn'] * df['r']
-        # df['ft_nr_rpn'] = df['ft_rpn'] * df['nr']
-        # df['ft_nr_lpn'] = df['ft_lpn'] * df['nr']
-
-
-
-
-
-        df = define_side_agnostic_events(df)
-
-        if 'index' in df.columns:
-            df = df.drop('index', axis=1)
-
-        
-
-        # Select column names to use for GLM predictors
-        X_cols = [
-        'nTrial',
-        'cpn', 'cpx',
-        # 'spn', 'spx',
-        'spnr', 'spxr',
-        'spnnr', 'spxnr',
-        'sl',
-        ]
-
-
-        # Simplify dataframe for training
-        dfrel = df.copy()
-        dfrel = dfrel.replace('False', 0).astype(float)
-        dfrel = dfrel*1
-        # dfrel = overwrite_response_with_toy(dfrel)
-
-
-        # Timeshift X_cols forward by pos_order times and backward by neg_order times
-        dfrel, X_cols_sftd = timeshift_vals(dfrel, X_cols, neg_order=-7, pos_order=20)
-        # dfrel, X_cols_sftd = timeshift_vals(dfrel, X_cols, neg_order=-7, pos_order=7)
-
-        # Drop NAs for non-existant timeshifts
-        dfrel = dfrel.dropna()
-
-        # Create setup dfs by dropping the inter-trial intervals (if drop_iti=False)
-        # X_setup, y_setup, dfrel_setup = create_setup_dfs(dfrel, X_cols_sftd, y_col)
-        X_setup, y_setup, dfrel_setup, wi_trial_keep = create_setup_dfs(dfrel, X_cols_sftd, y_col, drop_iti=False)
-
-        # Split data into setup (training) and holdout (test) sets
-        np.random.seed(30186)
-        random.seed(30186)
-        X_setup, y_setup, X_holdout, y_holdout, dfrel_setup, dfrel_holdout = holdout_splits(X_setup, y_setup, dfrel_setup, id_cols=['nTrial'], perc_holdout=0.2, drop_iti_train=False, drop_iti_holdout=False, wi_trial_keep=wi_trial_keep)
-
-        #######################
-        #######################
-        #######################
-
-        # Generate cross-validation (technically, group / shuffle split) sets for training / model selection
-        kfold_cv_idx = sglm_ez.cv_idx_by_trial_id(X_setup, y=y_setup, trial_id_columns=['nTrial'], num_folds=50, test_size=0.2)
-
-        # Drop nTrial column from X_setup. (It is only used for group identification in group/shuffle/split)
-        X_setup = X_setup[[_ for _ in X_setup.columns if _ not in ['nTrial']]]
-
-        
-        score_method = 'r2'        
-
-        # Select hyper parameters for GLM to use for model selection
-        # Step 1: Create a dictionary of lists for these relevant keywords...
-        kwargs_iterations = {
-            # # 'alpha': [0.0, 1.0],
-            # # 'l1_ratio': [0.0, 0.001],
-
-            # 'alpha': [0.001, 0.01, 0.1, 0.5, 0.9, 1.0],
-            # 'l1_ratio': [0.0, 0.001, 0.01],
-
-            'alpha': [0.001, 0.01, 0.1, 0.5, 0.9, 1.0],
-            'l1_ratio': [0.0, 0.001,],
-        }
-
-        # Step 2: Create a dictionary for the fixed keyword arguments that do not require iteration...
-        kwargs_fixed = {
-            'max_iter': 1000,
-            'fit_intercept': True
-        }
-
-        # Step 3: Generate iterable list of keyword sets for possible combinations
-        glm_kwarg_lst = sglm_cv.generate_mult_params(kwargs_iterations, kwargs_fixed)
-        best_score, best_score_std, best_params, best_model, cv_results = sglm_ez.simple_cv_fit(X_setup, y_setup, kfold_cv_idx, glm_kwarg_lst, model_type='Normal', verbose=0, score_method=score_method)
-
-        print()
-        print('---')
-        print()
-
-        print_best_model_info(X_setup, best_score, best_params, best_model, start)
-
-
-        glm, holdout_score, holdout_neg_mse_score = training_fit_holdout_score(X_setup, y_setup, X_holdout, y_holdout, best_params)
-
-        # Collect
-        res[filename] = {'holdout_score':holdout_score,
-                        'holdout_neg_mse_score':holdout_neg_mse_score,
-                        'best_score':best_score,
-                        'best_params':best_params,
-                        'all_models':sorted([(_['cv_R2_score'],
-                                              _['cv_mse_score'],
-                                              sglm_ez.calc_l1(_['cv_coefs']),
-                                              sglm_ez.calc_l2(_['cv_coefs']),
-                                              _['glm_kwargs']) for _ in cv_results['full_cv_results']], key=lambda x: -x[0])
-                        }
-        print(f'Holdout Score: {holdout_score}')
-        # print('Keys:',)
-
-        # Generate and save plots of the beta coefficients
-        X_cols_plot = [_ for _ in X_cols if _ in X_setup.columns]
-        X_cols_sftd_plot = [_ for _ in X_cols_sftd if _ in X_setup.columns]
-
-        fn = filename.split(".")[0]
-        splt.plot_all_beta_coefs(glm.coef_, X_cols_plot,
-                                        X_cols_sftd_plot,
-                                        plot_width=2,
-                                        y_lims=(-2.0, 2.0),
-                                        # filename=f'{fn}_coeffs.png',
-                                        binsize=50,
-                                        filename=f'model_outputs/best_coeffs/{fn}_{y_col}_coeffs_R2_{np.round(holdout_score, 4)}.png',
-                                        plot_name=f'{fn} — {y_col} — {best_params}'
-                                        )
-        
-
-        # dfrel_holdout
-        # dfrel_setup
-
-
-        # print('dfrel', list(X_setup.columns))
-
-        
-        dfrel_holdout['nn'] = dfrel_holdout[['lpn', 'rpn']].sum(axis=1)
-        dfrel_holdout['xx'] = dfrel_holdout[['lpx', 'rpx']].sum(axis=1)
-
-        first_trans = dfrel_holdout.groupby('nTrial')[['nn', 'xx', 'lpn', 'rpn', 'lpx', 'rpx', 'cpn']].cumsum()
-        first_trans = ((first_trans == 1)*1).diff()
-        first_trans *= first_trans >= 0
-        first_trans['lpn'] = dfrel_holdout['nn']*dfrel_holdout['lpn']
-        first_trans['rpn'] = dfrel_holdout['nn']*dfrel_holdout['rpn']
-        first_trans['lpx'] = dfrel_holdout['xx']*dfrel_holdout['lpx']
-        first_trans['rpx'] = dfrel_holdout['xx']*dfrel_holdout['rpx']
-
-        first_trans = first_trans.rename({_k:f'ft_{_k}' for _k in first_trans.columns}, axis=1)
-        dfrel_holdout[first_trans.columns] = first_trans
-
-
-
-        dfrel_holdout['ft_r_rpn'] = dfrel_holdout['ft_rpn'] * dfrel_holdout['r']
-        dfrel_holdout['ft_r_lpn'] = dfrel_holdout['ft_lpn'] * dfrel_holdout['r']
-        dfrel_holdout['ft_nr_rpn'] = dfrel_holdout['ft_rpn'] * dfrel_holdout['nr']
-        dfrel_holdout['ft_nr_lpn'] = dfrel_holdout['ft_lpn'] * dfrel_holdout['nr']
-
-
-        tmp = dfrel_holdout.set_index('nTrial').copy()
-        tmp['pred'] = glm.predict(tmp[X_setup.columns])
-        tmp = get_first_entry_time(tmp, X_setup)
-
-        splt.plot_avg_reconstructions(tmp,
-                                      y_col=y_col,
-                                      binsize = 50,
-                                      min_time = -20,
-                                      max_time = 30,
-                                      min_signal = -3.0,
-                                      max_signal = 3.0,
-                                      file_name=f'model_outputs/best_reconstructions/{fn}_{y_col}_arr_R2_{np.round(holdout_score, 4)}.png')
-    
-
-
-
-        for fitted_model_dict in cv_results['full_cv_results']:
-            fitted_model = fitted_model_dict['model']
-            kwarg_info = "_".join([f"{_k}_{fitted_model_dict['glm_kwargs'][_k]}" for _k in fitted_model_dict["glm_kwargs"]])
-
-
-
-            model_coef = fitted_model.coef_
-            model_intercept = fitted_model.intercept_
-
-            np.save(f'model_outputs/all_models/coeffs_{filename[:-4]}_{y_col}_{kwarg_info}.npy', model_coef)
-            np.save(f'model_outputs/all_models/intercept_{filename[:-4]}_{y_col}_{kwarg_info}.npy', model_intercept)
+            # Select column name to use for outcome variable
+            # y_col = 'zsrdFF'
             
-            # tmp_holdout_score = fitted_model.r2_score(X_holdout[X_setup.columns], y_holdout)
-            tmp_holdout_score = fitted_model.r2_score(dfrel_holdout[X_setup.columns], y_holdout)
+            # Load file
+            df = pd.read_csv(f'{dir_path}/../{filename}')
+            df = df[[_ for _ in df.columns if 'Unnamed' not in _]]
+            print(df.columns)
+            df = lpp.rename_columns(df)
 
-            # print("fitted_model_dict['glm_kwargs']",fitted_model_dict['glm_kwargs'])
 
-            tmp = dfrel_holdout.set_index('nTrial').copy()
-            tmp['pred'] = fitted_model.predict(tmp[X_setup.columns])
-            tmp = get_first_entry_time(tmp, X_setup)
+            tmp = sglm_pp.detrend_data(df, y_col, [], 200)
+            df[y_col] = tmp
+            df = df.dropna()
+
+            df = lpp.define_trial_starts_ends(df)
+
+            print('Percent of Data in ITI:', (df['nTrial'] == df['nEndTrial']).mean())
+
+            df = lpp.set_reward_flags(df)
+            df = lpp.set_port_entry_exit_rewarded_unrewarded_indicators(df)
             
-            # tmp = X_holdout.set_index('nTrial').copy()
-            tmp_y = y_holdout.copy()
-            tmp_y.index = tmp.index
-            tmp[y_holdout.name] = tmp_y
+            # df['nn'] = df[['lpn', 'rpn']].sum(axis=1)
+            # df['xx'] = df[['lpx', 'rpx']].sum(axis=1)
 
-            tmp.to_csv(f'model_outputs/all_data/tmp_data_{filename[:-4]}_{y_col}_{kwarg_info}.csv')
+            # first_trans = df.groupby('nTrial')[['nn', 'xx', 'lpn', 'rpn', 'lpx', 'rpx', 'cpn']].cumsum()
+            # first_trans = ((first_trans == 1)*1).diff()
+            # first_trans *= first_trans >= 0
+            # first_trans['lpn'] = df['nn']*df['lpn']
+            # first_trans['rpn'] = df['nn']*df['rpn']
+            # first_trans['lpx'] = df['xx']*df['lpx']
+            # first_trans['rpx'] = df['xx']*df['rpx']
 
-            splt.plot_avg_reconstructions(tmp,
-                                          y_col=y_col,
-                                          binsize = 50,
-                                          min_time = -20,
-                                          max_time = 30,
-                                          min_signal = -3.0,
-                                          max_signal = 3.0,
-                                          file_name=f'model_outputs/all_reconstructions/avg_resp_reconstruction_{filename[:-4]}_{y_col}_{kwarg_info}_R2_{np.round(tmp_holdout_score, 4)}.png')
-            splt.plot_all_beta_coefs(fitted_model.coef_, X_cols_plot,
+            # df[first_trans.columns] = first_trans
+
+
+
+            # df['ft_r_rpn'] = df['ft_rpn'] * df['r']
+            # df['ft_r_lpn'] = df['ft_lpn'] * df['r']
+            # df['ft_nr_rpn'] = df['ft_rpn'] * df['nr']
+            # df['ft_nr_lpn'] = df['ft_lpn'] * df['nr']
+
+
+
+
+
+            df = lpp.define_side_agnostic_events(df)
+
+            if 'index' in df.columns:
+                df = df.drop('index', axis=1)
+
+            
+
+            # Select column names to use for GLM predictors
+            X_cols = [
+            'nTrial',
+            'cpn', 'cpx',
+            # 'spn', 'spx',
+            'spnr', 'spxr',
+            'spnnr', 'spxnr',
+            'sl',
+            ]
+
+
+            # Simplify dataframe for training
+            dfrel = df.copy()
+            dfrel = dfrel.replace('False', 0).astype(float)
+            dfrel = dfrel*1
+            # dfrel = overwrite_response_with_toy(dfrel)
+
+
+            # Timeshift X_cols forward by pos_order times and backward by neg_order times
+            # dfrel, X_cols_sftd = timeshift_vals(dfrel, X_cols, neg_order=-7, pos_order=20)
+            dfrel, X_cols_sftd = timeshift_vals(dfrel, X_cols, neg_order=-14, pos_order=14)
+            # dfrel, X_cols_sftd = timeshift_vals(dfrel, X_cols, neg_order=-7, pos_order=7)
+
+            # Drop NAs for non-existant timeshifts
+            dfrel = dfrel.dropna()
+
+            # Create setup dfs by dropping the inter-trial intervals (if drop_iti=False)
+            # X_setup, y_setup, dfrel_setup = create_setup_dfs(dfrel, X_cols_sftd, y_col)
+            X_setup, y_setup, dfrel_setup, wi_trial_keep = create_setup_dfs(dfrel, X_cols_sftd, y_col, drop_iti=False)
+
+            # Split data into setup (training) and holdout (test) sets
+            np.random.seed(30186)
+            random.seed(30186)
+            X_setup, y_setup, X_holdout, y_holdout, dfrel_setup, dfrel_holdout, wi_trial_keep_tr, wi_trial_keep_holdout = holdout_splits(X_setup, y_setup, dfrel_setup, id_cols=['nTrial'], perc_holdout=0.2, drop_iti_train=False, drop_iti_holdout=False, wi_trial_keep=wi_trial_keep)
+
+            #######################
+            #######################
+            #######################
+
+            # Generate cross-validation (technically, group / shuffle split) sets for training / model selection
+            kfold_cv_idx = sglm_ez.cv_idx_by_trial_id(X_setup, y=y_setup, trial_id_columns=['nTrial'], num_folds=50, test_size=0.2)
+
+            # Drop nTrial column from X_setup. (It is only used for group identification in group/shuffle/split)
+            X_setup = X_setup[[_ for _ in X_setup.columns if _ not in ['nTrial']]]
+
+            
+            score_method = 'r2'        
+
+            # Select hyper parameters for GLM to use for model selection
+            # Step 1: Create a dictionary of lists for these relevant keywords...
+            kwargs_iterations = {
+                # # 'alpha': [0.0, 1.0],
+                # # 'l1_ratio': [0.0, 0.001],
+
+                # 'alpha': [0.001, 0.01, 0.1, 0.5, 0.9, 1.0],
+                # 'l1_ratio': [0.0, 0.001, 0.01],
+
+                'alpha': [0.001, 0.01, 0.1, 0.5, 0.9, 1.0],
+                'l1_ratio': [0.0, 0.001,],
+            }
+
+            # Step 2: Create a dictionary for the fixed keyword arguments that do not require iteration...
+            kwargs_fixed = {
+                'max_iter': 1000,
+                'fit_intercept': True
+            }
+
+            # Step 3: Generate iterable list of keyword sets for possible combinations
+            glm_kwarg_lst = sglm_cv.generate_mult_params(kwargs_iterations, kwargs_fixed)
+            best_score, best_score_std, best_params, best_model, cv_results = sglm_ez.simple_cv_fit(X_setup, y_setup, kfold_cv_idx, glm_kwarg_lst, model_type='Normal', verbose=0, score_method=score_method)
+
+            print()
+            print('---')
+            print()
+
+            print_best_model_info(X_setup, best_score, best_params, best_model, start)
+
+
+            glm, holdout_score, holdout_neg_mse_score = training_fit_holdout_score(X_setup, y_setup, X_holdout, y_holdout, best_params, wi_trial_keep_tr, wi_trial_keep_holdout)
+
+            # Collect
+            res[f'{filename}_{y_col}'] = {'holdout_score':holdout_score,
+                            'holdout_neg_mse_score':holdout_neg_mse_score,
+                            'best_score':best_score,
+                            'best_params':best_params,
+                            'all_models':sorted([(_['cv_R2_score'],
+                                                _['cv_mse_score'],
+                                                sglm_ez.calc_l1(_['cv_coefs']),
+                                                sglm_ez.calc_l2(_['cv_coefs']),
+                                                _['glm_kwargs']) for _ in cv_results['full_cv_results']], key=lambda x: -x[0])
+                            }
+            print(f'Holdout Score: {holdout_score}')
+            # print('Keys:',)
+
+            # Generate and save plots of the beta coefficients
+            X_cols_plot = [_ for _ in X_cols if _ in X_setup.columns]
+            X_cols_sftd_plot = [_ for _ in X_cols_sftd if _ in X_setup.columns]
+
+            fn = filename.split(".")[0]
+            splt.plot_all_beta_coefs(glm.coef_, X_cols_plot,
                                             X_cols_sftd_plot,
                                             plot_width=2,
                                             y_lims=(-2.0, 2.0),
                                             # filename=f'{fn}_coeffs.png',
                                             binsize=50,
-                                            filename=f'model_outputs/all_coeffs/betas_{filename[:-4]}_{y_col}_{kwarg_info}_coeffs_R2_{np.round(tmp_holdout_score, 4)}.png',
-                                            plot_name=f'{fn} — {y_col} — {kwarg_info}'
+                                            filename=f'model_outputs/best_coeffs/77_{fn}_{y_col}_coeffs_R2_{np.round(holdout_score, 4)}.png',
+                                            plot_name=f'{fn} — {y_col} — {best_params}'
                                             )
             
-    
 
-            # print('entry_timing_r',entry_timing_r)
-            # print('entry_timing_l',entry_timing_l)
-            # print('entry_timing_c',entry_timing_c)
+            # dfrel_holdout
+            # dfrel_setup
+
+
+            # print('dfrel', list(X_setup.columns))
+
             
-            
-    
+            dfrel_holdout['nn'] = dfrel_holdout[['lpn', 'rpn']].sum(axis=1)
+            dfrel_holdout['xx'] = dfrel_holdout[['lpx', 'rpx']].sum(axis=1)
+
+            first_trans = dfrel_holdout.groupby('nTrial')[['nn', 'xx', 'lpn', 'rpn', 'lpx', 'rpx', 'cpn']].cumsum()
+            first_trans = ((first_trans == 1)*1).diff()
+            first_trans *= first_trans >= 0
+            first_trans['lpn'] = dfrel_holdout['nn']*dfrel_holdout['lpn']
+            first_trans['rpn'] = dfrel_holdout['nn']*dfrel_holdout['rpn']
+            first_trans['lpx'] = dfrel_holdout['xx']*dfrel_holdout['lpx']
+            first_trans['rpx'] = dfrel_holdout['xx']*dfrel_holdout['rpx']
+
+            first_trans = first_trans.rename({_k:f'ft_{_k}' for _k in first_trans.columns}, axis=1)
+            dfrel_holdout[first_trans.columns] = first_trans
+
+
+
+            dfrel_holdout['ft_r_rpn'] = dfrel_holdout['ft_rpn'] * dfrel_holdout['r']
+            dfrel_holdout['ft_r_lpn'] = dfrel_holdout['ft_lpn'] * dfrel_holdout['r']
+            dfrel_holdout['ft_nr_rpn'] = dfrel_holdout['ft_rpn'] * dfrel_holdout['nr']
+            dfrel_holdout['ft_nr_lpn'] = dfrel_holdout['ft_lpn'] * dfrel_holdout['nr']
+
+
+            tmp = dfrel_holdout.set_index('nTrial').copy()
+            tmp['pred'] = glm.predict(tmp[X_setup.columns])
+            tmp = get_first_entry_time(tmp, X_setup)
+
+            splt.plot_avg_reconstructions(tmp,
+                                        y_col=y_col,
+                                        binsize = 50,
+                                        min_time = -20,
+                                        max_time = 30,
+                                        min_signal = -3.0,
+                                        max_signal = 3.0,
+                                        file_name=f'model_outputs/best_reconstructions/77_{fn}_{y_col}_arr_R2_{np.round(holdout_score, 4)}.png')
+        
+
+
+
+            for fitted_model_dict in cv_results['full_cv_results']:
+                fitted_model = fitted_model_dict['model']
+                kwarg_info = "_".join([f"{_k}_{fitted_model_dict['glm_kwargs'][_k]}" for _k in fitted_model_dict["glm_kwargs"]])
+
+
+
+                model_coef = fitted_model.coef_
+                model_intercept = fitted_model.intercept_
+
+                np.save(f'model_outputs/all_models/77_coeffs_{filename[:-4]}_{y_col}_{kwarg_info}.npy', model_coef)
+                np.save(f'model_outputs/all_models/77_intercept_{filename[:-4]}_{y_col}_{kwarg_info}.npy', model_intercept)
+                
+                # tmp_holdout_score = fitted_model.r2_score(X_holdout[X_setup.columns], y_holdout)
+                tmp_holdout_score = fitted_model.r2_score(dfrel_holdout[X_setup.columns][wi_trial_keep_holdout], y_holdout[wi_trial_keep_holdout])
+
+                # print("fitted_model_dict['glm_kwargs']",fitted_model_dict['glm_kwargs'])
+
+                tmp = dfrel_holdout.set_index('nTrial').copy()
+                tmp['pred'] = fitted_model.predict(tmp[X_setup.columns])
+                tmp = get_first_entry_time(tmp, X_setup)
+                
+                # tmp = X_holdout.set_index('nTrial').copy()
+                tmp_y = y_holdout.copy()
+                tmp_y.index = tmp.index
+                tmp[y_holdout.name] = tmp_y
+
+                tmp.to_csv(f'model_outputs/all_data/77_tmp_data_{filename[:-4]}_{y_col}_{kwarg_info}.csv')
+
+                splt.plot_avg_reconstructions(tmp,
+                                            y_col=y_col,
+                                            binsize = 50,
+                                            min_time = -20,
+                                            max_time = 30,
+                                            min_signal = -3.0,
+                                            max_signal = 3.0,
+                                            file_name=f'model_outputs/all_reconstructions/77_avg_resp_reconstruction_{filename[:-4]}_{y_col}_{kwarg_info}_R2_{np.round(tmp_holdout_score, 4)}.png')
+                splt.plot_all_beta_coefs(fitted_model.coef_, X_cols_plot,
+                                                X_cols_sftd_plot,
+                                                plot_width=2,
+                                                y_lims=(-2.0, 2.0),
+                                                # filename=f'{fn}_coeffs.png',
+                                                binsize=50,
+                                                filename=f'model_outputs/all_coeffs/77_betas_{filename[:-4]}_{y_col}_{kwarg_info}_coeffs_R2_{np.round(tmp_holdout_score, 4)}.png',
+                                                plot_name=f'{fn} — {y_col} — {kwarg_info}'
+                                                )
+                
+
+
+                # print('entry_timing_r',entry_timing_r)
+                # print('entry_timing_l',entry_timing_l)
+                # print('entry_timing_c',entry_timing_c)
+                
+                
+        
 
     # For every file iterated, for every result value, for every model fitted, print the reslts
     print(f'Final Results:')
