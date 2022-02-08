@@ -23,6 +23,39 @@ import lynne_pp as lpp
 
 import cProfile
 
+def preprocess_lynne(df):
+    '''
+    Preprocess Lynne's dataframe for GLM
+    Args:
+        df: dataframe with entry, exit, lick, reward, and dFF columns
+    Returns:
+        dataframe with entry, exit, lick, reward, and
+    '''
+    df = df[[_ for _ in df.columns if 'Unnamed' not in _]]
+    print(df.columns)
+    df = lpp.rename_columns(df)
+
+
+    tmp = sglm_pp.detrend_data(df, y_col, [], 200)
+    df[y_col] = tmp
+    df = df.dropna()
+
+    df = lpp.define_trial_starts_ends(df)
+
+    print('Percent of Data in ITI:', (df['nTrial'] == df['nEndTrial']).mean())
+
+    df = lpp.set_reward_flags(df)
+    df = lpp.set_port_entry_exit_rewarded_unrewarded_indicators(df)
+    df = lpp.define_side_agnostic_events(df)
+
+    if 'index' in df.columns:
+        df = df.drop('index', axis=1)
+    
+    dfrel = df.copy()
+    dfrel = dfrel.replace('False', 0).astype(float)
+    dfrel = dfrel*1
+    # dfrel = overwrite_response_with_toy(dfrel)
+    return dfrel
 
 def overwrite_response_with_toy(dfrel, y_col='zsgdFF'):
     '''
@@ -301,53 +334,8 @@ def to_profile():
             
             # Load file
             df = pd.read_csv(f'{dir_path}/../{filename}')
-            df = df[[_ for _ in df.columns if 'Unnamed' not in _]]
-            print(df.columns)
-            df = lpp.rename_columns(df)
-
-
-            tmp = sglm_pp.detrend_data(df, y_col, [], 200)
-            df[y_col] = tmp
-            df = df.dropna()
-
-            df = lpp.define_trial_starts_ends(df)
-
-            print('Percent of Data in ITI:', (df['nTrial'] == df['nEndTrial']).mean())
-
-            df = lpp.set_reward_flags(df)
-            df = lpp.set_port_entry_exit_rewarded_unrewarded_indicators(df)
+            dfrel = preprocess_lynne(df)
             
-            # df['nn'] = df[['lpn', 'rpn']].sum(axis=1)
-            # df['xx'] = df[['lpx', 'rpx']].sum(axis=1)
-
-            # first_trans = df.groupby('nTrial')[['nn', 'xx', 'lpn', 'rpn', 'lpx', 'rpx', 'cpn']].cumsum()
-            # first_trans = ((first_trans == 1)*1).diff()
-            # first_trans *= first_trans >= 0
-            # first_trans['lpn'] = df['nn']*df['lpn']
-            # first_trans['rpn'] = df['nn']*df['rpn']
-            # first_trans['lpx'] = df['xx']*df['lpx']
-            # first_trans['rpx'] = df['xx']*df['rpx']
-
-            # df[first_trans.columns] = first_trans
-
-
-
-            # df['ft_r_rpn'] = df['ft_rpn'] * df['r']
-            # df['ft_r_lpn'] = df['ft_lpn'] * df['r']
-            # df['ft_nr_rpn'] = df['ft_rpn'] * df['nr']
-            # df['ft_nr_lpn'] = df['ft_lpn'] * df['nr']
-
-
-
-
-
-            df = lpp.define_side_agnostic_events(df)
-
-            if 'index' in df.columns:
-                df = df.drop('index', axis=1)
-
-            
-
             # Select column names to use for GLM predictors
             X_cols = [
             'nTrial',
@@ -357,14 +345,6 @@ def to_profile():
             'spnnr', 'spxnr',
             'sl',
             ]
-
-
-            # Simplify dataframe for training
-            dfrel = df.copy()
-            dfrel = dfrel.replace('False', 0).astype(float)
-            dfrel = dfrel*1
-            # dfrel = overwrite_response_with_toy(dfrel)
-
 
             # Timeshift X_cols forward by pos_order times and backward by neg_order times
             # dfrel, X_cols_sftd = timeshift_vals(dfrel, X_cols, neg_order=-7, pos_order=20)

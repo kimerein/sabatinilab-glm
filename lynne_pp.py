@@ -82,8 +82,8 @@ def set_reward_flags(df):
         dataframe with added rewarded trial and not rewarded trial columns
     '''
     # Identify rewarded vs. unrewarded trials
-    df['r_trial'] = df.groupby('nTrial')['r'].transform(np.sum)
-    df['nr_trial'] = df.groupby('nTrial')['nr'].transform(np.sum)
+    df['r_trial'] = (df.groupby('nTrial')['r'].transform(np.sum) > 0) * 1.0
+    df['nr_trial'] = (df.groupby('nTrial')['nr'].transform(np.sum) > 0) * 1.0
     return df
 
 def set_port_entry_exit_rewarded_unrewarded_indicators(df):
