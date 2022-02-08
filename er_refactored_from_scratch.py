@@ -356,12 +356,12 @@ for left_out in leave_one_out_list:
             X_setup = get_x(dfrel_setup, prediction_X_cols_sftd, keep_rows=None)
             y_setup = get_y(dfrel_setup, y_col, keep_rows=None)
             best_score, best_score_std, best_params, best_model, cv_results = sglm_ez.simple_cv_fit(X_setup, y_setup, kfold_cv_idx, glm_kwarg_lst, model_type='Normal', verbose=0, score_method=score_method)
-
+            
             print_best_model_info(X_setup, best_score, best_params, best_model, start)
 
-            X_holdout = get_x(dfrel_holdout, prediction_X_cols_sftd, keep_rows=wi_trial_keep_holdout)
-            y_holdout = get_y(dfrel_holdout, y_col, keep_rows=wi_trial_keep_holdout)
-            glm, holdout_score, holdout_neg_mse_score = training_fit_holdout_score(X_setup, y_setup, X_holdout, y_holdout, best_params)
+            X_holdout_noiti = get_x(dfrel_holdout, prediction_X_cols_sftd, keep_rows=wi_trial_keep_holdout)
+            y_holdout_noiti = get_y(dfrel_holdout, y_col, keep_rows=wi_trial_keep_holdout)
+            glm, holdout_score, holdout_neg_mse_score = training_fit_holdout_score(X_setup, y_setup, X_holdout_noiti, y_holdout_noiti, best_params)
 
             # Collect
             res[f'{run_id}'] = {'holdout_score':holdout_score,
@@ -423,14 +423,14 @@ for left_out in leave_one_out_list:
                 np.save(f'{all_models_folder}/coeffs/{std_name}_{model_c_basename}.npy', model_coef)
                 np.save(f'{all_models_folder}/intercepts/{std_name}_{model_i_basename}.npy', model_intercept)
                 
-                tmp_holdout_score = fitted_model.r2_score(X_holdout, y_holdout)
+                tmp_holdout_score = fitted_model.r2_score(X_holdout_noiti, y_holdout_noiti)
 
                 tmp = dfrel_holdout.set_index('nTrial').copy()
                 tmp['pred'] = fitted_model.predict(get_x(dfrel_holdout, prediction_X_cols_sftd, keep_rows=None))
                 tmp = get_first_entry_time(tmp)
                 tmp_y = get_y(dfrel_holdout, y_col, keep_rows=None).copy()
                 tmp_y.index = tmp.index
-                tmp[y_holdout.name] = tmp_y
+                tmp[y_holdout_noiti.name] = tmp_y
 
                 tmp.to_csv(f'{all_data_folder}/{std_name}_{tmp_data_basename}.csv')
 
