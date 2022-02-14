@@ -3,7 +3,7 @@ import numpy as np
 import sglm
 import itertools
 import threading, queue
-# from multiprocessing import Process, Pool
+from multiprocessing import Process, Pool
 import time
 
 # TODO: Multidimensional Array -- paramgrid and output grid
@@ -46,6 +46,18 @@ def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, verbose=0, resp_l
     """
 
     
+    q = queue.Queue()
+    def sglm_worker():
+        while True:
+            # try:
+            glm, args, kwargs = q.get()
+            print(f'Working on {kwargs}')
+            glm.fit_set(*args, **kwargs)
+            q.task_done()
+            print(f'Finished {kwargs}')
+            # except queue.Empty:
+            #     break
+
 
     threads = []
 
@@ -81,13 +93,15 @@ def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, verbose=0, resp_l
     
         glm = sglm.GLM(model_name, beta0_=beta0_, beta_=beta_, **glm_kwargs, score_method=score_method)
         # glm = sglm.GLM(model_name, **glm_kwargs)
-        
+        args = (X_train, y_train, X_test, y_test,
+                cv_coefs, cv_intercepts, cv_scores_train, cv_scores_test,
+                iter_cv,)
+        kwargs = {'resids': resids, 'mean_resids': mean_resids,
+                  'id_fit': iter_cv, 'verbose': verbose
+                 }
 
-        threads.append(threading.Thread(target=glm.fit_set, args=(X_train, y_train, X_test, y_test,
-                                                                  cv_coefs, cv_intercepts, cv_scores_train, cv_scores_test,
-                                                                  iter_cv,), kwargs={'resids': resids, 'mean_resids': mean_resids,
-                                                                                     'id_fit': iter_cv, 'verbose': verbose
-                                                                                     }))
+        q.put((glm, args, kwargs))
+        # threads.append(threading.Thread(target=glm.fit_set, args=args, kwargs=kwargs))
 
         # threads.append(Process(target=glm.fit_set, args=(X_train, y_train, X_test, y_test,
         #                                                           cv_coefs, cv_intercepts, cv_scores_train, cv_scores_test,
@@ -95,24 +109,32 @@ def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, verbose=0, resp_l
         #                                                                              'id_fit': iter_cv, 'verbose': verbose
         #                                                                              }))
 
-        threads[-1].name = str(glm_kwargs) + f' - {iter_cv}'
-        threads[-1].start()
+        # threads[-1].name = str(glm_kwargs) + f' - {iter_cv}'
+        # threads[-1].start()
 
-        # if iter_cv % 5 == 4:
-        #     for thread in threads:
-        #         thread.join()
-        #     threads = []
+        # # if iter_cv % 5 == 4:
+        # #     for thread in threads:
+        # #         thread.join()
+        # #     threads = []
 
 
         
-        # cv_coefs[:, iter_cv] = glm.coef_
-        # cv_intercepts[iter_cv] = glm.intercept_
-        # cv_scores_train[iter_cv] = glm.score(X_train, y_train)
-        # cv_scores_test[iter_cv] = glm.score(X_test, y_test)
+        # # cv_coefs[:, iter_cv] = glm.coef_
+        # # cv_intercepts[iter_cv] = glm.intercept_
+        # # cv_scores_train[iter_cv] = glm.score(X_train, y_train)
+        # # cv_scores_test[iter_cv] = glm.score(X_test, y_test)
 
-    for thread in threads:
-        thread.join()
-    threads = []
+
+    threading.Thread(target=sglm_worker, daemon=True).start()
+    threading.Thread(target=sglm_worker, daemon=True).start()
+    threading.Thread(target=sglm_worker, daemon=True).start()
+    threading.Thread(target=sglm_worker, daemon=True).start()
+    threading.Thread(target=sglm_worker, daemon=True).start()
+
+    # for thread in threads:
+    #     thread.join()
+    # threads = []
+    q.join()
 
 
     #####################
@@ -206,20 +228,20 @@ def cv_glm_mult_params(X, y, cv_idx, model_name, glm_kwarg_lst, verbose=0, score
 
         model_name = glm_kwargs.pop('model_name', 'Gaussian')
 
-        # threads.append(threading.Thread(target=cv_glm_single_params, args=(X, y, cv_idx, model_name, glm_kwargs,),
-        #                                                              kwargs={'verbose': verbose,
-        #                                                                      'resp_list': resp,
-        #                                                                      'beta0_':beta0_,
-        #                                                                      'beta_':beta_,
-        #                                                                      'score_method':score_method
-        #                                                                      }))
-        threads.append(Process(target=cv_glm_single_params, args=(X, y, cv_idx, model_name, glm_kwargs,),
+        threads.append(threading.Thread(target=cv_glm_single_params, args=(X, y, cv_idx, model_name, glm_kwargs,),
                                                                      kwargs={'verbose': verbose,
                                                                              'resp_list': resp,
                                                                              'beta0_':beta0_,
                                                                              'beta_':beta_,
                                                                              'score_method':score_method
                                                                              }))
+        # threads.append(Process(target=cv_glm_single_params, args=(X, y, cv_idx, model_name, glm_kwargs,),
+        #                                                              kwargs={'verbose': verbose,
+        #                                                                      'resp_list': resp,
+        #                                                                      'beta0_':beta0_,
+        #                                                                      'beta_':beta_,
+        #                                                                      'score_method':score_method
+        #                                                                      }))
         
         threads[-1].name = str(glm_kwargs)
         threads[-1].start()
