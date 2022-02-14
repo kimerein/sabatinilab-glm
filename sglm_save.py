@@ -11,14 +11,14 @@ class GLM_data():
         self.data = {}
         self.data['fit_results'] = []
     def save(self, overwrite=False):
-        path_to_file = self.file_dir + self.filename
+        path_to_file = self.file_dir + '/' + self.filename
         if not exists(path_to_file) or overwrite:
             file_save = open(path_to_file, 'wb')
             pickle.dump(self, file_save)
         else:
             print('File already exists. Set overwrite=True to overwrite.')
     def load(self):
-        path_to_file = self.file_dir + self.filename
+        path_to_file = self.file_dir + '/' + self.filename
         if not exists(path_to_file):
             print('File does not exist.')
             return
@@ -45,30 +45,33 @@ class GLM_data():
         self.data['posorder'] = posorder
     def append_fit_results(self,
                            response_col,
-                           drop_cols,
                            hyperparams,
                            glm_model=None,
-                           gss_scores=None,
-                           refit_scores=None,
+                           scores=None,
                            dropped_cols=[],
                            gssids=None):
 
         for score_id in ['tr_witi', 'tr_noiti', 'gss_witi', 'gss_noiti', 'holdout_witi', 'holdout_noiti']:
-            if score_id not in gss_scores:
-                gss_scores[score_id] = None
-            if score_id not in refit_scores:
-                refit_scores[score_id] = None
+            if score_id not in scores:
+                scores[score_id] = None
 
         fit_result = {'response_col': response_col,
-                      'drop_cols': drop_cols,
                       'hyperparams': hyperparams,
                       'glm_model_gss': glm_model,
                       'dropped_cols': dropped_cols,
-                      'gss_scores': gss_scores,
-                      'refit_scores': refit_scores,
+                      'scores': scores,
                       'gss_mse': None,
                       'refit_mse': None,
                       'gssids': gssids}
         
         self.data['fit_results'].append(fit_result)
+
+
+# set_uid(self, uid)
+# set_filename(self, filename)
+# set_basedata(self, basedata)
+# set_X_cols(self, X_cols)
+# set_gss_info(self, folds, pholdout, pgss, gssid=None)
+# set_timeshifts(self, negorder, posorder)
+# append_fit_results(self, response_col, drop_cols, hyperparams, glm_model=None, gss_scores=None, refit_scores=None, dropped_cols=[], gssids=None)
 

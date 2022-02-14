@@ -2,7 +2,8 @@ import pandas as pd
 import numpy as np
 import sglm
 import itertools
-import threading
+import threading, queue
+# from multiprocessing import Process, Pool
 import time
 
 # TODO: Multidimensional Array -- paramgrid and output grid
@@ -44,6 +45,8 @@ def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, verbose=0, resp_l
     Returns: dict of information relevant to fitted validation model based on single set of GLM parameters
     """
 
+    
+
     threads = []
 
     n_coefs = X.shape[1]
@@ -78,7 +81,7 @@ def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, verbose=0, resp_l
     
         glm = sglm.GLM(model_name, beta0_=beta0_, beta_=beta_, **glm_kwargs, score_method=score_method)
         # glm = sglm.GLM(model_name, **glm_kwargs)
-
+        
 
         threads.append(threading.Thread(target=glm.fit_set, args=(X_train, y_train, X_test, y_test,
                                                                   cv_coefs, cv_intercepts, cv_scores_train, cv_scores_test,
@@ -86,13 +89,19 @@ def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, verbose=0, resp_l
                                                                                      'id_fit': iter_cv, 'verbose': verbose
                                                                                      }))
 
+        # threads.append(Process(target=glm.fit_set, args=(X_train, y_train, X_test, y_test,
+        #                                                           cv_coefs, cv_intercepts, cv_scores_train, cv_scores_test,
+        #                                                           iter_cv,), kwargs={'resids': resids, 'mean_resids': mean_resids,
+        #                                                                              'id_fit': iter_cv, 'verbose': verbose
+        #                                                                              }))
+
         threads[-1].name = str(glm_kwargs) + f' - {iter_cv}'
         threads[-1].start()
 
-        if iter_cv % 5 == 4:
-            for thread in threads:
-                thread.join()
-            threads = []
+        # if iter_cv % 5 == 4:
+        #     for thread in threads:
+        #         thread.join()
+        #     threads = []
 
 
         
@@ -103,6 +112,7 @@ def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, verbose=0, resp_l
 
     for thread in threads:
         thread.join()
+    threads = []
 
 
     #####################
@@ -196,24 +206,33 @@ def cv_glm_mult_params(X, y, cv_idx, model_name, glm_kwarg_lst, verbose=0, score
 
         model_name = glm_kwargs.pop('model_name', 'Gaussian')
 
-        threads.append(threading.Thread(target=cv_glm_single_params, args=(X, y, cv_idx, model_name, glm_kwargs,),
+        # threads.append(threading.Thread(target=cv_glm_single_params, args=(X, y, cv_idx, model_name, glm_kwargs,),
+        #                                                              kwargs={'verbose': verbose,
+        #                                                                      'resp_list': resp,
+        #                                                                      'beta0_':beta0_,
+        #                                                                      'beta_':beta_,
+        #                                                                      'score_method':score_method
+        #                                                                      }))
+        threads.append(Process(target=cv_glm_single_params, args=(X, y, cv_idx, model_name, glm_kwargs,),
                                                                      kwargs={'verbose': verbose,
                                                                              'resp_list': resp,
                                                                              'beta0_':beta0_,
                                                                              'beta_':beta_,
                                                                              'score_method':score_method
                                                                              }))
+        
         threads[-1].name = str(glm_kwargs)
         threads[-1].start()
         
-        if i % 4 == 3:
-            for thread in threads:
-                thread.join()
-            threads = []
+        # if i % 4 == 3:
+        #     for thread in threads:
+        #         thread.join()
+        #     threads = []
 
 
     for thread in threads:
         thread.join()
+    threads = []
 
     for cv_result in resp:
         # if ((cv_result['model'].score_metric == 'pseudo_R2' and cv_result['cv_mean_score'] > best_score)): # or

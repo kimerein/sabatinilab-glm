@@ -152,8 +152,9 @@ def plot_all_beta_coefs(coeffs, coef_names, sftd_coef_names, plot_width=4, y_lim
 
         plot_single_coef_set(coef_name, timeshifts, coefs, axs_tmp, y_lims, binsize=binsize, label=label)
     
+    fig.patch.set_facecolor('white')
     fig.tight_layout()
-
+    
     if filename:
         fig.savefig(filename)
 
@@ -216,6 +217,7 @@ def plot_power_spectra(y_true_full, y_hat_full):
 
     plt.show()
 
+    fig.patch.set_facecolor('white')
     fig.savefig('figure_outputs/spectral_out.png')
 
     return
@@ -382,6 +384,7 @@ def plot_avg_reconstructions(tmp_backup,
                     '95% SEM Confidence Interval'])
     
     plt.tight_layout()
+    fig.patch.set_facecolor('white')
 
     if file_name:
         fig.savefig(file_name)
