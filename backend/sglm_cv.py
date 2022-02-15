@@ -51,10 +51,10 @@ def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, verbose=0, resp_l
         while True:
             # try:
             glm, args, kwargs = q.get()
-            print(f'Working on {kwargs}')
+            # print(f'Working on {kwargs}')
             glm.fit_set(*args, **kwargs)
             q.task_done()
-            print(f'Finished {kwargs}')
+            # print(f'Finished {kwargs}')
             # except queue.Empty:
             #     break
 
@@ -129,7 +129,7 @@ def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, verbose=0, resp_l
     threading.Thread(target=sglm_worker, daemon=True).start()
     threading.Thread(target=sglm_worker, daemon=True).start()
     threading.Thread(target=sglm_worker, daemon=True).start()
-    threading.Thread(target=sglm_worker, daemon=True).start()
+    # threading.Thread(target=sglm_worker, daemon=True).start()
 
     # for thread in threads:
     #     thread.join()
@@ -199,6 +199,25 @@ def cv_glm_mult_params(X, y, cv_idx, model_name, glm_kwarg_lst, verbose=0, score
     
     Returns: dict of information relevant to the best model identified and overall fit information
     """
+    
+
+
+
+
+    q2 = queue.Queue()
+    def sglm_worker():
+        while True:
+            # try:
+            args, kwargs = q2.get()
+            # print(f'Working on {kwargs}')
+            # glm.fit_set(*args, **kwargs)
+            cv_glm_single_params(*args, **kwargs)
+            q2.task_done()
+            # print(f'Finished {kwargs}')
+            # except queue.Empty:
+            #     break
+
+
 
     # score_metric = glm_kwarg_lst[0]['score_metric'] if 'score_metric' in glm_kwarg_lst else 'pseudo_R2'
 
@@ -228,13 +247,16 @@ def cv_glm_mult_params(X, y, cv_idx, model_name, glm_kwarg_lst, verbose=0, score
 
         model_name = glm_kwargs.pop('model_name', 'Gaussian')
 
-        threads.append(threading.Thread(target=cv_glm_single_params, args=(X, y, cv_idx, model_name, glm_kwargs,),
-                                                                     kwargs={'verbose': verbose,
-                                                                             'resp_list': resp,
-                                                                             'beta0_':beta0_,
-                                                                             'beta_':beta_,
-                                                                             'score_method':score_method
-                                                                             }))
+        args = (X, y, cv_idx, model_name, glm_kwargs,)
+        kwargs = {'verbose': verbose,
+                  'resp_list': resp,
+                  'beta0_':beta0_,
+                  'beta_':beta_,
+                  'score_method':score_method
+                 }
+
+        # threads.append(threading.Thread(target=cv_glm_single_params, args=args,
+        #                                                              kwargs=kwargs))
         # threads.append(Process(target=cv_glm_single_params, args=(X, y, cv_idx, model_name, glm_kwargs,),
         #                                                              kwargs={'verbose': verbose,
         #                                                                      'resp_list': resp,
@@ -243,19 +265,89 @@ def cv_glm_mult_params(X, y, cv_idx, model_name, glm_kwarg_lst, verbose=0, score
         #                                                                      'score_method':score_method
         #                                                                      }))
         
-        threads[-1].name = str(glm_kwargs)
-        threads[-1].start()
+        q2.put((args, kwargs))
         
-        # if i % 4 == 3:
-        #     for thread in threads:
-        #         thread.join()
-        #     threads = []
+        # threads[-1].name = str(glm_kwargs)
+        # threads[-1].start()
+        
+    #     if i % 4 == 3:
+    #         for thread in threads:
+    #             thread.join()
+    #         threads = []
 
 
-    for thread in threads:
-        thread.join()
-    threads = []
+    # for thread in threads:
+    #     thread.join()
+    # threads = []
 
+
+
+    threading.Thread(target=sglm_worker, daemon=True).start()
+    # threading.Thread(target=sglm_worker, daemon=True).start()
+    # threading.Thread(target=sglm_worker, daemon=True).start()
+    # threading.Thread(target=sglm_worker, daemon=True).start()
+
+    q2.join()
+
+
+
+
+    # # score_metric = glm_kwarg_lst[0]['score_metric'] if 'score_metric' in glm_kwarg_lst else 'pseudo_R2'
+
+    # final_results = {}
+    # best_score = -np.inf #if score_metric == 'pseudo_R2' else np.inf
+    # best_params = None
+    # # best_model = None
+
+    # threads = []
+    # resp = list()
+
+
+    # start = time.time()
+
+    # pca_glm = sglm.GLM('PCA Normal') if model_name in {'Normal', 'Gaussian'} else sglm.GLM(model_name)
+    # pca_glm.pca_fit(X, y)
+    # print(f'> PCA GLM Built in {time.time() - start} seconds')
+
+    # # beta0_ = pca_glm.beta0_
+    # # beta_ = pca_glm.beta_
+    # beta0_ = None
+    # beta_ = None
+
+
+    # for i, glm_kwargs in enumerate(glm_kwarg_lst):
+    #     print(glm_kwargs)
+
+    #     model_name = glm_kwargs.pop('model_name', 'Gaussian')
+
+    #     threads.append(threading.Thread(target=cv_glm_single_params, args=(X, y, cv_idx, model_name, glm_kwargs,),
+    #                                                                  kwargs={'verbose': verbose,
+    #                                                                          'resp_list': resp,
+    #                                                                          'beta0_':beta0_,
+    #                                                                          'beta_':beta_,
+    #                                                                          'score_method':score_method
+    #                                                                          }))
+    #     # threads.append(Process(target=cv_glm_single_params, args=(X, y, cv_idx, model_name, glm_kwargs,),
+    #     #                                                              kwargs={'verbose': verbose,
+    #     #                                                                      'resp_list': resp,
+    #     #                                                                      'beta0_':beta0_,
+    #     #                                                                      'beta_':beta_,
+    #     #                                                                      'score_method':score_method
+    #     #                                                                      }))
+        
+    #     threads[-1].name = str(glm_kwargs)
+    #     threads[-1].start()
+        
+    #     if i % 1 == 0:
+    #         for thread in threads:
+    #             thread.join()
+    #         threads = []
+
+
+    # for thread in threads:
+    #     thread.join()
+    # threads = []
+    
     for cv_result in resp:
         # if ((cv_result['model'].score_metric == 'pseudo_R2' and cv_result['cv_mean_score'] > best_score)): # or
             # (cv_result['model'].score_metric == 'deviance' and cv_result['cv_mean_score'] < best_score)):
@@ -378,4 +470,99 @@ def generate_mult_params(kwarg_lists, kwargs=None):
 #         score = model.score(X, y)
 #         neg_score = 1 - score
 #         params = 
+
+
+
+
+
+
+
+
+
+
+
+    # q2 = queue.Queue()
+    # def sglm_worker():
+    #     while True:
+    #         # try:
+    #         args, kwargs = q2.get()
+    #         # print(f'Working on {kwargs}')
+    #         # glm.fit_set(*args, **kwargs)
+    #         cv_glm_single_params(*args, **kwargs)
+    #         q2.task_done()
+    #         # print(f'Finished {kwargs}')
+    #         # except queue.Empty:
+    #         #     break
+
+
+
+    # # score_metric = glm_kwarg_lst[0]['score_metric'] if 'score_metric' in glm_kwarg_lst else 'pseudo_R2'
+
+    # final_results = {}
+    # best_score = -np.inf #if score_metric == 'pseudo_R2' else np.inf
+    # best_params = None
+    # # best_model = None
+
+    # threads = []
+    # resp = list()
+
+
+    # start = time.time()
+
+    # pca_glm = sglm.GLM('PCA Normal') if model_name in {'Normal', 'Gaussian'} else sglm.GLM(model_name)
+    # pca_glm.pca_fit(X, y)
+    # print(f'> PCA GLM Built in {time.time() - start} seconds')
+
+    # # beta0_ = pca_glm.beta0_
+    # # beta_ = pca_glm.beta_
+    # beta0_ = None
+    # beta_ = None
+
+
+    # for i, glm_kwargs in enumerate(glm_kwarg_lst):
+    #     print(glm_kwargs)
+
+    #     model_name = glm_kwargs.pop('model_name', 'Gaussian')
+
+    #     args = (X, y, cv_idx, model_name, glm_kwargs,)
+    #     kwargs = {'verbose': verbose,
+    #               'resp_list': resp,
+    #               'beta0_':beta0_,
+    #               'beta_':beta_,
+    #               'score_method':score_method
+    #              }
+
+    #     # threads.append(threading.Thread(target=cv_glm_single_params, args=args,
+    #     #                                                              kwargs=kwargs))
+    #     # threads.append(Process(target=cv_glm_single_params, args=(X, y, cv_idx, model_name, glm_kwargs,),
+    #     #                                                              kwargs={'verbose': verbose,
+    #     #                                                                      'resp_list': resp,
+    #     #                                                                      'beta0_':beta0_,
+    #     #                                                                      'beta_':beta_,
+    #     #                                                                      'score_method':score_method
+    #     #                                                                      }))
+        
+    #     q2.put((args, kwargs))
+        
+    #     # threads[-1].name = str(glm_kwargs)
+    #     # threads[-1].start()
+        
+    # #     if i % 4 == 3:
+    # #         for thread in threads:
+    # #             thread.join()
+    # #         threads = []
+
+
+    # # for thread in threads:
+    # #     thread.join()
+    # # threads = []
+
+
+
+    # threading.Thread(target=sglm_worker, daemon=True).start()
+    # # threading.Thread(target=sglm_worker, daemon=True).start()
+    # # threading.Thread(target=sglm_worker, daemon=True).start()
+    # # threading.Thread(target=sglm_worker, daemon=True).start()
+
+    # q2.join()
 

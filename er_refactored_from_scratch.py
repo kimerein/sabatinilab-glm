@@ -264,7 +264,7 @@ def to_profile():
     best_reconstruct_folder = 'model_outputs/best_reconstructions'
     best_coeffs_folder = 'model_outputs/best_coeffs'
 
-    prefix = '77'
+    prefix = '99'
     avg_reconstruct_basename = 'arr'
     all_betas_basename = 'betas'
     model_c_basename = 'coeffs'
@@ -320,7 +320,7 @@ def to_profile():
     res = {}
 
     # leave_one_out_list = [[]]
-    leave_one_out_list = [[]] + [[_] for _ in X_cols_all]
+    leave_one_out_list = [[]] + [[_] for _ in X_cols_all if _ != 'nTrial'] # Excluding column for groupby, 'nTrial'
 
 
     # Loop through files to be processed
