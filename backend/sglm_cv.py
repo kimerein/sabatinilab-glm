@@ -13,17 +13,31 @@ import time
 
 
 class SGLM_worker():
-    def __init__(self, queue):
+    def __init__(self, queue, verbose=0):
+        if verbose > 1:
+            print('Worker created')
         self.queue = queue
-        self.done = False
+        self.verbose = verbose
 
-    def run(self):
+    def run_single(self):
         while True:
+            if self.verbose > 1:
+                print('Running single')
             glm, args, kwargs = self.queue.get()
             glm.fit_set(*args, **kwargs)
             self.queue.task_done()
-            if self.done:
-                break
+            if self.queue.empty():
+                return
+    
+    def run_multi(self):
+        while True:
+            if self.verbose > 1:
+                print('Running multi')
+            args, kwargs = self.queue.get()
+            cv_glm_single_params(*args, **kwargs)
+            self.queue.task_done()
+            if self.queue.empty():
+                return
 
 def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, verbose=0, resp_list=[], beta_=None, beta0_=None, score_method='mse'):
     """
@@ -147,17 +161,13 @@ def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, verbose=0, resp_l
 
     num_workers = 4
     workers = [SGLM_worker(q) for _ in range(num_workers)]
-    threads = [threading.Thread(target=worker.run, daemon=True) for worker in workers]
+    threads = [threading.Thread(target=worker.run_single, daemon=True) for worker in workers]
     for thread in threads:
         thread.start()
     
     q.join()
-    for worker in workers:
-        worker.done = True
     for thread in threads:
         thread.join()
-
-
 
 
     # for thread in threads:
@@ -312,20 +322,17 @@ def cv_glm_mult_params(X, y, cv_idx, model_name, glm_kwarg_lst, verbose=0, score
 
 
 
-    threading.Thread(target=sglm_worker, daemon=True).start()
     # threading.Thread(target=sglm_worker, daemon=True).start()
-    # threading.Thread(target=sglm_worker, daemon=True).start()
-    # threading.Thread(target=sglm_worker, daemon=True).start()
+    # # threading.Thread(target=sglm_worker, daemon=True).start()
+    # # threading.Thread(target=sglm_worker, daemon=True).start()
+    # # threading.Thread(target=sglm_worker, daemon=True).start()
 
     num_workers = 1
     workers = [SGLM_worker(q2) for _ in range(num_workers)]
-    threads = [threading.Thread(target=worker.run, daemon=True) for worker in workers]
+    threads = [threading.Thread(target=worker.run_multi, daemon=True) for worker in workers]
     for thread in threads:
         thread.start()
-    
     q2.join()
-    for worker in workers:
-        worker.done = True
     for thread in threads:
         thread.join()
 
