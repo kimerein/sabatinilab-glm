@@ -9,7 +9,21 @@ import time
 # TODO: Multidimensional Array -- paramgrid and output grid
 # TODO: Add an OrderedDict implementation for the generate_mult_params version
 
-# TODO: Add a Feature Selection methodology -- to adjust feature selection based on cross-validation 
+# TODO: Add a Feature Selection methodology -- to adjust feature selection based on cross-validation
+
+
+class SGLM_worker():
+    def __init__(self, queue):
+        self.queue = queue
+        self.done = False
+
+    def run(self):
+        while True:
+            glm, args, kwargs = self.queue.get()
+            glm.fit_set(*args, **kwargs)
+            self.queue.task_done()
+            if self.done:
+                break
 
 def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, verbose=0, resp_list=[], beta_=None, beta0_=None, score_method='mse'):
     """
@@ -47,16 +61,16 @@ def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, verbose=0, resp_l
 
     
     q = queue.Queue()
-    def sglm_worker():
-        while True:
-            # try:
-            glm, args, kwargs = q.get()
-            # print(f'Working on {kwargs}')
-            glm.fit_set(*args, **kwargs)
-            q.task_done()
-            # print(f'Finished {kwargs}')
-            # except queue.Empty:
-            #     break
+    # def sglm_worker():
+    #     while True:
+    #         # try:
+    #         glm, args, kwargs = q.get()
+    #         # print(f'Working on {kwargs}')
+    #         glm.fit_set(*args, **kwargs)
+    #         q.task_done()
+    #         # print(f'Finished {kwargs}')
+    #         # except queue.Empty:
+    #         #     break
 
 
     threads = []
@@ -125,16 +139,30 @@ def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, verbose=0, resp_l
         # # cv_scores_test[iter_cv] = glm.score(X_test, y_test)
 
 
-    threading.Thread(target=sglm_worker, daemon=True).start()
-    threading.Thread(target=sglm_worker, daemon=True).start()
-    threading.Thread(target=sglm_worker, daemon=True).start()
-    threading.Thread(target=sglm_worker, daemon=True).start()
     # threading.Thread(target=sglm_worker, daemon=True).start()
+    # threading.Thread(target=sglm_worker, daemon=True).start()
+    # threading.Thread(target=sglm_worker, daemon=True).start()
+    # threading.Thread(target=sglm_worker, daemon=True).start()
+    # # threading.Thread(target=sglm_worker, daemon=True).start()
+
+    num_workers = 4
+    workers = [SGLM_worker(q) for _ in range(num_workers)]
+    threads = [threading.Thread(target=worker.run, daemon=True) for worker in workers]
+    for thread in threads:
+        thread.start()
+    
+    q.join()
+    for worker in workers:
+        worker.done = True
+    for thread in threads:
+        thread.join()
+
+
+
 
     # for thread in threads:
     #     thread.join()
     # threads = []
-    q.join()
 
 
     #####################
@@ -205,17 +233,19 @@ def cv_glm_mult_params(X, y, cv_idx, model_name, glm_kwarg_lst, verbose=0, score
 
 
     q2 = queue.Queue()
-    def sglm_worker():
-        while True:
-            # try:
-            args, kwargs = q2.get()
-            # print(f'Working on {kwargs}')
-            # glm.fit_set(*args, **kwargs)
-            cv_glm_single_params(*args, **kwargs)
-            q2.task_done()
-            # print(f'Finished {kwargs}')
-            # except queue.Empty:
-            #     break
+
+    
+    # def sglm_worker():
+    #     while True:
+    #         # try:
+    #         args, kwargs = q2.get()
+    #         # print(f'Working on {kwargs}')
+    #         # glm.fit_set(*args, **kwargs)
+    #         cv_glm_single_params(*args, **kwargs)
+    #         q2.task_done()
+    #         # print(f'Finished {kwargs}')
+    #         # except queue.Empty:
+    #         #     break
 
 
 
@@ -287,7 +317,17 @@ def cv_glm_mult_params(X, y, cv_idx, model_name, glm_kwarg_lst, verbose=0, score
     # threading.Thread(target=sglm_worker, daemon=True).start()
     # threading.Thread(target=sglm_worker, daemon=True).start()
 
+    num_workers = 1
+    workers = [SGLM_worker(q2) for _ in range(num_workers)]
+    threads = [threading.Thread(target=worker.run, daemon=True) for worker in workers]
+    for thread in threads:
+        thread.start()
+    
     q2.join()
+    for worker in workers:
+        worker.done = True
+    for thread in threads:
+        thread.join()
 
 
 

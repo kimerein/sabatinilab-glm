@@ -15,6 +15,7 @@ class GLM_data():
         if not exists(path_to_file) or overwrite:
             file_save = open(path_to_file, 'wb')
             pickle.dump(self, file_save)
+            print('SGLM file saved to: ' + path_to_file)
         else:
             print('File already exists. Set overwrite=True to overwrite.')
     def load(self):

@@ -68,6 +68,7 @@ def preprocess_lynne(df):
     df = df[[_ for _ in df.columns if 'Unnamed' not in _]]
     print(df.columns)
     df = lpp.rename_columns(df)
+    print(df.columns)
     df = lpp.define_trial_starts_ends(df)
 
     print('Percent of Data in ITI:', (df['nTrial'] == df['nEndTrial']).mean())
@@ -264,18 +265,34 @@ def to_profile():
     best_reconstruct_folder = 'model_outputs/best_reconstructions'
     best_coeffs_folder = 'model_outputs/best_coeffs'
 
-    prefix = '99'
+    # prefix = 'w_unrewarded_cvsize=.01'
+    # prefix = 'new_lynne2'
+    prefix = 'new_lynne_linear_only_refac'
     avg_reconstruct_basename = 'arr'
     all_betas_basename = 'betas'
     model_c_basename = 'coeffs'
     model_i_basename = 'intercept'
     tmp_data_basename = 'tmp_data'
 
-    files_list = [
-                    'Ach_rDAh_WT63_11082021.csv',
-                    # 'Ach_rDAh_WT63_11162021.csv',
-                    # 'Ach_rDAh_WT63_11182021.csv'
-                    ]
+    # files_list = [
+    #                 'GLM_SIGNALS_WT63_11082021.txt',
+    #                 # 'Ach_rDAh_WT63_11082021.csv',
+    #                 # 'Ach_rDAh_WT63_11162021.csv',
+    #                 # 'Ach_rDAh_WT63_11182021.csv'
+    #                 ]
+
+    files_list = ['GLM_SIGNALS_WT63_11122021.txt',
+                  'GLM_SIGNALS_WT63_11102021.txt',
+                  'GLM_SIGNALS_WT63_11082021.txt',
+                  'GLM_SIGNALS_WT63_11182021.txt',
+                  'GLM_SIGNALS_WT63_11222021.txt',
+                  'GLM_SIGNALS_WT63_11162021.txt',
+                #   'GLM_TABLE_WT63_11082021.txt',
+                 #  'GLM_TABLE_WT63_11182021.txt',
+                 #  'GLM_TABLE_WT63_11122021.txt',
+                 #  'GLM_TABLE_WT63_11162021.txt',
+                 #  'GLM_TABLE_WT63_11222021.txt',
+                 ]
 
     # Select column names to use for GLM predictors
     # 'spn', 'spx',
@@ -293,8 +310,14 @@ def to_profile():
     # Select hyper parameters for GLM to use for model selection
     # Step 1: Create a dictionary of lists for these relevant keywords...
     kwargs_iterations = {
-        'alpha': [0.001, 0.01, 0.1, 0.5, 0.9, 1.0],
-        'l1_ratio': [0.0, 0.001, 0.1],
+        'alpha': [0],
+        'l1_ratio': [0],
+
+        # 'alpha': [0.001, 0.01, 0.1, 1.0],
+        # 'l1_ratio': [0.0, 0.001],
+
+        # 'alpha': [0.001, 0.01, 0.1, 0.5, 0.9, 1.0],
+        # 'l1_ratio': [0.0, 0.001],
 
         # 'alpha': [0.001, 0.01,],
         # 'l1_ratio': [0.0, 0.001,],
@@ -313,14 +336,16 @@ def to_profile():
     folds = 50
     pholdout = 0.2
     pgss = 0.2
+    # pgss = 0.05
+    # pgss = 0.01
 
     # Step 3: Generate iterable list of keyword sets for possible combinations
     glm_kwarg_lst = sglm_cv.generate_mult_params(kwargs_iterations, kwargs_fixed)
 
     res = {}
 
-    # leave_one_out_list = [[]]
-    leave_one_out_list = [[]] + [[_] for _ in X_cols_all if _ != 'nTrial'] # Excluding column for groupby, 'nTrial'
+    leave_one_out_list = [[]]
+    # leave_one_out_list = [[]] + [[_] for _ in X_cols_all if _ != 'nTrial'] # Excluding column for groupby, 'nTrial'
 
 
     # Loop through files to be processed
@@ -338,13 +363,20 @@ def to_profile():
         # Load file
         df = pd.read_csv(f'{dir_path}/../{filename}')
         df = preprocess_lynne(df)
+        # df = df[df['r_trial'] > 0]
         df['wi_trial_keep'] = get_is_not_iti(df)
 
         glmsave.set_basedata(df)
 
-        for y_col in tqdm(['zsrdFF', 'zsgdFF'], 'ycol'):
+        for y_col in tqdm(['resp1', 'resp2', 'resp3', 'resp4',
+                            'SGP_1',
+                            'SGP_2',
+                            'SGP_5',
+                            'SGP_6',
+        ], 'ycol'):
+        # for y_col in tqdm(['zsrdFF', 'zsgdFF'], 'ycol'):
 
-            df = detrend(df, y_col)
+            # df = detrend(df, y_col)
 
             for left_out in tqdm(leave_one_out_list, 'left_out'):
                 
@@ -357,7 +389,16 @@ def to_profile():
 
                 print("Run ID:", run_id)
                 dfrel = df.copy()
-                
+
+
+
+
+                if 'SGP_' == y_col[:len('SGP_')]:
+                    dfrel[y_col] = dfrel[y_col].replace(0, np.nan)
+
+
+
+
                 # Timeshift X_cols forward by pos_order times and backward by neg_order times
                 dfrel, X_cols_sftd = timeshift_vals(dfrel, X_cols, neg_order=neg_order, pos_order=pos_order)
                 dfrel = dfrel.dropna()
@@ -371,11 +412,15 @@ def to_profile():
                                                         num_folds=folds,
                                                         test_size=pgss)
 
+                print([(len(_[0]), len(_[1])) for _ in kfold_cv_idx])
+
                 prediction_X_cols = [_ for _ in X_cols if _ not in ['nTrial']]
                 prediction_X_cols_sftd = [_ for _ in X_cols_sftd if _ not in ['nTrial']]
 
                 X_setup = get_x(dfrel_setup, prediction_X_cols_sftd, keep_rows=None)
                 y_setup = get_y(dfrel_setup, y_col, keep_rows=None)
+                X_setup_noiti = get_x(dfrel_setup, prediction_X_cols_sftd, keep_rows=dfrel_setup['wi_trial_keep'])
+                y_setup_noiti = get_y(dfrel_setup, y_col, keep_rows=dfrel_setup['wi_trial_keep'])
                 best_score, best_score_std, best_params, best_model, cv_results = sglm_ez.simple_cv_fit(X_setup, y_setup, kfold_cv_idx, glm_kwarg_lst, model_type='Normal', verbose=0, score_method=score_method)
                 
                 print_best_model_info(X_setup, best_score, best_params, best_model, start)
@@ -448,8 +493,8 @@ def to_profile():
 
                     glmsave.append_fit_results(y_col, fitted_model_dict["glm_kwargs"], glm_model=fitted_model, dropped_cols=left_out,
                                             scores={
-                                                'tr_witi':None,
-                                                'tr_noiti':None,
+                                                'tr_witi':fitted_model.r2_score(X_setup, y_setup),
+                                                'tr_noiti':fitted_model.r2_score(X_setup_noiti, y_setup_noiti),
                                                 'gss_witi':fitted_model_dict['cv_R2_score'],
                                                 'gss_noiti':None,
                                                 'holdout_witi':fitted_model.r2_score(X_holdout_witi, y_holdout_witi),

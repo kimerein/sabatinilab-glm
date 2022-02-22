@@ -34,42 +34,60 @@ def rename_columns(df):
     Returns:
         dataframe with renamed columns
     '''
+    # # Simplify variable names
+    # df = df.rename({'center port occupancy': 'cpo',
+    #                 'center port entry': 'cpn',
+    #                 'center port exit': 'cpx',
+
+    #                 'left port occupancy': 'lpo',
+    #                 'left port entry': 'lpn',
+    #                 'left port exit': 'lpx',
+    #                 'left licks': 'll',
+
+    #                 'right port occupancy': 'rpo',
+    #                 'right port entry': 'rpn',
+    #                 'right port exit': 'rpx',
+    #                 'right licks': 'rl',
+
+    #                 'no reward': 'nr',
+    #                 'reward': 'r',
+
+
+    #                 'dF/F green (Ach3.0)': 'gdFF',
+    #                 'zscored green (Ach3.0)': 'zsgdFF',
+
+    #                 'dF/F green (dLight1.1)': 'gdFF',
+    #                 'zscored green (dLight1.1)': 'zsgdFF',
+
+    #                 'dF/F green (dlight1.1)': 'gdFF',
+    #                 'zscored green (dlight1.1)': 'zsgdFF',
+
+    #                 'dF/F (dlight1.1)': 'gdFF',
+    #                 'zscore dF/F (dlight)': 'zsgdFF',
+
+    #                 'zscore dF/F (Ach)': 'zsgdFF',
+    #                 'zscore dF/F (Ach3.0)': 'zsgdFF',
+
+    #                 'zscore dF/F (rGRAB-DA)' : 'zsrdFF',
+    #                 }, axis=1)
     # Simplify variable names
-    df = df.rename({'center port occupancy': 'cpo',
-                    'center port entry': 'cpn',
-                    'center port exit': 'cpx',
-
-                    'left port occupancy': 'lpo',
-                    'left port entry': 'lpn',
-                    'left port exit': 'lpx',
-                    'left licks': 'll',
-
-                    'right port occupancy': 'rpo',
-                    'right port entry': 'rpn',
-                    'right port exit': 'rpx',
-                    'right licks': 'rl',
-
-                    'no reward': 'nr',
-                    'reward': 'r',
-
-
-                    'dF/F green (Ach3.0)': 'gdFF',
-                    'zscored green (Ach3.0)': 'zsgdFF',
-
-                    'dF/F green (dLight1.1)': 'gdFF',
-                    'zscored green (dLight1.1)': 'zsgdFF',
-
-                    'dF/F green (dlight1.1)': 'gdFF',
-                    'zscored green (dlight1.1)': 'zsgdFF',
-
-                    'dF/F (dlight1.1)': 'gdFF',
-                    'zscore dF/F (dlight)': 'zsgdFF',
-
-                    'zscore dF/F (Ach)': 'zsgdFF',
-                    'zscore dF/F (Ach3.0)': 'zsgdFF',
-
-                    'zscore dF/F (rGRAB-DA)' : 'zsrdFF',
-                    }, axis=1)
+    df = df.rename({'Ch1':'resp1',
+                    'Ch2':'resp2',
+                    'Ch5':'resp3',
+                    'Ch6':'resp4',
+                    'centerOcc':'cpo',
+                    'centerIn':'cpn',
+                    'centerOut':'cpx',
+                    'rightOcc':'rpo',
+                    'rightIn':'rpn',
+                    'rightOut':'rpx',
+                    'rightLick':'rl',
+                    'leftOcc':'lpo',
+                    'leftIn':'lpn',
+                    'leftOut':'lpx',
+                    'leftLick':'ll',
+                    'reward':'r',
+                    'noreward':'nr'}, axis=1)
     return df
 
 
