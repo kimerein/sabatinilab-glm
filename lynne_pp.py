@@ -114,15 +114,25 @@ def set_port_entry_exit_rewarded_unrewarded_indicators(df):
     '''
     # Identify combined reward vs. non-rewarded / left vs. right / entries vs. exits
     df = df.assign(**{
-        'rpxr':df['r_trial']*df['rpx'],
-        'rpxnr':df['nr_trial']*df['rpx'],
-        'lpxr':df['r_trial']*df['lpx'],
-        'lpxnr':df['nr_trial']*df['lpx'],
+        # 'rpxr':df['r_trial']*df['rpx'],
+        # 'rpxnr':df['nr_trial']*df['rpx'],
+        # 'lpxr':df['r_trial']*df['lpx'],
+        # 'lpxnr':df['nr_trial']*df['lpx'],
 
-        'rpnr':df['r_trial']*df['rpn'],
-        'rpnnr':df['nr_trial']*df['rpn'],
-        'lpnr':df['r_trial']*df['lpn'],
-        'lpnnr':df['nr_trial']*df['lpn'],
+        # 'rpnr':df['r_trial']*df['rpn'],
+        # 'rpnnr':df['nr_trial']*df['rpn'],
+        # 'lpnr':df['r_trial']*df['lpn'],
+        # 'lpnnr':df['nr_trial']*df['lpn'],
+
+        'rpxr':df['r']*df['rpx'],
+        'rpxnr':df['nr']*df['rpx'],
+        'lpxr':df['r']*df['lpx'],
+        'lpxnr':df['nr']*df['lpx'],
+
+        'rpnr':df['r']*df['rpn'],
+        'rpnnr':df['nr']*df['rpn'],
+        'lpnr':df['r']*df['lpn'],
+        'lpnnr':df['nr']*df['lpn'],
 
     })
     return df

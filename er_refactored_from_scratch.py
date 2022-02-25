@@ -73,6 +73,8 @@ def preprocess_lynne(df):
 
     print('Percent of Data in ITI:', (df['nTrial'] == df['nEndTrial']).mean())
 
+    print(df)
+
     df = lpp.set_reward_flags(df)
     df = lpp.set_port_entry_exit_rewarded_unrewarded_indicators(df)
     df = lpp.define_side_agnostic_events(df)
@@ -267,7 +269,9 @@ def to_profile():
 
     # prefix = 'w_unrewarded_cvsize=.01'
     # prefix = 'new_lynne2'
-    prefix = 'new_lynne_linear_only_refac'
+    # prefix = 'new_lynne_mn2l2_only_refac'
+    # prefix = 'investig_resolved'
+    prefix = 'r_trial-r-refit'
     avg_reconstruct_basename = 'arr'
     all_betas_basename = 'betas'
     model_c_basename = 'coeffs'
@@ -281,12 +285,14 @@ def to_profile():
     #                 # 'Ach_rDAh_WT63_11182021.csv'
     #                 ]
 
-    files_list = ['GLM_SIGNALS_WT63_11122021.txt',
-                  'GLM_SIGNALS_WT63_11102021.txt',
+    files_list = [
                   'GLM_SIGNALS_WT63_11082021.txt',
+                  'GLM_SIGNALS_WT63_11102021.txt',
+                  'GLM_SIGNALS_WT63_11122021.txt',
+                  'GLM_SIGNALS_WT63_11162021.txt',
                   'GLM_SIGNALS_WT63_11182021.txt',
                   'GLM_SIGNALS_WT63_11222021.txt',
-                  'GLM_SIGNALS_WT63_11162021.txt',
+
                 #   'GLM_TABLE_WT63_11082021.txt',
                  #  'GLM_TABLE_WT63_11182021.txt',
                  #  'GLM_TABLE_WT63_11122021.txt',
@@ -310,7 +316,7 @@ def to_profile():
     # Select hyper parameters for GLM to use for model selection
     # Step 1: Create a dictionary of lists for these relevant keywords...
     kwargs_iterations = {
-        'alpha': [0],
+        'alpha': [0.0],
         'l1_ratio': [0],
 
         # 'alpha': [0.001, 0.01, 0.1, 1.0],
@@ -395,7 +401,8 @@ def to_profile():
 
                 if 'SGP_' == y_col[:len('SGP_')]:
                     dfrel[y_col] = dfrel[y_col].replace(0, np.nan)
-
+                if dfrel[y_col].std() >= 90:
+                    dfrel[y_col] /= 100
 
 
 
@@ -447,6 +454,11 @@ def to_profile():
                 # Generate and save plots of the beta coefficients
                 X_cols_plot = prediction_X_cols
                 X_cols_sftd_plot = prediction_X_cols_sftd
+
+                # print('X_setup.columns', list(X_setup.columns), len(list(X_setup.columns)))
+                # print('X_setup_noiti.columns', list(X_setup_noiti.columns), len(list(X_setup_noiti.columns)))
+                # print('X_holdout_witi.columns', list(X_holdout_witi.columns), len(list(X_holdout_witi.columns)))
+                # print('X_holdout_noiti.columns', list(X_holdout_noiti.columns), len(list(X_holdout_noiti.columns)))
 
 
                 holdout_score_rnd = np.round(holdout_score, 4)
