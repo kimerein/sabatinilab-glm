@@ -89,7 +89,7 @@ def plot_single_coef_set(name, timeshifts, coefs, ax=None, y_lims=None, binsize=
 
     ax.set_xlabel(x_label, fontsize=15)
     ax.set_ylabel('Coefficient Value', fontsize=15)
-    ax.grid()
+    ax.grid(True)
     return
 
 def plot_all_beta_coefs(coeffs, coef_names, sftd_coef_names, plot_width=4, y_lims=None, filename='', plot_name='', binsize=None, fig=None, axs=None, label=None):
