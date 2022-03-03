@@ -1,4 +1,19 @@
+import os
+import sys
+dir_path = '/'.join(os.path.realpath(__file__).split('/')[:-1])
+sys.path.append(f'{dir_path}/sabatinilab-glm/backend')
+sys.path.append(f'{dir_path}/..')
+sys.path.append(f'{dir_path}/backend')
+sys.path.append(f'{dir_path}/../backend')
+
+import time
 import numpy as np
+import sglm
+import sglm_cv
+import sglm_pp
+import sglm_ez
+import sglm_plt as splt
+import sglm_save as ssave
 
 
 def define_trial_starts_ends(df, trial_shift_bounds=7):
@@ -71,10 +86,11 @@ def rename_columns(df):
     #                 'zscore dF/F (rGRAB-DA)' : 'zsrdFF',
     #                 }, axis=1)
     # Simplify variable names
-    df = df.rename({'Ch1':'resp1',
-                    'Ch2':'resp2',
-                    'Ch5':'resp3',
-                    'Ch6':'resp4',
+    df = df.rename({'Ch1':'Ch1',
+                    'Ch2':'Ch2',
+                    'Ch5':'Ch5',
+                    'Ch6':'Ch6',
+
                     'centerOcc':'cpo',
                     'centerIn':'cpn',
                     'centerOut':'cpx',
@@ -101,7 +117,8 @@ def set_reward_flags(df):
     '''
     # Identify rewarded vs. unrewarded trials
     df['r_trial'] = (df.groupby('nTrial')['r'].transform(np.sum) > 0) * 1.0
-    df['nr_trial'] = (df.groupby('nTrial')['nr'].transform(np.sum) > 0) * 1.0
+    # df['nr_trial'] = (df.groupby('nTrial')['nr'].transform(np.sum) > 0) * 1.0
+    df['nr_trial'] = (df.groupby('nTrial')['r'].transform(np.sum) <= 0) * 1.0
     return df
 
 def set_port_entry_exit_rewarded_unrewarded_indicators(df):
@@ -158,3 +175,127 @@ def define_side_agnostic_events(df):
     })
 
     return df
+
+def get_first_time_events(dfrel):
+    '''
+    Returns a list of first time events
+    Args:
+        dfrel: dataframe with entry, exit, reward, non-reward columns
+    Returns:
+        first_time_events: list of first time events
+    '''
+    
+    dfrel['nn'] = dfrel[['lpn', 'rpn']].sum(axis=1)
+    dfrel['xx'] = dfrel[['lpx', 'rpx']].sum(axis=1)
+
+    first_trans = dfrel.groupby('nTrial')[['nn', 'xx', 'lpn', 'rpn', 'lpx', 'rpx', 'cpn']].cumsum()
+    first_trans = ((first_trans == 1)*1).diff()
+    first_trans *= first_trans >= 0
+    first_trans['lpn'] = dfrel['nn']*dfrel['lpn']
+    first_trans['rpn'] = dfrel['nn']*dfrel['rpn']
+    first_trans['lpx'] = dfrel['xx']*dfrel['lpx']
+    first_trans['rpx'] = dfrel['xx']*dfrel['rpx']
+
+    first_trans = first_trans.rename({_k:f'ft_{_k}' for _k in first_trans.columns}, axis=1)
+    dfrel[first_trans.columns] = first_trans
+
+    dfrel['ft_r_rpn'] = dfrel['ft_rpn'] * dfrel['r']
+    dfrel['ft_r_lpn'] = dfrel['ft_lpn'] * dfrel['r']
+    dfrel['ft_nr_rpn'] = dfrel['ft_rpn'] * dfrel['nr']
+    dfrel['ft_nr_lpn'] = dfrel['ft_lpn'] * dfrel['nr']
+
+    return dfrel
+
+def preprocess_lynne(df, trial_shift_bounds=7):
+    '''
+    Preprocess Lynne's dataframe for GLM
+    Args:
+        df: dataframe with entry, exit, lick, reward, and dFF columns
+    Returns:
+        dataframe with entry, exit, lick, reward, and
+    '''
+    df = df[[_ for _ in df.columns if 'Unnamed' not in _]]
+    print(df.columns)
+    df = rename_columns(df)
+    print(df.columns)
+    df = define_trial_starts_ends(df, trial_shift_bounds=trial_shift_bounds)
+
+    print('Percent of Data in ITI:', (df['nTrial'] == df['nEndTrial']).mean())
+
+    print(df)
+
+    df = set_reward_flags(df)
+    df = set_port_entry_exit_rewarded_unrewarded_indicators(df)
+    df = define_side_agnostic_events(df)
+
+    if 'index' in df.columns:
+        df = df.drop('index', axis=1)
+    
+    dfrel = df.copy()
+    dfrel = dfrel.replace('False', 0).astype(float)
+    dfrel = dfrel*1
+    # dfrel = overwrite_response_with_toy(dfrel)
+
+    dfrel = dfrel[[_ for _ in dfrel.columns if 'Unnamed' not in _]]
+    dfrel = get_first_time_events(dfrel)
+    return dfrel
+
+def detrend(df, y_col):
+    tmp = sglm_pp.detrend_data(df, y_col, [], 200)
+    df[y_col] = tmp
+    df = df.dropna()
+    return df
+
+def get_is_not_iti(df):
+    '''
+    Returns a boolean array of whether the trial is not ITI
+    Args:
+        df: dataframe with entry, exit, lick, reward, and dFF columns
+    Returns:
+        boolean array of whether the trial is not ITI
+    '''
+    return df['nTrial'] != df['nEndTrial']
+
+
+def timeshift_vals(dfrel, X_cols, neg_order=-7, pos_order=20):
+    '''
+    Timeshift values
+    Args:
+        dfrel: full dataframe
+        X_cols: list of columns to shift
+        neg_order: negative order of the timeshift
+        pos_order: positive order of the timeshift
+    Returns:
+        dfrel: dataframe with additional timeshifted columns
+        X_cols_sftd: list of shifted columns
+    '''
+    dfrel = sglm_ez.timeshift_cols(dfrel, X_cols[1:], neg_order=neg_order, pos_order=pos_order)
+    X_cols_sftd = sglm_ez.add_timeshifts_to_col_list(X_cols, X_cols[1:], neg_order=neg_order, pos_order=pos_order)
+    return dfrel, X_cols_sftd
+
+
+def get_first_entry_time(tmp):
+    '''
+    Get first entry time
+    Args:
+        tmp: dataframe with ITI removed, and first_time (ft_rpn / ft_lpn / ft_cpn) columns defined
+    Returns:
+        dataframe with added time_adjusted columns releatvive to first entry
+    '''
+    # Get first entry time
+    tmp['1'] = 1
+    tmp['tim'] = tmp.groupby('nTrial')['1'].cumsum()
+
+    entry_timing_r = tmp.groupby('nTrial')['ft_rpn'].transform(lambda x: x.argmax()).astype(int)
+    entry_timing_l = tmp.groupby('nTrial')['ft_lpn'].transform(lambda x: x.argmax()).astype(int)
+    entry_timing = (entry_timing_r > entry_timing_l)*entry_timing_r + (entry_timing_r < entry_timing_l)*entry_timing_l
+
+    adjusted_time = (tmp['tim'] - entry_timing)
+    tmp['adjusted_time'] = adjusted_time
+    adjusted_time.index = tmp.index
+
+    entry_timing_c = tmp.groupby('nTrial')['ft_cpn'].transform(lambda x: x.argmax()).astype(int)
+    adjusted_time_c = (tmp['tim'] - entry_timing_c)
+    adjusted_time_c.index = tmp.index
+    tmp['cpn_adjusted_time'] = adjusted_time_c
+    return tmp

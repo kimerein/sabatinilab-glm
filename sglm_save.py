@@ -67,12 +67,3 @@ class GLM_data():
         
         self.data['fit_results'].append(fit_result)
 
-
-# set_uid(self, uid)
-# set_filename(self, filename)
-# set_basedata(self, basedata)
-# set_X_cols(self, X_cols)
-# set_gss_info(self, folds, pholdout, pgss, gssid=None)
-# set_timeshifts(self, negorder, posorder)
-# append_fit_results(self, response_col, drop_cols, hyperparams, glm_model=None, gss_scores=None, refit_scores=None, dropped_cols=[], gssids=None)
-
