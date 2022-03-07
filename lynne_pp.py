@@ -14,6 +14,7 @@ import sglm_pp
 import sglm_ez
 import sglm_plt as splt
 import sglm_save as ssave
+import pandas as pd
 
 
 def define_trial_starts_ends(df, trial_shift_bounds=7):
@@ -25,20 +26,22 @@ def define_trial_starts_ends(df, trial_shift_bounds=7):
     Returns:
         dataframe with added nTrial and nEndTrial columns to identify the number of the trial counts for start & end
     '''
-    df['event_col_a'] = ((df['cpo'].diff() > 0)*1).replace(0, np.nan) * 1.0
-    df['event_col_b'] = df['nr'].replace(0, np.nan) * 2.0
-    df['event_col_c'] = df['r'].replace(0, np.nan) * 3.0
+    df['event_col_a'] = df['cpn'].replace(0, np.nan) * 1.0
+    df['event_col_b'] = df['lpx'].replace(0, np.nan) * 2.0
+    df['event_col_c'] = df['rpx'].replace(0, np.nan) * 2.0
+
     df['event_col'] = df['event_col_a'].combine_first(df['event_col_b']).combine_first(df['event_col_c'])
     df['event_col'] = df['event_col'].bfill()
-    df['trial_start_flag'] = ((df['event_col'] == 1.0)&(df['event_col'].shift(-1) != df['event_col']) * 1.0).shift(-trial_shift_bounds) * 1.0
+    df['trial_start_flag'] = ((df['event_col'] == 1.0)&(df['event_col'].shift(-1) != 1.0)).shift(-trial_shift_bounds) * 1.0
+
     df['nTrial'] = df['trial_start_flag'].cumsum()
-    df['event_col_d'] = ((df['lpx'] > 0)*1.0).replace(0, np.nan) * 1.0
-    df['event_col_e'] = ((df['rpx'] > 0)*1.0).replace(0, np.nan) * 1.0
-    df['event_col_end'] = df['event_col_d'].combine_first(df['event_col_e']).combine_first(df['trial_start_flag'].replace(0.0, np.nan)*2.0)
+
+    df['event_col_end'] = df['event_col_b'].combine_first(df['event_col_c']).combine_first(df['trial_start_flag'].replace(0.0, np.nan))
     df['event_col_end'] = df['event_col_end'].ffill()
-    df['trial_end_flag'] = ((df['event_col_end'] == 1.0)&(df['event_col_end'].shift(1) == 2.0)&(df['event_col_end'].shift(1) != df['event_col_end'])&(df['nTrial'] > 0) * 1.0).shift(trial_shift_bounds) * 1.0
+    df['trial_end_flag'] = ((df['event_col_end'] == 2.0)&(df['event_col_end'].shift(1) != 2.0)&(df['nTrial'] > 0)).shift(trial_shift_bounds) * 1.0
     df['nEndTrial'] = df['trial_end_flag'].cumsum()
-    return df.drop(['event_col_a', 'event_col_b', 'event_col_c', 'event_col_d', 'event_col_e'], axis=1)
+
+    return df.drop(['event_col_a', 'event_col_b', 'event_col_c'], axis=1)
 
 
 def rename_columns(df):
@@ -188,21 +191,26 @@ def get_first_time_events(dfrel):
     dfrel['nn'] = dfrel[['lpn', 'rpn']].sum(axis=1)
     dfrel['xx'] = dfrel[['lpx', 'rpx']].sum(axis=1)
 
-    first_trans = dfrel.groupby('nTrial')[['nn', 'xx', 'lpn', 'rpn', 'lpx', 'rpx', 'cpn']].cumsum()
+    first_trans = dfrel.groupby('nTrial')[['nn', 'xx', 'lpn', 'rpn', 'spn', 'lpx', 'rpx', 'spx', 'cpn']].cumsum()
     first_trans = ((first_trans == 1)*1).diff()
     first_trans *= first_trans >= 0
     first_trans['lpn'] = dfrel['nn']*dfrel['lpn']
     first_trans['rpn'] = dfrel['nn']*dfrel['rpn']
+    first_trans['spn'] = dfrel['nn']*dfrel['spn']
     first_trans['lpx'] = dfrel['xx']*dfrel['lpx']
     first_trans['rpx'] = dfrel['xx']*dfrel['rpx']
+    first_trans['spx'] = dfrel['xx']*dfrel['spx']
 
     first_trans = first_trans.rename({_k:f'ft_{_k}' for _k in first_trans.columns}, axis=1)
     dfrel[first_trans.columns] = first_trans
 
     dfrel['ft_r_rpn'] = dfrel['ft_rpn'] * dfrel['r']
     dfrel['ft_r_lpn'] = dfrel['ft_lpn'] * dfrel['r']
+    dfrel['ft_r_spn'] = dfrel['ft_spn'] * dfrel['r']
     dfrel['ft_nr_rpn'] = dfrel['ft_rpn'] * dfrel['nr']
     dfrel['ft_nr_lpn'] = dfrel['ft_lpn'] * dfrel['nr']
+    dfrel['ft_nr_spn'] = dfrel['ft_spn'] * dfrel['nr']
+
 
     return dfrel
 
@@ -215,14 +223,14 @@ def preprocess_lynne(df, trial_shift_bounds=7):
         dataframe with entry, exit, lick, reward, and
     '''
     df = df[[_ for _ in df.columns if 'Unnamed' not in _]]
-    print(df.columns)
+    # print(df.columns)
     df = rename_columns(df)
-    print(df.columns)
+    # print(df.columns)
     df = define_trial_starts_ends(df, trial_shift_bounds=trial_shift_bounds)
 
     print('Percent of Data in ITI:', (df['nTrial'] == df['nEndTrial']).mean())
 
-    print(df)
+    # print(df)
 
     df = set_reward_flags(df)
     df = set_port_entry_exit_rewarded_unrewarded_indicators(df)
@@ -299,3 +307,12 @@ def get_first_entry_time(tmp):
     adjusted_time_c.index = tmp.index
     tmp['cpn_adjusted_time'] = adjusted_time_c
     return tmp
+
+if __name__ == '__main__':
+    df = pd.read_csv('/Users/josh/Documents/Harvard/GLM/GLM_SIGNALS_WT68_12152021.txt')
+    df = df[[_ for _ in df.columns if 'Unnamed' not in _]]
+    print(df.columns)
+    df = rename_columns(df)
+    print(df.columns)
+    df = define_trial_starts_ends(df, trial_shift_bounds=1)
+    print(df)

@@ -72,6 +72,14 @@ def holdout_splits(dfrel_setup, id_cols=['nTrial'], perc_holdout=0.2):
     dfrel_setup = dfrel_setup.loc[~holdout]
     return dfrel_setup, dfrel_holdout
 
+def setup_glmsave(glmsave, prefix, filename, neg_order, pos_order, X_cols_all, folds, pholdout, pgss, gssid=None):
+    glmsave.set_uid(prefix)
+    glmsave.set_filename(filename)
+    glmsave.set_timeshifts(neg_order, pos_order)
+    glmsave.set_X_cols(X_cols_all)
+    glmsave.set_gss_info(folds, pholdout, pgss, gssid=None)
+    return
+
 def to_profile():
     start = time.time()
 
@@ -90,7 +98,7 @@ def to_profile():
     # prefix = 'investig_resolved'
     # prefix = 'r_trial-r-refit'
     # prefix = 'allsess_fit_multi_alpha'
-    prefix = '1diff_tbnds_manysess_individ'
+    prefix = '1b_diff_tbnds_manysess_individ'
     avg_reconstruct_basename = 'arr'
     all_betas_basename = 'betas'
     model_c_basename = 'coeffs'
@@ -155,12 +163,7 @@ def to_profile():
         fn = filename.split('.')[0].split('/')[-1]
 
         glmsave = ssave.GLM_data(ssave_folder, f'{prefix}_{fn}.pkl')
-        glmsave.set_uid(prefix)
-        glmsave.set_filename(filename)
-        glmsave.set_timeshifts(neg_order, pos_order)
-        glmsave.set_X_cols(X_cols_all)
-        glmsave.set_gss_info(folds, pholdout, pgss, gssid=None)
-
+        setup_glmsave(glmsave, prefix, filename, neg_order, pos_order, X_cols_all, folds, pholdout, pgss, gssid=None)
 
         # Load file
         df = pd.read_csv(f'{dir_path}/../{filename}')
