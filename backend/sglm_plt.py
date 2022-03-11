@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import GroupShuffleSplit
 import time
+import seaborn as sns
 
 from scipy.fft import fft, ifft
 from scipy.signal import welch
@@ -367,15 +368,17 @@ def plot_avg_reconstructions(tmp_backup,
 
         plot_time, x_label, min_time_revised, max_time_revised = get_time_alignment(x_label, tmp_backup[plot_time_name], min_time=min_time, max_time=max_time, binsize=binsize)
         tmp_backup['plot_time'] = plot_time
+
+        print('tmp_backup', tmp_backup)
+        
         tmp = tmp_backup[tmp_backup['plot_time'].between(min_time_revised, max_time_revised)].copy()
-
-
 
         is_plt_col_name = f'is_{"_".join(plot_cols)}_trial'
 
         tmp[is_plt_col_name] = sglm_ez.get_is_trial(tmp, ['nTrial'], plot_cols)
         ci_setup_true = sglm_ez.get_sem(tmp, tmp[is_plt_col_name], 'plot_time', y_col)
         ci_setup_pred = sglm_ez.get_sem(tmp, tmp[is_plt_col_name], 'plot_time', 'pred')
+
         plot_single_avg_reconstruction(ci_setup_true, ci_setup_pred, ax[i,j], min_time_revised, max_time_revised, min_signal, max_signal, x_label, y_label, plot_title)
 
 
@@ -391,3 +394,83 @@ def plot_avg_reconstructions(tmp_backup,
 
     return
 
+def get_triplicated_data_for_time_alignment(df, alignment_col):
+    """
+
+    """
+    rel_points = df[df[alignment_col] > 0].reset_index()
+    identifiers = rel_points[['index', 'nTrial', 'nEndTrial']].dropna().values.astype(int)
+    
+    lst_extendeds = []
+    
+    for idx, nTrial, nEndTrial in identifiers:
+        extended_trial = df[(df['nTrial'] == nTrial) | (df['nEndTrial'] == nEndTrial)].reset_index().copy()
+        extended_trial['index'] -= idx
+
+        lst_extendeds.append(extended_trial.copy())
+        
+    relative_df = pd.concat(lst_extendeds)
+    return relative_df
+
+def plot_single_avg_reconstruction_v2(df, alignment_col, channel, fig=None, ax=None):
+    """
+    
+    """
+
+    relative_df = get_triplicated_data_for_time_alignment(df, alignment_col, inx_bounds=(-40, 60))
+    alignment_name = alignment_col.split('_')[-1]
+    sns.lineplot(x='index', y=channel, data=relative_df[relative_df['index'].between(*inx_bounds)], label=f'{alignment_col} — {channel}', ax=ax)
+    
+    fig.suptitle(f'{alignment_name} — {channel}')
+    ax.ylim(-1,2.5)
+    ax.grid()
+    
+    return
+
+def plot_avg_reconstructions_v2(df,
+                                alignment_col_lst=['photometrySideInIndex_r', 'photometrySideInIndex_nr'],
+                                channel='zsgdFF',
+                                binsize = 54,
+                                min_time = -20, max_time = 30,
+                                min_signal = -3.0, max_signal = 3.0,
+                                title='Average Photometry Response Aligned to Side Port Entry — Holdout Data Only',
+                                file_name=None):
+    """
+    
+    """
+
+
+    x_label = 'Timesteps __ from Event'
+    y_label = 'Response'
+
+    max_i = len(alignment_col_lst)//2
+    max_j = 1
+
+    # plt.figure(figsize=(10,5))
+    # fig, ax = plt.subplots(2,2)
+    fig, ax = plt.subplots(max_i + len(alignment_col_lst)%2, max_j+1)
+    fig.suptitle(title)
+    fig.set_figheight(20)
+    fig.set_figwidth(40)
+
+
+    for ialignment_col, alignment_col in enumerate(alignment_col_lst):
+
+        i,j = ialignment_col//2, ialignment_col%2
+        plot_single_avg_reconstruction_v2(df, alignment_col, channel, fig=fig, ax=ax[i,j])
+        
+
+
+    # ax[i, j].legend(['Mean Photometry Response',
+    #                 'Predicted Photometry Response',
+    #                 '95% SEM Confidence Interval'])
+    ax[i, j].legend()
+    fig.show()
+    
+    plt.tight_layout()
+    fig.patch.set_facecolor('white')
+
+    if file_name:
+        fig.savefig(file_name)
+
+    return
