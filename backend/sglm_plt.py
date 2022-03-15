@@ -369,7 +369,7 @@ def plot_avg_reconstructions(tmp_backup,
         plot_time, x_label, min_time_revised, max_time_revised = get_time_alignment(x_label, tmp_backup[plot_time_name], min_time=min_time, max_time=max_time, binsize=binsize)
         tmp_backup['plot_time'] = plot_time
 
-        print('tmp_backup', tmp_backup)
+        # print('tmp_backup', tmp_backup)
         
         tmp = tmp_backup[tmp_backup['plot_time'].between(min_time_revised, max_time_revised)].copy()
 
@@ -398,8 +398,12 @@ def get_triplicated_data_for_time_alignment(df, alignment_col):
     """
 
     """
+
     rel_points = df[df[alignment_col] > 0].reset_index()
     identifiers = rel_points[['index', 'nTrial', 'nEndTrial']].dropna().values.astype(int)
+
+    # print('identifiers')
+    # print(identifiers)
     
     lst_extendeds = []
     
@@ -407,38 +411,54 @@ def get_triplicated_data_for_time_alignment(df, alignment_col):
         extended_trial = df[(df['nTrial'] == nTrial) | (df['nEndTrial'] == nEndTrial)].reset_index().copy()
         extended_trial['index'] -= idx
 
+        # print('extended_trial')
+        # print(extended_trial)
+
         lst_extendeds.append(extended_trial.copy())
         
     relative_df = pd.concat(lst_extendeds)
     return relative_df
 
-def plot_single_avg_reconstruction_v2(df, alignment_col, channel, fig=None, ax=None):
+def plot_single_avg_reconstruction_v2(df, alignment_col, channel,
+                                      title=None, trial_num=None, x_label=None, y_label=None,
+                                      inx_bounds=(-40, 60), signal_bounds=(-1, 2.5),
+                                      fig=None, ax=None):
     """
     
     """
 
-    relative_df = get_triplicated_data_for_time_alignment(df, alignment_col, inx_bounds=(-40, 60))
+    relative_df = get_triplicated_data_for_time_alignment(df, alignment_col)
+
     alignment_name = alignment_col.split('_')[-1]
-    sns.lineplot(x='index', y=channel, data=relative_df[relative_df['index'].between(*inx_bounds)], label=f'{alignment_col} — {channel}', ax=ax)
+    sns.lineplot(x='index', y=channel, data=relative_df[relative_df['index'].between(*inx_bounds)], label=f'{alignment_col} — {channel} — True', ax=ax, color='b')
+    sns.lineplot(x='index', y='pred', data=relative_df[relative_df['index'].between(*inx_bounds)], label=f'{alignment_col} — {channel} — Pred', ax=ax, color='r')
     
-    fig.suptitle(f'{alignment_name} — {channel}')
-    ax.ylim(-1,2.5)
+    # fig.suptitle(f'{alignment_name} — {channel}')
+    
+    # ax.title.set_text(f'{title} — {trial_num} Trials')
+    ax.title.set_text(f'{title} — {trial_num} Trials')
+    ax.set_xlabel(x_label)
+    ax.set_ylabel(y_label)
+
+    ax.set_ylim(*signal_bounds)
     ax.grid()
     
     return
 
 def plot_avg_reconstructions_v2(df,
-                                alignment_col_lst=['photometrySideInIndex_r', 'photometrySideInIndex_nr'],
+                                alignment_col_lst=['photometrySideInIndexr', 'photometryCenterInIndexr',
+                                                   'photometrySideInIndexnr','photometryCenterInIndexnr'],
                                 channel='zsgdFF',
                                 binsize = 54,
-                                min_time = -20, max_time = 30,
+                                min_time = -40, max_time = 60,
                                 min_signal = -3.0, max_signal = 3.0,
                                 title='Average Photometry Response Aligned to Side Port Entry — Holdout Data Only',
                                 file_name=None):
     """
     
     """
-
+    inx_bounds = (min_time, max_time)
+    signal_bounds = (min_signal, max_signal)
 
     x_label = 'Timesteps __ from Event'
     y_label = 'Response'
@@ -457,8 +477,10 @@ def plot_avg_reconstructions_v2(df,
     for ialignment_col, alignment_col in enumerate(alignment_col_lst):
 
         i,j = ialignment_col//2, ialignment_col%2
-        plot_single_avg_reconstruction_v2(df, alignment_col, channel, fig=fig, ax=ax[i,j])
-        
+        plot_single_avg_reconstruction_v2(df, alignment_col, channel,
+                                        #   title=f'{alignment_col} — ',
+                                          title=f'{alignment_col} Trials',
+                                          inx_bounds=inx_bounds, signal_bounds=signal_bounds, fig=fig, ax=ax[i,j])
 
 
     # ax[i, j].legend(['Mean Photometry Response',

@@ -121,7 +121,8 @@ def to_profile():
 
 
 
-    prefix = 'tmp'
+    # prefix = 'tmp'
+    prefix = 'checking_avg_reconstruction'
 
 
     # prefix = 'table_based-incl_before_start'
@@ -204,7 +205,7 @@ def to_profile():
     full_df_set = []
 
     # Loop through files to be processed
-    for ifn,filename in enumerate(tqdm(files_list, 'filename')):
+    for ifn,filename in enumerate((files_list)):
         fn = filename.split('.')[0].split('/')[-1]
 
         glmsave = ssave.GLM_data(ssave_folder, f'{prefix}_{fn}.pkl')
@@ -251,8 +252,8 @@ def to_profile():
 
 
 
-        df['nTrial'] = ((~df['photometryCenterInIndex'].isna())*1).cumsum().shift(-5)
-        df['nEndTrial'] = ((~df['photometrySideOutIndex'].isna())*1).cumsum().shift(5)
+        df['nTrial'] = (((~df['photometryCenterInIndex'].isna())&(df['photometryCenterInIndex']==1))*1).cumsum().shift(-5)
+        df['nEndTrial'] = (((~df['photometrySideOutIndex'].isna())&(df['photometrySideOutIndex']==1))*1).cumsum().shift(5)
 
         df = df[df['nTrial'] > 0]
 
@@ -282,16 +283,23 @@ def to_profile():
     #     print(df.isna().sum().reset_index())
 
 
+    # print('dfrela1\n', dfrel.reset_index().groupby('nTrial')['index'].agg(['count', 'max', 'min']))
+    # print('dfrelb1\n', dfrel.reset_index().groupby('nEndTrial')['index'].agg(['count', 'max', 'min']))
+
+    # print('df\n', df[['nTrial', 'nEndTrial', 'photometryCenterInIndex', 'photometrySideOutIndex']])
+    # print('df\n', df.reset_index().groupby('nTrial')['index'].agg(['count', 'max', 'min']))
+    # print('df\n', df.reset_index().groupby('nEndTrial')['index'].agg(['count', 'max', 'min']))
+
 
 
     # Unindent from here to glmsave.save() to revert to using the full dataframe and uncomment previous 3 lines.
     glmsave.set_basedata(df)
-    for y_col in tqdm(y_col_lst, 'ycol'):
+    for y_col in (y_col_lst):
     # for y_col in tqdm(['zsrdFF', 'zsgdFF'], 'ycol'):
 
         # df = lpp.detrend(df, y_col)
 
-        for left_out in tqdm(leave_one_out_list, 'left_out'):
+        for left_out in (leave_one_out_list):
             
             X_cols = [_ for _ in X_cols_all if _ not in left_out]
 
@@ -315,11 +323,15 @@ def to_profile():
 
             # Timeshift X_cols forward by pos_order times and backward by neg_order times
             dfrel, X_cols_sftd = lpp.timeshift_vals(dfrel, X_cols, neg_order=neg_order, pos_order=pos_order)
+
+
+            print(list(dfrel.columns))
             
             dfrel = dfrel.dropna()
             dfrel_setup, dfrel_holdout = holdout_splits(dfrel,
                                                         id_cols=['nTrial'],
                                                         perc_holdout=pholdout)
+
 
             # Generate cross-validation (technically, group / shuffle split) sets for training / model selection
             kfold_cv_idx = sglm_ez.cv_idx_by_trial_id(dfrel_setup,
@@ -345,6 +357,8 @@ def to_profile():
             X_holdout_noiti = get_x(dfrel_holdout, prediction_X_cols_sftd, keep_rows=dfrel_holdout['wi_trial_keep'])
             y_holdout_noiti = get_y(dfrel_holdout, y_col, keep_rows=dfrel_holdout['wi_trial_keep'])
             glm, holdout_score, holdout_neg_mse_score = sglm_ez.training_fit_holdout_score(X_setup, y_setup, X_holdout_noiti, y_holdout_noiti, best_params)
+
+            dfrel['pred'] = glm.predict(dfrel[prediction_X_cols_sftd])
 
             # Collect
             results_dict[f'{run_id}'] = {'holdout_score':holdout_score,
@@ -381,14 +395,19 @@ def to_profile():
                                             plot_name=f'Best Coeffs - {run_id} — {best_params}'
                                             )
 
-            tmp = dfrel_holdout.set_index('nTrial').copy()
-            tmp['pred'] = glm.predict(get_x(dfrel_holdout, prediction_X_cols_sftd))
-            tmp = lpp.get_first_entry_time(tmp)
-
-
             best_beta_fn = f'{best_reconstruct_folder}/{run_id}_best_{avg_reconstruct_basename}_R2_{holdout_score_rnd}.png'
-            splt.plot_avg_reconstructions(tmp,
-                                        y_col=y_col,
+            # splt.plot_avg_reconstructions(tmp,
+            #                             y_col=y_col,
+            #                             binsize = 54,
+            #                             min_time = -20,
+            #                             max_time = 30,
+            #                             min_signal = -3.0,
+            #                             max_signal = 3.0,
+            #                             file_name=best_beta_fn,
+            #                             title=f'Best Average Reconstruction - {run_id} — {best_params}'
+            #                             )
+            splt.plot_avg_reconstructions_v2(dfrel,
+                                        channel=y_col,
                                         binsize = 54,
                                         min_time = -20,
                                         max_time = 30,
@@ -397,8 +416,8 @@ def to_profile():
                                         file_name=best_beta_fn,
                                         title=f'Best Average Reconstruction - {run_id} — {best_params}'
                                         )
-            
-            for fitted_model_dict in tqdm(cv_results['full_cv_results'], 'cv_results'):
+
+            for fitted_model_dict in (cv_results['full_cv_results']):
                 fitted_model = fitted_model_dict['model']
                 kwarg_info = "_".join([f"{_k}_{fitted_model_dict['glm_kwargs'][_k]}" for _k in fitted_model_dict["glm_kwargs"]])
 
@@ -432,16 +451,28 @@ def to_profile():
                 tmp.to_csv(f'{all_data_folder}/{std_name}_{tmp_data_basename}.csv')
 
                 holdout_score_rnd = np.round(tmp_holdout_score, 4)
-                splt.plot_avg_reconstructions(tmp,
-                                            y_col=y_col,
-                                            binsize = 50,
-                                            min_time = -20,
-                                            max_time = 30,
-                                            min_signal = -3.0,
-                                            max_signal = 3.0,
-                                            file_name=f'{all_reconstruct_folder}/{std_name}_{avg_reconstruct_basename}_R2_{holdout_score_rnd}.png',
-                                            title=f'Average Reconstruction - {run_id} — {kwarg_info}'
+                # splt.plot_avg_reconstructions(tmp,
+                #                             y_col=y_col,
+                #                             binsize = 50,
+                #                             min_time = -20,
+                #                             max_time = 30,
+                #                             min_signal = -3.0,
+                #                             max_signal = 3.0,
+                #                             file_name=f'{all_reconstruct_folder}/{std_name}_{avg_reconstruct_basename}_R2_{holdout_score_rnd}.png',
+                #                             title=f'Average Reconstruction - {run_id} — {kwarg_info}'
+                #                             )
+
+                splt.plot_avg_reconstructions_v2(dfrel,
+                                                 channel=y_col,
+                                                 binsize = 54,
+                                                 min_time = -20,
+                                                 max_time = 30,
+                                                 min_signal = -3.0,
+                                                 max_signal = 3.0,
+                                                 file_name=f'{all_reconstruct_folder}/{std_name}_{avg_reconstruct_basename}_R2_{holdout_score_rnd}.png',
+                                                 title=f'Average Reconstruction - {run_id} — {kwarg_info}'
                                             )
+
                 splt.plot_all_beta_coefs(fitted_model.coef_, X_cols_plot,
                                                 X_cols_sftd_plot,
                                                 plot_width=2,
