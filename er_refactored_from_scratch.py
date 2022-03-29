@@ -80,6 +80,30 @@ def setup_glmsave(glmsave, prefix, filename, neg_order, pos_order, X_cols_all, f
     glmsave.set_gss_info(folds, pholdout, pgss, gssid=None)
     return
 
+def generate_Ab_labels(df_t):
+    df_t = df_t.copy()
+    df_t['prv_choseLeft'] = df_t['choseLeft'].shift(1)
+    df_t['prv_choseRight'] = df_t['choseRight'].shift(1)
+    df_t['prv_wasRewarded'] = df_t['wasRewarded'].shift(1)
+
+    df_t['label_1Aa'] = df_t['prv_wasRewarded'].astype(bool).fillna(False)
+    df_t['label_2AB'] = ((df_t['choseLeft'] == df_t['prv_choseLeft']) & (df_t['choseRight'] == df_t['prv_choseRight'])).astype(bool).fillna(False)
+    df_t['label_2Aa'] = df_t['wasRewarded'].astype(bool).fillna(False)
+
+    df_t['label'] = '  '
+
+    df_t.loc[df_t['label_1Aa'], 'label'] = df_t.loc[df_t['label_1Aa'], 'label'].str.slice_replace(0, 1, 'A')
+    df_t.loc[~df_t['label_1Aa'], 'label'] = df_t.loc[~df_t['label_1Aa'], 'label'].str.slice_replace(0, 1, 'a')
+
+    df_t.loc[(df_t['label_2AB']&df_t['label_2Aa']), 'label'] = df_t.loc[(df_t['label_2AB']&df_t['label_2Aa']), 'label'].str.slice_replace(1, 2, 'A')
+    df_t.loc[(~df_t['label_2AB']&df_t['label_2Aa']), 'label'] = df_t.loc[(~df_t['label_2AB']&df_t['label_2Aa']), 'label'].str.slice_replace(1, 2, 'B')
+    df_t.loc[(df_t['label_2AB']&~df_t['label_2Aa']), 'label'] = df_t.loc[(df_t['label_2AB']&~df_t['label_2Aa']), 'label'].str.slice_replace(1, 2, 'a')
+    df_t.loc[(~df_t['label_2AB']&~df_t['label_2Aa']), 'label'] = df_t.loc[(~df_t['label_2AB']&~df_t['label_2Aa']), 'label'].str.slice_replace(1, 2, 'b')
+
+    df_t.loc[df_t['prv_wasRewarded'].isna(), 'label'] = np.nan
+
+    return df_t
+
 def to_profile():
     start = time.time()
 
@@ -122,7 +146,10 @@ def to_profile():
 
 
     # prefix = 'tmp'
-    prefix = 'checking_avg_reconstruction'
+    # prefix = 'checking_avg_reconstruction'
+    # prefix = 'Ab_v02'
+    # prefix = 'all_data_v02-61-63-64'
+    prefix = 'all_data_v04-61-63-64-rmse'
 
 
     # prefix = 'table_based-incl_before_start'
@@ -135,16 +162,25 @@ def to_profile():
     model_i_basename = 'intercept'
     tmp_data_basename = 'tmp_data'
 
-    # # Bigger files list
-    # files_list = glob.glob(f'{dir_path}/../GLM_SIGNALS_WT61_*') + \
-    #              glob.glob(f'{dir_path}/../GLM_SIGNALS_WT63_*') + \
-    #              glob.glob(f'{dir_path}/../GLM_SIGNALS_WT64_*') + \
-    #              glob.glob(f'{dir_path}/../GLM_SIGNALS_WT43_*') + \
-    #              glob.glob(f'{dir_path}/../GLM_SIGNALS_WT44_*')
+    ignore_files = [
+                    'WT61_10152021',
+                    'WT61_10082021'
+                   ]
 
-    files_list = glob.glob(f'{dir_path}/../GLM_SIGNALS_WT61_*')
+    # # Bigger files list
+    files_list = glob.glob(f'{dir_path}/../GLM_SIGNALS_WT61_*') + \
+                 glob.glob(f'{dir_path}/../GLM_SIGNALS_WT63_*') + \
+                 glob.glob(f'{dir_path}/../GLM_SIGNALS_WT64_*')
+                #  glob.glob(f'{dir_path}/../GLM_SIGNALS_WT43_*') + \
+                #  glob.glob(f'{dir_path}/../GLM_SIGNALS_WT44_*')
+
+    # files_list = glob.glob(f'{dir_path}/../GLM_SIGNALS_WT61_*')
     
     files_list = [_.split('/')[-1] for _ in files_list]
+    
+    for ign in ignore_files:
+        files_list = [_ for _ in files_list if ign not in _]
+    
     print(files_list)
 
     y_col_lst = ['Ch1', 'Ch2', 'Ch5', 'Ch6']
@@ -153,9 +189,12 @@ def to_profile():
     X_cols_all = [
         'nTrial',
         'cpn', 'cpx',
-        'spnr', 'spxr',
-        'spnnr', 'spxnr',
-        'sl',
+
+        # 'spnr',
+        # 'spxr',
+        'spnnr',
+        'spxnr',
+        # 'sl',
 
         # # 'nTrial',
         # 'photometryCenterInIndex', 'photometryCenterOutIndex',
@@ -168,7 +207,18 @@ def to_profile():
         # # 'spnnr', 'spxnr',
 
 
-        # 'sl',
+        'photometrySideInIndexAA', 'photometrySideInIndexAa',
+        'photometrySideInIndexaA', 'photometrySideInIndexaa',
+        'photometrySideInIndexAB', 'photometrySideInIndexAb',
+        'photometrySideInIndexaB', 'photometrySideInIndexab',
+
+        'photometrySideOutIndexAA', 'photometrySideOutIndexAa',
+        'photometrySideOutIndexaA', 'photometrySideOutIndexaa',
+        'photometrySideOutIndexAB', 'photometrySideOutIndexAb',
+        'photometrySideOutIndexaB', 'photometrySideOutIndexab',
+
+
+        'sl',
     ]
 
     score_method = 'r2'        
@@ -214,7 +264,7 @@ def to_profile():
         # Load file
         df = pd.read_csv(f'{dir_path}/../{filename}')
         df = lpp.preprocess_lynne(df, trial_shift_bounds=1)
-        df['wi_trial_keep'] = lpp.get_is_not_iti(df)
+        # df['wi_trial_keep'] = lpp.get_is_not_iti(df)
 
         for y_col in y_col_lst:
             if 'SGP_' == y_col[:len('SGP_')]:
@@ -225,11 +275,19 @@ def to_profile():
 
 
 
+        basis_Aa_cols = ['AA', 'Aa', 'aA', 'aa', 'AB', 'Ab', 'aB', 'ab']
 
 
         table_fn = f'{dir_path}/../{filename}'.replace('GLM_SIGNALS', 'GLM_TABLE')
         # print(fn, '--', table_fn)
         df_t = pd.read_csv(table_fn)
+        df_t = generate_Ab_labels(df_t).dropna()
+        ab_dummies = pd.get_dummies(df_t['label'])
+        for basis_col in basis_Aa_cols:
+            if basis_col not in ab_dummies.columns:
+                df_t[basis_col] = 0
+        df_t[ab_dummies.columns] = ab_dummies
+
 
         for col in df_t.columns:
             if 'Index' not in col:
@@ -241,21 +299,28 @@ def to_profile():
 
             single_inx_vals = num_inx_vals[num_inx_vals == 1].index
 
-            df[col] = df_t_tmp[df_t_tmp[col].isin(single_inx_vals)].set_index(col)['wasRewarded']
+            # df[col] = (df_t_tmp[df_t_tmp[col].isin(single_inx_vals)].set_index(col)['wasRewarded'] == df_t_tmp[df_t_tmp[col].isin(single_inx_vals)].set_index(col)['wasRewarded'])
+            df[col] = (df_t_tmp[df_t_tmp[col].isin(single_inx_vals)].set_index(col)['wasRewarded'] == df_t_tmp[df_t_tmp[col].isin(single_inx_vals)].set_index(col)['wasRewarded'])*1
 
-            df[f'{col}r'] = df[col]
-            df[f'{col}nr'] = (1 - df[col])
+            df[f'{col}r'] = df_t_tmp[df_t_tmp[col].isin(single_inx_vals)].set_index(col)['wasRewarded']
+            df[f'{col}nr'] = (1 - df[f'{col}r'])
 
-            df[f'{col}r'] = df[f'{col}r'].fillna(0)
-            df[f'{col}nr'] = df[f'{col}nr'].fillna(0)
-            df[col] = (df[col]*2 - 1).fillna(0)
+            # df[f'{col}r'] = df[f'{col}r'].fillna(0)
+            # df[f'{col}nr'] = df[f'{col}nr'].fillna(0)
+            # df[col] = (df[col]*2 - 1).fillna(0)
+
+            if col in ['photometrySideInIndex', 'photometrySideOutIndex']: #, 'photometryCenterInIndex']:
+                for basis in ['AA', 'Aa', 'aA', 'aa', 'AB', 'Ab', 'aB', 'ab']:
+                    df[col+basis] = df_t_tmp[df_t_tmp[col].isin(single_inx_vals)].set_index(col)[basis].fillna(0)
 
 
 
         df['nTrial'] = (((~df['photometryCenterInIndex'].isna())&(df['photometryCenterInIndex']==1))*1).cumsum().shift(-5)
         df['nEndTrial'] = (((~df['photometrySideOutIndex'].isna())&(df['photometrySideOutIndex']==1))*1).cumsum().shift(5)
 
-        df = df[df['nTrial'] > 0]
+        df['wi_trial_keep'] = lpp.get_is_not_iti(df)
+
+        df = df[df['nTrial'] > 0].fillna(0)
 
         df['nTrial'] += ifn * 100000
         df['nEndTrial'] += ifn * 100000
@@ -275,6 +340,16 @@ def to_profile():
         full_df_set.append(df)
     
     df = pd.concat(full_df_set)
+
+
+    # df['spnr'] = ((df['spnr'] == 1)&(df['photometrySideInIndex'] != 1)).astype(int)
+    df['spnnr'] = ((df['spnnr'] == 1)&(df['photometrySideInIndex'] != 1)).astype(int)
+    # df['spxr'] = ((df['spxr'] == 1)&(df['photometrySideOutIndex'] != 1)).astype(int)
+    df['spxnr'] = ((df['spxnr'] == 1)&(df['photometrySideOutIndex'] != 1)).astype(int)
+    # print(df[['spnr', 'spnnr', 'spxr', 'spxnr']].sum())
+    print(df[X_cols_all].sum())
+
+
 
     # glmsave.set_basedata(df)
 
@@ -325,12 +400,13 @@ def to_profile():
             dfrel, X_cols_sftd = lpp.timeshift_vals(dfrel, X_cols, neg_order=neg_order, pos_order=pos_order)
 
 
-            print(list(dfrel.columns))
+            # print(list(dfrel.columns))
             
             dfrel = dfrel.dropna()
             dfrel_setup, dfrel_holdout = holdout_splits(dfrel,
                                                         id_cols=['nTrial'],
                                                         perc_holdout=pholdout)
+            dfrel_setup, dfrel_holdout = dfrel_setup.copy(), dfrel_holdout.copy()
 
 
             # Generate cross-validation (technically, group / shuffle split) sets for training / model selection
@@ -359,6 +435,8 @@ def to_profile():
             glm, holdout_score, holdout_neg_mse_score = sglm_ez.training_fit_holdout_score(X_setup, y_setup, X_holdout_noiti, y_holdout_noiti, best_params)
 
             dfrel['pred'] = glm.predict(dfrel[prediction_X_cols_sftd])
+            dfrel_setup['pred'] = glm.predict(dfrel_setup[prediction_X_cols_sftd])
+            dfrel_holdout['pred'] = glm.predict(dfrel_holdout[prediction_X_cols_sftd])
 
             # Collect
             results_dict[f'{run_id}'] = {'holdout_score':holdout_score,
@@ -387,14 +465,15 @@ def to_profile():
             best_beta_fn = f'{best_coeffs_folder}/{run_id}_best_{all_betas_basename}_R2_{holdout_score_rnd}.png'
             splt.plot_all_beta_coefs(glm.coef_, X_cols_plot,
                                             X_cols_sftd_plot,
-                                            plot_width=2,
-                                            y_lims=(-2.0, 2.0),
+                                            plot_width=4,
+                                            # plot_width=2,
+                                            y_lims=(-2.5, 2.5),
                                             # filename=f'{fn}_coeffs.png',
                                             binsize=54,
                                             filename=best_beta_fn,
                                             plot_name=f'Best Coeffs - {run_id} — {best_params}'
                                             )
-
+            
             best_beta_fn = f'{best_reconstruct_folder}/{run_id}_best_{avg_reconstruct_basename}_R2_{holdout_score_rnd}.png'
             # splt.plot_avg_reconstructions(tmp,
             #                             y_col=y_col,
@@ -406,9 +485,13 @@ def to_profile():
             #                             file_name=best_beta_fn,
             #                             title=f'Best Average Reconstruction - {run_id} — {best_params}'
             #                             )
-            splt.plot_avg_reconstructions_v2(dfrel,
+
+
+            splt.plot_avg_reconstructions_v2(dfrel_holdout,
+            # splt.plot_avg_reconstructions_v2(dfrel,
                                         channel=y_col,
                                         binsize = 54,
+                                        plot_width=4,
                                         min_time = -20,
                                         max_time = 30,
                                         min_signal = -3.0,
@@ -462,21 +545,25 @@ def to_profile():
                 #                             title=f'Average Reconstruction - {run_id} — {kwarg_info}'
                 #                             )
 
-                splt.plot_avg_reconstructions_v2(dfrel,
+                
+
+                splt.plot_avg_reconstructions_v2(dfrel_holdout,
+                # splt.plot_avg_reconstructions_v2(dfrel,
                                                  channel=y_col,
+                                                 plot_width=4,
                                                  binsize = 54,
                                                  min_time = -20,
                                                  max_time = 30,
-                                                 min_signal = -3.0,
-                                                 max_signal = 3.0,
+                                                 min_signal = -2.5,
+                                                 max_signal = 2.5,
                                                  file_name=f'{all_reconstruct_folder}/{std_name}_{avg_reconstruct_basename}_R2_{holdout_score_rnd}.png',
                                                  title=f'Average Reconstruction - {run_id} — {kwarg_info}'
                                             )
 
                 splt.plot_all_beta_coefs(fitted_model.coef_, X_cols_plot,
                                                 X_cols_sftd_plot,
-                                                plot_width=2,
-                                                y_lims=(-2.0, 2.0),
+                                                plot_width=4,
+                                                y_lims=(-3.0, 3.0),
                                                 # filename=f'{fn}_coeffs.png',
                                                 binsize=54,
                                                 filename=f'{all_coeffs_folder}/{std_name}_{all_betas_basename}_R2_{holdout_score_rnd}.png',

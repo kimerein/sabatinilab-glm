@@ -429,14 +429,21 @@ def plot_single_avg_reconstruction_v2(df, alignment_col, channel,
 
     relative_df = get_triplicated_data_for_time_alignment(df, alignment_col)
 
+    df_filt_to_bounds = relative_df[relative_df['index'].between(*inx_bounds)].copy()
+    df_filt_to_bounds['resids'] = df_filt_to_bounds[channel] - df_filt_to_bounds['pred']
+    num_trials = (df_filt_to_bounds['index'] == 0).sum()
+
+    rmse = np.sqrt((df_filt_to_bounds['resids']**2).mean())
+
     alignment_name = alignment_col.split('_')[-1]
-    sns.lineplot(x='index', y=channel, data=relative_df[relative_df['index'].between(*inx_bounds)], label=f'{alignment_col} — {channel} — True', ax=ax, color='b')
-    sns.lineplot(x='index', y='pred', data=relative_df[relative_df['index'].between(*inx_bounds)], label=f'{alignment_col} — {channel} — Pred', ax=ax, color='r')
+    sns.lineplot(x='index', y=channel, data=df_filt_to_bounds, label=f'{alignment_col} — {channel} — True', ax=ax, color='b')
+    sns.lineplot(x='index', y='pred', data=df_filt_to_bounds, label=f'{alignment_col} — {channel} — Pred', ax=ax, color='r')
     
     # fig.suptitle(f'{alignment_name} — {channel}')
     
     # ax.title.set_text(f'{title} — {trial_num} Trials')
-    ax.title.set_text(f'{title} — {trial_num} Trials')
+    # ax.title.set_text(f'{title} — {trial_num} Trials — RMSE: {rmse:.2f}')
+    ax.title.set_text(f'{title} — {num_trials} Trials — RMSE: {rmse:.2f}')
     ax.set_xlabel(x_label)
     ax.set_ylabel(y_label)
 
@@ -446,9 +453,22 @@ def plot_single_avg_reconstruction_v2(df, alignment_col, channel,
     return
 
 def plot_avg_reconstructions_v2(df,
-                                alignment_col_lst=['photometrySideInIndexr', 'photometryCenterInIndexr',
-                                                   'photometrySideInIndexnr','photometryCenterInIndexnr'],
+                                # alignment_col_lst=['photometrySideInIndexr', 'photometryCenterInIndexr',
+                                #                    'photometrySideInIndexnr','photometryCenterInIndexnr'],
+
+                                alignment_col_lst=['photometrySideInIndexAA', 'photometrySideInIndexAa',
+                                                   'photometrySideInIndexaA','photometrySideInIndexaa',
+                                                   'photometrySideInIndexAB', 'photometrySideInIndexAb',
+                                                   'photometrySideInIndexaB','photometrySideInIndexab',
+
+                                                   'photometrySideOutIndexAA', 'photometrySideOutIndexAa',
+                                                   'photometrySideOutIndexaA', 'photometrySideOutIndexaa',
+                                                   'photometrySideOutIndexAB', 'photometrySideOutIndexAb',
+                                                   'photometrySideOutIndexaB', 'photometrySideOutIndexab',
+                                                   ],
+                                
                                 channel='zsgdFF',
+                                plot_width=4,
                                 binsize = 54,
                                 min_time = -40, max_time = 60,
                                 min_signal = -3.0, max_signal = 3.0,
@@ -463,12 +483,17 @@ def plot_avg_reconstructions_v2(df,
     x_label = 'Timesteps __ from Event'
     y_label = 'Response'
 
-    max_i = len(alignment_col_lst)//2
-    max_j = 1
+    fig, ax = plt.subplots(len(alignment_col_lst)//plot_width + (len(alignment_col_lst)%plot_width > 0)*1, plot_width)
 
-    # plt.figure(figsize=(10,5))
-    # fig, ax = plt.subplots(2,2)
-    fig, ax = plt.subplots(max_i + len(alignment_col_lst)%2, max_j+1)
+
+    # # fig, ax = plt.subplots(2,2)
+    # # max_i = len(alignment_col_lst)//plot_width
+    # # max_j = 1
+    
+    
+    # # plt.figure(figsize=(10,5))
+    # fig, ax = plt.subplots(max_i + len(alignment_col_lst)%2, max_j+1)
+
     fig.suptitle(title)
     fig.set_figheight(20)
     fig.set_figwidth(40)
@@ -476,7 +501,7 @@ def plot_avg_reconstructions_v2(df,
 
     for ialignment_col, alignment_col in enumerate(alignment_col_lst):
 
-        i,j = ialignment_col//2, ialignment_col%2
+        i,j = ialignment_col//plot_width, ialignment_col%plot_width
         plot_single_avg_reconstruction_v2(df, alignment_col, channel,
                                         #   title=f'{alignment_col} — ',
                                           title=f'{alignment_col} Trials',
