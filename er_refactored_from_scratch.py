@@ -149,7 +149,12 @@ def to_profile():
     # prefix = 'checking_avg_reconstruction'
     # prefix = 'Ab_v02'
     # prefix = 'all_data_v02-61-63-64'
-    prefix = 'all_data_v04-61-63-64-rmse'
+    # prefix = 'all_data_v04-61-63-64-rmse'
+    # prefix = 'all_data_v04-61-63-64-rmse-leaveout-one'
+    # prefix = 'all_data_v05-61-63-64' # Leave one out
+    # prefix = 'all_data_v05-61-63-64-leavenoout'
+    # prefix = 'all_data_v05-61-63-64-leavegroupsout'
+    prefix = 'all_data_v06-61-63-64-reviseddrop'
 
 
     # prefix = 'table_based-incl_before_start'
@@ -175,6 +180,26 @@ def to_profile():
                 #  glob.glob(f'{dir_path}/../GLM_SIGNALS_WT44_*')
 
     # files_list = glob.glob(f'{dir_path}/../GLM_SIGNALS_WT61_*')
+
+
+    channel_definitions = {
+        ('WT61',): {'Ch1': 'gACH', 'Ch2': 'rDA'},
+        ('WT64',): {'Ch1': 'gACH', 'Ch2': 'empty'},
+        ('WT63',): {'Ch1': 'gDA', 'Ch2': 'empty'},
+    }
+
+    channel_assignments = {}
+    for file_lookup in channel_definitions:
+        print(file_lookup)
+        channel_renamings = channel_definitions[file_lookup]
+        relevant_files = [f for f in files_list if all(x in f for x in file_lookup)]
+        for relevant_file in relevant_files:
+            relevant_file = relevant_file.split('/')[-1]
+            print('>', relevant_file)
+            channel_assignments[relevant_file] = channel_renamings
+    
+    print('<->', channel_assignments)
+
     
     files_list = [_.split('/')[-1] for _ in files_list]
     
@@ -183,7 +208,11 @@ def to_profile():
     
     print(files_list)
 
-    y_col_lst = ['Ch1', 'Ch2', 'Ch5', 'Ch6']
+    y_col_lst_all = ['gACH', 'rDA', 'gDA', 'Ch5', 'Ch6', 'GP_1', 'GP_2', 'GP_5', 'GP_6', 'SGP_1', 'SGP_2', 'SGP_5', 'SGP_6']
+
+    # y_col_lst = ['Ch1', 'Ch2', 'Ch5', 'Ch6']
+    # y_col_lst = ['gACH', 'gDA', 'rDA', 'Ch5', 'Ch6']
+    y_col_lst = ['gACH', 'gDA', 'Ch5', 'Ch6']
 
     # Select column names to use for GLM predictors
     X_cols_all = [
@@ -251,7 +280,16 @@ def to_profile():
     results_dict = {}
 
     leave_one_out_list = [[]]
-    # leave_one_out_list = [[]] + [[_] for _ in X_cols_all if _ != 'nTrial'] # Excluding column for groupby, 'nTrial'
+    # leave_one_out_list = [[]] + [[_] for _ in X_cols_all if _ != 'nTrial' and _ not in [
+    #     'photometrySideInIndexAA', 'photometrySideInIndexAa',
+    #     'photometrySideInIndexaA', 'photometrySideInIndexaa',
+    #     'photometrySideInIndexAB', 'photometrySideInIndexAb',
+    #     'photometrySideInIndexaB', 'photometrySideInIndexab',
+
+    #     'photometrySideOutIndexAA', 'photometrySideOutIndexAa',
+    #     'photometrySideOutIndexaA', 'photometrySideOutIndexaa',
+    #     'photometrySideOutIndexAB', 'photometrySideOutIndexAb',
+    #     'photometrySideOutIndexaB', 'photometrySideOutIndexab',]] # Excluding column for groupby, 'nTrial'
     full_df_set = []
 
     # Loop through files to be processed
@@ -266,12 +304,24 @@ def to_profile():
         df = lpp.preprocess_lynne(df, trial_shift_bounds=1)
         # df['wi_trial_keep'] = lpp.get_is_not_iti(df)
 
-        for y_col in y_col_lst:
+        # print(filename)
+        # print(channel_assignments.keys())
+        if filename in channel_assignments:
+            df = df.rename(channel_assignments[filename], axis=1)
+            # print(filename, channel_assignments[filename], list(df.columns))
+        
+        # print('df.columns', list(df.columns))
+
+        for y_col in y_col_lst_all:
+            if y_col not in df.columns:
+                df[y_col] = np.nan
+                continue
             if 'SGP_' == y_col[:len('SGP_')]:
                 df[y_col] = df[y_col].replace(0, np.nan)
             if df[y_col].std() >= 90:
                 df[y_col] /= 100
         
+
 
 
 
@@ -376,6 +426,11 @@ def to_profile():
 
         for left_out in (leave_one_out_list):
             
+            glmsave = ssave.GLM_data(ssave_folder, f'{prefix}_{fn}_{y_col}_{left_out}.pkl')
+            setup_glmsave(glmsave, prefix, filename, neg_order, pos_order, X_cols_all, folds, pholdout, pgss, gssid=None)
+
+            glmsave.set_basedata(df)
+
             X_cols = [_ for _ in X_cols_all if _ not in left_out]
 
             if len(leave_one_out_list) > 1:
@@ -399,10 +454,14 @@ def to_profile():
             # Timeshift X_cols forward by pos_order times and backward by neg_order times
             dfrel, X_cols_sftd = lpp.timeshift_vals(dfrel, X_cols, neg_order=neg_order, pos_order=pos_order)
 
-
+            print(dfrel)
             # print(list(dfrel.columns))
+
+
+            # y_col_lst_all
             
-            dfrel = dfrel.dropna()
+            dfrel = dfrel[(dfrel[X_cols_sftd + [y_col]].isna().sum(axis=1) == 0)&(dfrel[y_col] != 0)]
+            # dfrel = dfrel.dropna()
             dfrel_setup, dfrel_holdout = holdout_splits(dfrel,
                                                         id_cols=['nTrial'],
                                                         perc_holdout=pholdout)
@@ -575,7 +634,7 @@ def to_profile():
             plt.close('all')
             
 
-    glmsave.save()
+            glmsave.save()
 
     # For every file iterated, for every result value, for every model fitted, print the reslts
     print(f'Final Results:')
@@ -603,4 +662,5 @@ def to_profile():
     print('Runtime:',end-start)
 
 if __name__ == '__main__':
-    profile = cProfile.run('to_profile()', filename='./profile_val.prof', sort='cumtime')
+    # profile = cProfile.run('to_profile()', filename='./profile_val.prof', sort='cumtime')
+    to_profile()

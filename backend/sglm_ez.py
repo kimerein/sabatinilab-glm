@@ -251,7 +251,9 @@ def holdout_split_by_trial_id(X, y=None, id_cols=['nTrial', 'iBlock'], strat_col
             bucket_ids = bucket_ids + '_' + X[idc].astype(str)
     bucket_ids = bucket_ids.astype("category").cat.codes
 
-
+    #print('bucket_ids', bucket_ids)
+    #print('bucket_ids max+  ', bucket_ids.max() + 1)
+    #print('bucket_ids.astype("category").cat.codes', bucket_ids.astype("category").cat.codesucket_ids)
     num_bucket_ids = int(bucket_ids.max() + 1)
 
     if strat_col is not None:

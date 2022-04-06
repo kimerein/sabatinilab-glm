@@ -485,7 +485,7 @@ def plot_avg_reconstructions_v2(df,
 
     fig, ax = plt.subplots(len(alignment_col_lst)//plot_width + (len(alignment_col_lst)%plot_width > 0)*1, plot_width)
 
-
+    
     # # fig, ax = plt.subplots(2,2)
     # # max_i = len(alignment_col_lst)//plot_width
     # # max_j = 1

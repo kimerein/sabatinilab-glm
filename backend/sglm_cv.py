@@ -394,6 +394,10 @@ def cv_glm_mult_params(X, y, cv_idx, model_name, glm_kwarg_lst, verbose=0, score
     # for thread in threads:
     #     thread.join()
     # threads = []
+
+    if len(resp) == 0:
+        print('len resp', len(resp))
+        print('resp', resp)
     
     for cv_result in resp:
         # if ((cv_result['model'].score_metric == 'pseudo_R2' and cv_result['cv_mean_score'] > best_score)): # or
@@ -409,6 +413,7 @@ def cv_glm_mult_params(X, y, cv_idx, model_name, glm_kwarg_lst, verbose=0, score
             best_score_std = cv_result['cv_std_score']
             best_params = cv_result['glm_kwargs']
             best_model = cv_result['model']
+            
     
     # print(score_method, cv_result['cv_R2_score'], best_score)
 

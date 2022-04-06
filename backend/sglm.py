@@ -401,5 +401,8 @@ def calc_R2(residuals: np.ndarray, mean_residuals: np.ndarray) -> float:
     """
     rss = np.sum(residuals**2)
     tss = np.sum(mean_residuals**2)
-    r2 = 1 - rss/tss
+    if tss == 0:
+        r2 = 0
+    else:
+        r2 = 1 - rss/tss
     return r2
