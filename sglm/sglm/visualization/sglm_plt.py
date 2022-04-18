@@ -1,3 +1,5 @@
+
+
 import os
 import sys
 dir_path = '/'.join(os.path.realpath(__file__).split('/')[:-1])
@@ -16,11 +18,6 @@ import seaborn as sns
 
 from scipy.fft import fft, ifft
 from scipy.signal import welch
-
-import sglm
-import sglm_cv
-import sglm_pp
-import sglm_ez
 
 
 def reconstruct_signal(glm, X, y_true=-1):
@@ -130,7 +127,7 @@ def plot_all_beta_coefs(coeffs, coef_names, sftd_coef_names, plot_width=4, y_lim
     # print('len(sftd_coef_names)', len(sftd_coef_names))
 
     coef_lookup = {sftd_coef_names[i]:coeffs[i] for i in range(len(sftd_coef_names))}
-    coef_cols = sglm_ez.get_coef_name_sets(coef_names, sftd_coef_names)
+    coef_cols = get_coef_name_sets(coef_names, sftd_coef_names)
     
     if fig is None or axs is None:
         fig, axs = plt.subplots(len(coef_cols)//plot_width + (len(coef_cols)%plot_width > 0)*1, plot_width)
@@ -142,7 +139,7 @@ def plot_all_beta_coefs(coeffs, coef_names, sftd_coef_names, plot_width=4, y_lim
 
     for icn, coef_name in enumerate(coef_cols):
         # print(icn)
-        timeshifts, coefs = sglm_ez.get_single_coef_set(coef_cols[coef_name], coef_lookup)
+        timeshifts, coefs = get_single_coef_set(coef_cols[coef_name], coef_lookup)
         
         if len(axs.shape) > 1:
             axs_a = axs[icn//plot_width]
@@ -375,9 +372,9 @@ def plot_avg_reconstructions(tmp_backup,
 
         is_plt_col_name = f'is_{"_".join(plot_cols)}_trial'
 
-        tmp[is_plt_col_name] = sglm_ez.get_is_trial(tmp, ['nTrial'], plot_cols)
-        ci_setup_true = sglm_ez.get_sem(tmp, tmp[is_plt_col_name], 'plot_time', y_col)
-        ci_setup_pred = sglm_ez.get_sem(tmp, tmp[is_plt_col_name], 'plot_time', 'pred')
+        tmp[is_plt_col_name] = get_is_trial(tmp, ['nTrial'], plot_cols)
+        ci_setup_true = get_sem(tmp, tmp[is_plt_col_name], 'plot_time', y_col)
+        ci_setup_pred = get_sem(tmp, tmp[is_plt_col_name], 'plot_time', 'pred')
 
         plot_single_avg_reconstruction(ci_setup_true, ci_setup_pred, ax[i,j], min_time_revised, max_time_revised, min_signal, max_signal, x_label, y_label, plot_title)
 
@@ -523,3 +520,35 @@ def plot_avg_reconstructions_v2(df,
         fig.savefig(file_name)
 
     return
+
+
+def get_is_trial(X, gb_name=['nTrial'], col_names=['r']):
+    for icol, col in enumerate(col_names):
+        if icol == 0:
+            check_list = (X.groupby(gb_name)[col].transform(np.max) == 1)
+        else:
+            check_list = check_list&(X.groupby(gb_name)[col].transform(np.max) == 1)
+    return check_list
+
+def get_sem(df, filt, gb, col, mult=1.96):
+    interim = df[filt].groupby(gb)[col].agg([np.mean, np.std, np.size])
+    interim['sem'] = interim['std'] / np.sqrt(interim['size'])
+    interim['ub'] = interim['mean'] + 1.96*interim['sem']
+    interim['lb'] = interim['mean'] - 1.96*interim['sem']
+    return interim[['lb', 'mean', 'ub', 'sem', 'size', 'std']]
+
+def get_coef_name_sets(coef_names, sftd_coef_names):    
+    coef_cols = {}
+
+    for coef_name in coef_names:
+        if coef_name in ['nTrial', 'nEndTrial']:
+            continue
+        lst = [_ for _ in sftd_coef_names if coef_name in _.split('_')]
+        lst = [_ if _ != coef_name else coef_name+'_0' for _ in lst]
+        lst = sorted(lst, key=lambda x: int(x.split('_')[-1]))
+        # lst = [_.replace('_0', '') for _ in lst]
+        coef_cols[coef_name] = lst
+    return coef_cols
+
+def get_single_coef_set(names, lookup):
+    return [int(_.split('_')[-1]) for _ in names], [lookup[_.replace('_0', '')] for _ in names]

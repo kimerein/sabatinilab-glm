@@ -160,11 +160,9 @@ def to_profile():
     # prefix = 'all_data_v09-61-63-64-ogcolsdrop'
     # prefix = 'all_data_v10-61-63-64-revert'
     # prefix = 'all_data_v11-61-63-64-basis'
-
     # prefix = 'all_data_v11-61-63-64-loo'
-    # prefix = 'all_data_v11-61-63-64-groupDrops2'
+    prefix = 'all_data_v11-61-63-64-groupDrops2'
 
-    prefix = 'all_data_v12-61-63-64-byfile'
 
     # prefix = 'table_based-incl_before_start'
 
@@ -280,6 +278,11 @@ def to_profile():
         # 'photometrySideOutIndexAB', 'photometrySideOutIndexAb',
         # 'photometrySideOutIndexaB', 'photometrySideOutIndexab',
 
+
+        'Ax', 'ax',
+        'xX', 'xx',
+        'xA', 'xB',
+
         'sl',
     ]
 
@@ -314,17 +317,17 @@ def to_profile():
 
     results_dict = {}
 
-    leave_one_out_list = [[]]
-    # leave_one_out_list = [[]] + [[_] for _ in X_cols_all if _ != 'nTrial' and _ not in [
-    #     'photometrySideInIndexAA', 'photometrySideInIndexAa',
-    #     'photometrySideInIndexaA', 'photometrySideInIndexaa',
-    #     'photometrySideInIndexAB', 'photometrySideInIndexAb',
-    #     'photometrySideInIndexaB', 'photometrySideInIndexab',
+    # leave_one_out_list = [[]]
+    leave_one_out_list = [[]] + [[_] for _ in X_cols_all if _ != 'nTrial' and _ not in [
+        'photometrySideInIndexAA', 'photometrySideInIndexAa',
+        'photometrySideInIndexaA', 'photometrySideInIndexaa',
+        'photometrySideInIndexAB', 'photometrySideInIndexAb',
+        'photometrySideInIndexaB', 'photometrySideInIndexab',
 
-    #     'photometrySideOutIndexAA', 'photometrySideOutIndexAa',
-    #     'photometrySideOutIndexaA', 'photometrySideOutIndexaa',
-    #     'photometrySideOutIndexAB', 'photometrySideOutIndexAb',
-    #     'photometrySideOutIndexaB', 'photometrySideOutIndexab',]] # Excluding column for groupby, 'nTrial'
+        'photometrySideOutIndexAA', 'photometrySideOutIndexAa',
+        'photometrySideOutIndexaA', 'photometrySideOutIndexaa',
+        'photometrySideOutIndexAB', 'photometrySideOutIndexAb',
+        'photometrySideOutIndexaB', 'photometrySideOutIndexab',]] # Excluding column for groupby, 'nTrial'
     full_df_set = []
 
     # Loop through files to be processed
@@ -398,7 +401,7 @@ def to_profile():
                 for basis in ['AA', 'Aa', 'aA', 'aa', 'AB', 'Ab', 'aB', 'ab']:
                     df[col+basis] = df_t_tmp[df_t_tmp[col].isin(single_inx_vals)].set_index(col)[basis].fillna(0)
 
-
+er_refactored_from_scratch_ignore_sideInInfo.py
 
         df['nTrial'] = (((~df['photometryCenterInIndex'].isna())&(df['photometryCenterInIndex']==1))*1).cumsum().shift(-5)
         df['nEndTrial'] = (((~df['photometrySideOutIndex'].isna())&(df['photometrySideOutIndex']==1))*1).cumsum().shift(5)
@@ -422,262 +425,264 @@ def to_profile():
         # # break
 
 
-        # full_df_set.append(df)
-        # df = pd.concat(full_df_set)
-        # sdf = df.copy()
-        # sdf = sdf.assign(**{'Ax':sdf['photometrySideInIndexAA']+sdf['photometrySideInIndexAa']+sdf['photometrySideInIndexAB']+sdf['photometrySideInIndexAb'],
-        #                     'ax':sdf['photometrySideInIndexaA']+sdf['photometrySideInIndexaB']+sdf['photometrySideInIndexaa']+sdf['photometrySideInIndexab'],
-        #                     'xX':sdf['photometrySideInIndexAA']+sdf['photometrySideInIndexaA']+sdf['photometrySideInIndexAB']+sdf['photometrySideInIndexaB'],
-        #                     'xx':sdf['photometrySideInIndexAa']+sdf['photometrySideInIndexaa']+sdf['photometrySideInIndexAb']+sdf['photometrySideInIndexab'],
-        #                     'xA':sdf['photometrySideInIndexAA']+sdf['photometrySideInIndexaA']+sdf['photometrySideInIndexAa']+sdf['photometrySideInIndexaa'],
-        #                     'xB':sdf['photometrySideInIndexAB']+sdf['photometrySideInIndexaB']+sdf['photometrySideInIndexAb']+sdf['photometrySideInIndexab']}
-        # )
-        # df = sdf.copy()
+        full_df_set.append(df)
+    
+    df = pd.concat(full_df_set)
+
+    sdf = df.copy()
+    sdf = sdf.assign(**{'Ax':sdf['photometrySideInIndexAA']+sdf['photometrySideInIndexAa']+sdf['photometrySideInIndexAB']+sdf['photometrySideInIndexAb'],
+                        'ax':sdf['photometrySideInIndexaA']+sdf['photometrySideInIndexaB']+sdf['photometrySideInIndexaa']+sdf['photometrySideInIndexab'],
+                        'xX':sdf['photometrySideInIndexAA']+sdf['photometrySideInIndexaA']+sdf['photometrySideInIndexAB']+sdf['photometrySideInIndexaB'],
+                        'xx':sdf['photometrySideInIndexAa']+sdf['photometrySideInIndexaa']+sdf['photometrySideInIndexAb']+sdf['photometrySideInIndexab'],
+                        'xA':sdf['photometrySideInIndexAA']+sdf['photometrySideInIndexaA']+sdf['photometrySideInIndexAa']+sdf['photometrySideInIndexaa'],
+                        'xB':sdf['photometrySideInIndexAB']+sdf['photometrySideInIndexaB']+sdf['photometrySideInIndexAb']+sdf['photometrySideInIndexab']}
+    )
+    df = sdf.copy()
 
 
-        # df['spnr'] = ((df['spnr'] == 1)&(df['photometrySideInIndex'] != 1)).astype(int)
-        df['spnnr'] = ((df['spnnr'] == 1)&(df['photometrySideInIndex'] != 1)).astype(int)
-        # df['spxr'] = ((df['spxr'] == 1)&(df['photometrySideOutIndex'] != 1)).astype(int)
-        df['spxnr'] = ((df['spxnr'] == 1)&(df['photometrySideOutIndex'] != 1)).astype(int)
-        # print(df[['spnr', 'spnnr', 'spxr', 'spxnr']].sum())
-        print(df[X_cols_all].sum())
-
-
-
-        # glmsave.set_basedata(df)
-
-
-        # with pd.option_context('max_rows', 1000):
-        #     print(df.isna().sum().reset_index())
-
-
-        # print('dfrela1\n', dfrel.reset_index().groupby('nTrial')['index'].agg(['count', 'max', 'min']))
-        # print('dfrelb1\n', dfrel.reset_index().groupby('nEndTrial')['index'].agg(['count', 'max', 'min']))
-
-        # print('df\n', df[['nTrial', 'nEndTrial', 'photometryCenterInIndex', 'photometrySideOutIndex']])
-        # print('df\n', df.reset_index().groupby('nTrial')['index'].agg(['count', 'max', 'min']))
-        # print('df\n', df.reset_index().groupby('nEndTrial')['index'].agg(['count', 'max', 'min']))
+    # df['spnr'] = ((df['spnr'] == 1)&(df['photometrySideInIndex'] != 1)).astype(int)
+    df['spnnr'] = ((df['spnnr'] == 1)&(df['photometrySideInIndex'] != 1)).astype(int)
+    # df['spxr'] = ((df['spxr'] == 1)&(df['photometrySideOutIndex'] != 1)).astype(int)
+    df['spxnr'] = ((df['spxnr'] == 1)&(df['photometrySideOutIndex'] != 1)).astype(int)
+    # print(df[['spnr', 'spnnr', 'spxr', 'spxnr']].sum())
+    print(df[X_cols_all].sum())
 
 
 
-        # Unindent from here to glmsave.save() to revert to using the full dataframe and uncomment previous 3 lines.
-        glmsave.set_basedata(df)
-        for y_col in (y_col_lst):
-        # for y_col in tqdm(['zsrdFF', 'zsgdFF'], 'ycol'):
+    # glmsave.set_basedata(df)
 
-            # df = lpp.detrend(df, y_col)
 
-            for left_out in (leave_one_out_list):
+    # with pd.option_context('max_rows', 1000):
+    #     print(df.isna().sum().reset_index())
+
+
+    # print('dfrela1\n', dfrel.reset_index().groupby('nTrial')['index'].agg(['count', 'max', 'min']))
+    # print('dfrelb1\n', dfrel.reset_index().groupby('nEndTrial')['index'].agg(['count', 'max', 'min']))
+
+    # print('df\n', df[['nTrial', 'nEndTrial', 'photometryCenterInIndex', 'photometrySideOutIndex']])
+    # print('df\n', df.reset_index().groupby('nTrial')['index'].agg(['count', 'max', 'min']))
+    # print('df\n', df.reset_index().groupby('nEndTrial')['index'].agg(['count', 'max', 'min']))
+
+
+
+    # Unindent from here to glmsave.save() to revert to using the full dataframe and uncomment previous 3 lines.
+    glmsave.set_basedata(df)
+    for y_col in (y_col_lst):
+    # for y_col in tqdm(['zsrdFF', 'zsgdFF'], 'ycol'):
+
+        # df = lpp.detrend(df, y_col)
+
+        for left_out in (leave_one_out_list):
+            
+            glmsave = ssave.GLM_data(ssave_folder, f'{prefix}_{fn}_{y_col}_{left_out}.pkl')
+            setup_glmsave(glmsave, prefix, filename, neg_order, pos_order, X_cols_all, folds, pholdout, pgss, gssid=None)
+
+            glmsave.set_basedata(df)
+
+            X_cols = [_ for _ in X_cols_all if _ not in left_out]
+
+            if len(leave_one_out_list) > 1:
+                run_id = f'{prefix}_{fn}_{y_col}_drop={"_".join(left_out)}'
+            else:
+                run_id = f'{prefix}_{fn}_{y_col}'
+
+            print("Run ID:", run_id)
+            dfrel = df.copy()
+
+
+
+
+            # if 'SGP_' == y_col[:len('SGP_')]:
+            #     dfrel[y_col] = dfrel[y_col].replace(0, np.nan)
+            # if dfrel[y_col].std() >= 90:
+            #     dfrel[y_col] /= 100
+
+
+
+            # Timeshift X_cols forward by pos_order times and backward by neg_order times
+            dfrel, X_cols_sftd = lpp.timeshift_vals(dfrel, X_cols, neg_order=neg_order, pos_order=pos_order)
+
+            print(dfrel)
+            # print(list(dfrel.columns))
+
+
+            # y_col_lst_all
+            
+            dfrel = dfrel[(dfrel[drop_cols_basis + X_cols_sftd + [y_col]].isna().sum(axis=1) == 0)&(dfrel[y_col] != 0)]
+            # dfrel = dfrel.dropna()
+            dfrel_setup, dfrel_holdout = holdout_splits(dfrel,
+                                                        id_cols=['nTrial'],
+                                                        perc_holdout=pholdout)
+            dfrel_setup, dfrel_holdout = dfrel_setup.copy(), dfrel_holdout.copy()
+
+
+            # Generate cross-validation (technically, group / shuffle split) sets for training / model selection
+            kfold_cv_idx = sglm_ez.cv_idx_by_trial_id(dfrel_setup,
+                                                    trial_id_columns=['nTrial'],
+                                                    num_folds=folds,
+                                                    test_size=pgss)
+
+            print([(len(_[0]), len(_[1])) for _ in kfold_cv_idx])
+
+            prediction_X_cols = [_ for _ in X_cols if _ not in ['nTrial']]
+            prediction_X_cols_sftd = [_ for _ in X_cols_sftd if _ not in ['nTrial']]
+
+            X_setup = get_x(dfrel_setup, prediction_X_cols_sftd, keep_rows=None)
+            y_setup = get_y(dfrel_setup, y_col, keep_rows=None)
+            X_setup_noiti = get_x(dfrel_setup, prediction_X_cols_sftd, keep_rows=dfrel_setup['wi_trial_keep'])
+            y_setup_noiti = get_y(dfrel_setup, y_col, keep_rows=dfrel_setup['wi_trial_keep'])
+            best_score, best_score_std, best_params, best_model, cv_results = sglm_ez.simple_cv_fit(X_setup, y_setup, kfold_cv_idx, glm_kwarg_lst, model_type='Normal', verbose=0, score_method=score_method)
+            
+            sglm_ez.print_best_model_info(X_setup, best_score, best_params, best_model, start)
+            
+            X_holdout_witi = get_x(dfrel_holdout, prediction_X_cols_sftd, keep_rows=None)
+            y_holdout_witi = get_y(dfrel_holdout, y_col, keep_rows=None)
+            X_holdout_noiti = get_x(dfrel_holdout, prediction_X_cols_sftd, keep_rows=dfrel_holdout['wi_trial_keep'])
+            y_holdout_noiti = get_y(dfrel_holdout, y_col, keep_rows=dfrel_holdout['wi_trial_keep'])
+            glm, holdout_score, holdout_neg_mse_score = sglm_ez.training_fit_holdout_score(X_setup, y_setup, X_holdout_noiti, y_holdout_noiti, best_params)
+
+            dfrel['pred'] = glm.predict(dfrel[prediction_X_cols_sftd])
+            dfrel_setup['pred'] = glm.predict(dfrel_setup[prediction_X_cols_sftd])
+            dfrel_holdout['pred'] = glm.predict(dfrel_holdout[prediction_X_cols_sftd])
+
+            # Collect
+            results_dict[f'{run_id}'] = {'holdout_score':holdout_score,
+                                        'holdout_neg_mse_score':holdout_neg_mse_score,
+                                        'best_score':best_score,
+                                        'best_params':best_params,
+                                        'all_models':sorted([(_['cv_R2_score'],
+                                                                _['cv_mse_score'],
+                                                                sglm_ez.calc_l1(_['cv_coefs']),
+                                                                sglm_ez.calc_l2(_['cv_coefs']),
+                                                                _['glm_kwargs']) for _ in cv_results['full_cv_results']], key=lambda x: -x[0])
+                                        }
+            print(f'Holdout Score: {holdout_score}')
+
+            # Generate and save plots of the beta coefficients
+            X_cols_plot = prediction_X_cols
+            X_cols_sftd_plot = prediction_X_cols_sftd
+
+            # print('X_setup.columns', list(X_setup.columns), len(list(X_setup.columns)))
+            # print('X_setup_noiti.columns', list(X_setup_noiti.columns), len(list(X_setup_noiti.columns)))
+            # print('X_holdout_witi.columns', list(X_holdout_witi.columns), len(list(X_holdout_witi.columns)))
+            # print('X_holdout_noiti.columns', list(X_holdout_noiti.columns), len(list(X_holdout_noiti.columns)))
+
+
+            holdout_score_rnd = np.round(holdout_score, 4)
+            best_beta_fn = f'{best_coeffs_folder}/{run_id}_best_{all_betas_basename}_R2_{holdout_score_rnd}.png'
+            splt.plot_all_beta_coefs(glm.coef_, X_cols_plot,
+                                            X_cols_sftd_plot,
+                                            plot_width=4,
+                                            # plot_width=2,
+                                            y_lims=(-2.5, 2.5),
+                                            # filename=f'{fn}_coeffs.png',
+                                            binsize=54,
+                                            filename=best_beta_fn,
+                                            plot_name=f'Best Coeffs - {run_id} — {best_params}'
+                                            )
+            
+            best_beta_fn = f'{best_reconstruct_folder}/{run_id}_best_{avg_reconstruct_basename}_R2_{holdout_score_rnd}.png'
+            # splt.plot_avg_reconstructions(tmp,
+            #                             y_col=y_col,
+            #                             binsize = 54,
+            #                             min_time = -20,
+            #                             max_time = 30,
+            #                             min_signal = -3.0,
+            #                             max_signal = 3.0,
+            #                             file_name=best_beta_fn,
+            #                             title=f'Best Average Reconstruction - {run_id} — {best_params}'
+            #                             )
+
+
+            splt.plot_avg_reconstructions_v2(dfrel_holdout,
+            # splt.plot_avg_reconstructions_v2(dfrel,
+                                        channel=y_col,
+                                        binsize = 54,
+                                        plot_width=4,
+                                        min_time = -20,
+                                        max_time = 30,
+                                        min_signal = -3.0,
+                                        max_signal = 3.0,
+                                        file_name=best_beta_fn,
+                                        title=f'Best Average Reconstruction - {run_id} — {best_params}'
+                                        )
+
+            for fitted_model_dict in (cv_results['full_cv_results']):
+                fitted_model = fitted_model_dict['model']
+                kwarg_info = "_".join([f"{_k}_{fitted_model_dict['glm_kwargs'][_k]}" for _k in fitted_model_dict["glm_kwargs"]])
+
+                model_coef = fitted_model.coef_
+                model_intercept = fitted_model.intercept_
+
+                std_name = f'{run_id}_{kwarg_info}'
+                np.save(f'{all_models_folder}/coeffs/{std_name}_{model_c_basename}.npy', model_coef)
+                np.save(f'{all_models_folder}/intercepts/{std_name}_{model_i_basename}.npy', model_intercept)
                 
-                glmsave = ssave.GLM_data(ssave_folder, f'{prefix}_{fn}_{y_col}_{left_out}.pkl')
-                setup_glmsave(glmsave, prefix, filename, neg_order, pos_order, X_cols_all, folds, pholdout, pgss, gssid=None)
+                tmp_holdout_score = fitted_model.r2_score(X_holdout_noiti, y_holdout_noiti)
 
-                glmsave.set_basedata(df)
+                glmsave.append_fit_results(y_col, fitted_model_dict["glm_kwargs"], glm_model=fitted_model, dropped_cols=left_out,
+                                        scores={
+                                            'tr_witi':fitted_model.r2_score(X_setup, y_setup),
+                                            'tr_noiti':fitted_model.r2_score(X_setup_noiti, y_setup_noiti),
+                                            'gss_witi':fitted_model_dict['cv_R2_score'],
+                                            'gss_noiti':None,
+                                            'holdout_witi':fitted_model.r2_score(X_holdout_witi, y_holdout_witi),
+                                            'holdout_noiti':fitted_model.r2_score(X_holdout_noiti, y_holdout_noiti)
+                                        },
+                                        gssids=kfold_cv_idx)
 
-                X_cols = [_ for _ in X_cols_all if _ not in left_out]
+                tmp = dfrel_holdout.set_index('nTrial').copy()
+                tmp['pred'] = fitted_model.predict(get_x(dfrel_holdout, prediction_X_cols_sftd, keep_rows=None))
+                tmp = lpp.get_first_entry_time(tmp)
+                tmp_y = get_y(dfrel_holdout, y_col, keep_rows=None).copy()
+                tmp_y.index = tmp.index
+                tmp[y_holdout_noiti.name] = tmp_y
 
-                if len(leave_one_out_list) > 1:
-                    run_id = f'{prefix}_{fn}_{y_col}_drop={"_".join(left_out)}'
-                else:
-                    run_id = f'{prefix}_{fn}_{y_col}'
+                tmp.to_csv(f'{all_data_folder}/{std_name}_{tmp_data_basename}.csv')
 
-                print("Run ID:", run_id)
-                dfrel = df.copy()
-
-
-
-
-                # if 'SGP_' == y_col[:len('SGP_')]:
-                #     dfrel[y_col] = dfrel[y_col].replace(0, np.nan)
-                # if dfrel[y_col].std() >= 90:
-                #     dfrel[y_col] /= 100
-
-
-
-                # Timeshift X_cols forward by pos_order times and backward by neg_order times
-                dfrel, X_cols_sftd = lpp.timeshift_vals(dfrel, X_cols, neg_order=neg_order, pos_order=pos_order)
-
-                print(dfrel)
-                # print(list(dfrel.columns))
-
-
-                # y_col_lst_all
-                
-                dfrel = dfrel[(dfrel[drop_cols_basis + X_cols_sftd + [y_col]].isna().sum(axis=1) == 0)&(dfrel[y_col] != 0)]
-                # dfrel = dfrel.dropna()
-                dfrel_setup, dfrel_holdout = holdout_splits(dfrel,
-                                                            id_cols=['nTrial'],
-                                                            perc_holdout=pholdout)
-                dfrel_setup, dfrel_holdout = dfrel_setup.copy(), dfrel_holdout.copy()
-
-
-                # Generate cross-validation (technically, group / shuffle split) sets for training / model selection
-                kfold_cv_idx = sglm_ez.cv_idx_by_trial_id(dfrel_setup,
-                                                        trial_id_columns=['nTrial'],
-                                                        num_folds=folds,
-                                                        test_size=pgss)
-
-                print([(len(_[0]), len(_[1])) for _ in kfold_cv_idx])
-
-                prediction_X_cols = [_ for _ in X_cols if _ not in ['nTrial']]
-                prediction_X_cols_sftd = [_ for _ in X_cols_sftd if _ not in ['nTrial']]
-
-                X_setup = get_x(dfrel_setup, prediction_X_cols_sftd, keep_rows=None)
-                y_setup = get_y(dfrel_setup, y_col, keep_rows=None)
-                X_setup_noiti = get_x(dfrel_setup, prediction_X_cols_sftd, keep_rows=dfrel_setup['wi_trial_keep'])
-                y_setup_noiti = get_y(dfrel_setup, y_col, keep_rows=dfrel_setup['wi_trial_keep'])
-                best_score, best_score_std, best_params, best_model, cv_results = sglm_ez.simple_cv_fit(X_setup, y_setup, kfold_cv_idx, glm_kwarg_lst, model_type='Normal', verbose=0, score_method=score_method)
-                
-                sglm_ez.print_best_model_info(X_setup, best_score, best_params, best_model, start)
-                
-                X_holdout_witi = get_x(dfrel_holdout, prediction_X_cols_sftd, keep_rows=None)
-                y_holdout_witi = get_y(dfrel_holdout, y_col, keep_rows=None)
-                X_holdout_noiti = get_x(dfrel_holdout, prediction_X_cols_sftd, keep_rows=dfrel_holdout['wi_trial_keep'])
-                y_holdout_noiti = get_y(dfrel_holdout, y_col, keep_rows=dfrel_holdout['wi_trial_keep'])
-                glm, holdout_score, holdout_neg_mse_score = sglm_ez.training_fit_holdout_score(X_setup, y_setup, X_holdout_noiti, y_holdout_noiti, best_params)
-
-                dfrel['pred'] = glm.predict(dfrel[prediction_X_cols_sftd])
-                dfrel_setup['pred'] = glm.predict(dfrel_setup[prediction_X_cols_sftd])
-                dfrel_holdout['pred'] = glm.predict(dfrel_holdout[prediction_X_cols_sftd])
-
-                # Collect
-                results_dict[f'{run_id}'] = {'holdout_score':holdout_score,
-                                            'holdout_neg_mse_score':holdout_neg_mse_score,
-                                            'best_score':best_score,
-                                            'best_params':best_params,
-                                            'all_models':sorted([(_['cv_R2_score'],
-                                                                    _['cv_mse_score'],
-                                                                    sglm_ez.calc_l1(_['cv_coefs']),
-                                                                    sglm_ez.calc_l2(_['cv_coefs']),
-                                                                    _['glm_kwargs']) for _ in cv_results['full_cv_results']], key=lambda x: -x[0])
-                                            }
-                print(f'Holdout Score: {holdout_score}')
-
-                # Generate and save plots of the beta coefficients
-                X_cols_plot = prediction_X_cols
-                X_cols_sftd_plot = prediction_X_cols_sftd
-
-                # print('X_setup.columns', list(X_setup.columns), len(list(X_setup.columns)))
-                # print('X_setup_noiti.columns', list(X_setup_noiti.columns), len(list(X_setup_noiti.columns)))
-                # print('X_holdout_witi.columns', list(X_holdout_witi.columns), len(list(X_holdout_witi.columns)))
-                # print('X_holdout_noiti.columns', list(X_holdout_noiti.columns), len(list(X_holdout_noiti.columns)))
-
-
-                holdout_score_rnd = np.round(holdout_score, 4)
-                best_beta_fn = f'{best_coeffs_folder}/{run_id}_best_{all_betas_basename}_R2_{holdout_score_rnd}.png'
-                splt.plot_all_beta_coefs(glm.coef_, X_cols_plot,
-                                                X_cols_sftd_plot,
-                                                plot_width=4,
-                                                # plot_width=2,
-                                                y_lims=(-2.5, 2.5),
-                                                # filename=f'{fn}_coeffs.png',
-                                                binsize=54,
-                                                filename=best_beta_fn,
-                                                plot_name=f'Best Coeffs - {run_id} — {best_params}'
-                                                )
-                
-                best_beta_fn = f'{best_reconstruct_folder}/{run_id}_best_{avg_reconstruct_basename}_R2_{holdout_score_rnd}.png'
+                holdout_score_rnd = np.round(tmp_holdout_score, 4)
                 # splt.plot_avg_reconstructions(tmp,
                 #                             y_col=y_col,
-                #                             binsize = 54,
+                #                             binsize = 50,
                 #                             min_time = -20,
                 #                             max_time = 30,
                 #                             min_signal = -3.0,
                 #                             max_signal = 3.0,
-                #                             file_name=best_beta_fn,
-                #                             title=f'Best Average Reconstruction - {run_id} — {best_params}'
+                #                             file_name=f'{all_reconstruct_folder}/{std_name}_{avg_reconstruct_basename}_R2_{holdout_score_rnd}.png',
+                #                             title=f'Average Reconstruction - {run_id} — {kwarg_info}'
                 #                             )
-    
+
+                
 
                 splt.plot_avg_reconstructions_v2(dfrel_holdout,
                 # splt.plot_avg_reconstructions_v2(dfrel,
-                                            channel=y_col,
-                                            binsize = 54,
-                                            plot_width=4,
-                                            min_time = -20,
-                                            max_time = 30,
-                                            min_signal = -3.0,
-                                            max_signal = 3.0,
-                                            file_name=best_beta_fn,
-                                            title=f'Best Average Reconstruction - {run_id} — {best_params}'
+                                                 channel=y_col,
+                                                 plot_width=4,
+                                                 binsize = 54,
+                                                 min_time = -20,
+                                                 max_time = 30,
+                                                 min_signal = -2.5,
+                                                 max_signal = 2.5,
+                                                 file_name=f'{all_reconstruct_folder}/{std_name}_{avg_reconstruct_basename}_R2_{holdout_score_rnd}.png',
+                                                 title=f'Average Reconstruction - {run_id} — {kwarg_info}'
                                             )
 
-                for fitted_model_dict in (cv_results['full_cv_results']):
-                    fitted_model = fitted_model_dict['model']
-                    kwarg_info = "_".join([f"{_k}_{fitted_model_dict['glm_kwargs'][_k]}" for _k in fitted_model_dict["glm_kwargs"]])
-
-                    model_coef = fitted_model.coef_
-                    model_intercept = fitted_model.intercept_
-
-                    std_name = f'{run_id}_{kwarg_info}'
-                    np.save(f'{all_models_folder}/coeffs/{std_name}_{model_c_basename}.npy', model_coef)
-                    np.save(f'{all_models_folder}/intercepts/{std_name}_{model_i_basename}.npy', model_intercept)
-                    
-                    tmp_holdout_score = fitted_model.r2_score(X_holdout_noiti, y_holdout_noiti)
-
-                    glmsave.append_fit_results(y_col, fitted_model_dict["glm_kwargs"], glm_model=fitted_model, dropped_cols=left_out,
-                                            scores={
-                                                'tr_witi':fitted_model.r2_score(X_setup, y_setup),
-                                                'tr_noiti':fitted_model.r2_score(X_setup_noiti, y_setup_noiti),
-                                                'gss_witi':fitted_model_dict['cv_R2_score'],
-                                                'gss_noiti':None,
-                                                'holdout_witi':fitted_model.r2_score(X_holdout_witi, y_holdout_witi),
-                                                'holdout_noiti':fitted_model.r2_score(X_holdout_noiti, y_holdout_noiti)
-                                            },
-                                            gssids=kfold_cv_idx)
-
-                    tmp = dfrel_holdout.set_index('nTrial').copy()
-                    tmp['pred'] = fitted_model.predict(get_x(dfrel_holdout, prediction_X_cols_sftd, keep_rows=None))
-                    tmp = lpp.get_first_entry_time(tmp)
-                    tmp_y = get_y(dfrel_holdout, y_col, keep_rows=None).copy()
-                    tmp_y.index = tmp.index
-                    tmp[y_holdout_noiti.name] = tmp_y
-
-                    tmp.to_csv(f'{all_data_folder}/{std_name}_{tmp_data_basename}.csv')
-
-                    holdout_score_rnd = np.round(tmp_holdout_score, 4)
-                    # splt.plot_avg_reconstructions(tmp,
-                    #                             y_col=y_col,
-                    #                             binsize = 50,
-                    #                             min_time = -20,
-                    #                             max_time = 30,
-                    #                             min_signal = -3.0,
-                    #                             max_signal = 3.0,
-                    #                             file_name=f'{all_reconstruct_folder}/{std_name}_{avg_reconstruct_basename}_R2_{holdout_score_rnd}.png',
-                    #                             title=f'Average Reconstruction - {run_id} — {kwarg_info}'
-                    #                             )
-
-                    
-
-                    splt.plot_avg_reconstructions_v2(dfrel_holdout,
-                    # splt.plot_avg_reconstructions_v2(dfrel,
-                                                    channel=y_col,
-                                                    plot_width=4,
-                                                    binsize = 54,
-                                                    min_time = -20,
-                                                    max_time = 30,
-                                                    min_signal = -2.5,
-                                                    max_signal = 2.5,
-                                                    file_name=f'{all_reconstruct_folder}/{std_name}_{avg_reconstruct_basename}_R2_{holdout_score_rnd}.png',
-                                                    title=f'Average Reconstruction - {run_id} — {kwarg_info}'
+                splt.plot_all_beta_coefs(fitted_model.coef_, X_cols_plot,
+                                                X_cols_sftd_plot,
+                                                plot_width=4,
+                                                y_lims=(-3.0, 3.0),
+                                                # filename=f'{fn}_coeffs.png',
+                                                binsize=54,
+                                                filename=f'{all_coeffs_folder}/{std_name}_{all_betas_basename}_R2_{holdout_score_rnd}.png',
+                                                plot_name=f'Coeffs by Timeshift - {run_id} — {kwarg_info}'
+                                                # plot_name=f'{fn} — {y_col} — {kwarg_info}'
                                                 )
-
-                    splt.plot_all_beta_coefs(fitted_model.coef_, X_cols_plot,
-                                                    X_cols_sftd_plot,
-                                                    plot_width=4,
-                                                    y_lims=(-3.0, 3.0),
-                                                    # filename=f'{fn}_coeffs.png',
-                                                    binsize=54,
-                                                    filename=f'{all_coeffs_folder}/{std_name}_{all_betas_basename}_R2_{holdout_score_rnd}.png',
-                                                    plot_name=f'Coeffs by Timeshift - {run_id} — {kwarg_info}'
-                                                    # plot_name=f'{fn} — {y_col} — {kwarg_info}'
-                                                    )
-                    
-                    plt.close('all')
-                plt.close('all')
                 
+                plt.close('all')
+            plt.close('all')
+            
 
-                glmsave.save()
+            glmsave.save()
 
     # For every file iterated, for every result value, for every model fitted, print the reslts
     print(f'Final Results:')

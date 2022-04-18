@@ -6,6 +6,7 @@ sys.path.append(f'{dir_path}/..')
 sys.path.append(f'{dir_path}/backend')
 sys.path.append(f'{dir_path}/../backend')
 # sys.path.append('./backend')
+
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -116,51 +117,6 @@ def to_profile():
     best_reconstruct_folder = 'model_outputs/best_reconstructions'
     best_coeffs_folder = 'model_outputs/best_coeffs'
 
-    # prefix = 'w_unrewarded_cvsize=.01'
-    # prefix = 'new_lynne2'
-    # prefix = 'new_lynne_mn2l2_only_refac'
-    # prefix = 'investig_resolved'
-    # prefix = 'r_trial-r-refit'
-    # prefix = 'allsess_fit_multi_alpha'
-    # prefix = '1b_diff_tbnds_manysess_individ'
-    # prefix = 'table_based-v05-addlcols'
-    # prefix = 'table_based-v06-ogcols'
-    # prefix = 'table_based-v07-ogcols'
-    # prefix = 'table_based-v08-ogcols-l2'
-    # prefix = 'table_based-v09-ogcols-l2'
-    # prefix = 'table_based-v10-ogcols' #### best one so far
-
-    # prefix = 'table_based-v11-ogcols'
-
-
-    # prefix = 'table_based-v12-ogcols'
-    # prefix = 'table_based-v13-ogcols'
-    # prefix = 'table_based-v14-ogcols'
-    # prefix = 'table_based-v15-ogcols'
-    # prefix = 'table_based-v16-ogcols'
-    # prefix = 'table_based-v17-ogcols'
-    # prefix = 'table_based-v18-ogcols-20sft'
-    # prefix = 'table_based-v19-ogcols-20sft-nodropna'
-
-
-
-
-    # prefix = 'tmp'
-    # prefix = 'checking_avg_reconstruction'
-    # prefix = 'Ab_v02'
-    # prefix = 'all_data_v02-61-63-64'
-    # prefix = 'all_data_v04-61-63-64-rmse'
-    # prefix = 'all_data_v04-61-63-64-rmse-leaveout-one'
-    # prefix = 'all_data_v05-61-63-64' # Leave one out
-    # prefix = 'all_data_v05-61-63-64-leavenoout'
-    # prefix = 'all_data_v05-61-63-64-leavegroupsout'
-    # prefix = 'all_data_v06-61-63-64-reviseddrop'
-    # prefix = 'all_data_v07-61-63-64-ogcols'
-    # prefix = 'all_data_v08-61-63-64-ogcolsdrop'
-    # prefix = 'all_data_v09-61-63-64-ogcolsdrop'
-    # prefix = 'all_data_v10-61-63-64-revert'
-    # prefix = 'all_data_v11-61-63-64-basis'
-
     # prefix = 'all_data_v11-61-63-64-loo'
     # prefix = 'all_data_v11-61-63-64-groupDrops2'
 
@@ -185,11 +141,6 @@ def to_profile():
     files_list = glob.glob(f'{dir_path}/../GLM_SIGNALS_WT61_*') + \
                  glob.glob(f'{dir_path}/../GLM_SIGNALS_WT63_*') + \
                  glob.glob(f'{dir_path}/../GLM_SIGNALS_WT64_*')
-                #  glob.glob(f'{dir_path}/../GLM_SIGNALS_WT43_*') + \
-                #  glob.glob(f'{dir_path}/../GLM_SIGNALS_WT44_*')
-
-    # files_list = glob.glob(f'{dir_path}/../GLM_SIGNALS_WT61_*')
-
 
     channel_definitions = {
         ('WT61',): {'Ch1': 'gACH', 'Ch2': 'rDA'},
@@ -222,29 +173,19 @@ def to_profile():
     # y_col_lst = ['Ch1', 'Ch2', 'Ch5', 'Ch6']
     # y_col_lst = ['gACH', 'gDA', 'rDA', 'Ch5', 'Ch6']
     y_col_lst = ['gACH', 'gDA', 'Ch5', 'Ch6']
-    # y_col_lst = ['Ch5', 'Ch6']
 
     # Select column names to use for GLM predictors
     drop_cols_basis = [
         'nTrial',
+
         'cpn', 'cpx',
+        'spnr', 'spxr',
+        'spnnr', 'spxnr',
 
-        # 'spnr',
-        # 'spxr',
-        'spnnr',
-        'spxnr',
-        # 'sl',
-
-        # # 'nTrial',
         # 'photometryCenterInIndex', 'photometryCenterOutIndex',
-        # # 'photometrySideInIndex', 'photometrySideOutIndex',
+        # 'photometrySideInIndex', 'photometrySideOutIndex',
         # 'photometrySideInIndexr', 'photometrySideOutIndexr',
         # 'photometrySideInIndexnr', 'photometrySideOutIndexnr',
-
-        # addl columns
-        'spnr', 'spxr',
-        # 'spnnr', 'spxnr',
-
 
         'photometrySideInIndexAA', 'photometrySideInIndexAa',
         'photometrySideInIndexaA', 'photometrySideInIndexaa',
@@ -256,18 +197,15 @@ def to_profile():
         'photometrySideOutIndexAB', 'photometrySideOutIndexAb',
         'photometrySideOutIndexaB', 'photometrySideOutIndexab',
 
-
         'sl',
     ]
 
     X_cols_all = [
         'nTrial',
-        'cpn', 'cpx',
 
-        'spnr',
-        'spxr',
-        'spnnr',
-        'spxnr',
+        'cpn', 'cpx',
+        'spnr', 'spxr',
+        'spnnr', 'spxnr',
 
 
         # 'photometrySideInIndexAA', 'photometrySideInIndexAa',
@@ -315,16 +253,8 @@ def to_profile():
     results_dict = {}
 
     leave_one_out_list = [[]]
-    # leave_one_out_list = [[]] + [[_] for _ in X_cols_all if _ != 'nTrial' and _ not in [
-    #     'photometrySideInIndexAA', 'photometrySideInIndexAa',
-    #     'photometrySideInIndexaA', 'photometrySideInIndexaa',
-    #     'photometrySideInIndexAB', 'photometrySideInIndexAb',
-    #     'photometrySideInIndexaB', 'photometrySideInIndexab',
+    # leave_one_out_list = [[]] + [[_] for _ in X_cols_all if _ != 'nTrial'] # Excluding column for groupby, 'nTrial'
 
-    #     'photometrySideOutIndexAA', 'photometrySideOutIndexAa',
-    #     'photometrySideOutIndexaA', 'photometrySideOutIndexaa',
-    #     'photometrySideOutIndexAB', 'photometrySideOutIndexAb',
-    #     'photometrySideOutIndexaB', 'photometrySideOutIndexab',]] # Excluding column for groupby, 'nTrial'
     full_df_set = []
 
     # Loop through files to be processed
@@ -337,15 +267,9 @@ def to_profile():
         # Load file
         df = pd.read_csv(f'{dir_path}/../{filename}')
         df = lpp.preprocess_lynne(df, trial_shift_bounds=1)
-        # df['wi_trial_keep'] = lpp.get_is_not_iti(df)
 
-        # print(filename)
-        # print(channel_assignments.keys())
         if filename in channel_assignments:
             df = df.rename(channel_assignments[filename], axis=1)
-            # print(filename, channel_assignments[filename], list(df.columns))
-        
-        # print('df.columns', list(df.columns))
 
         for y_col in y_col_lst_all:
             if y_col not in df.columns:
@@ -364,7 +288,6 @@ def to_profile():
 
 
         table_fn = f'{dir_path}/../{filename}'.replace('GLM_SIGNALS', 'GLM_TABLE')
-        # print(fn, '--', table_fn)
         df_t = pd.read_csv(table_fn)
         df_t = generate_Ab_labels(df_t).dropna()
         ab_dummies = pd.get_dummies(df_t['label'])
