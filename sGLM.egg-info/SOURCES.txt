@@ -1,0 +1,12 @@
+setup.py
+backend/__init__.py
+backend/sglm.py
+backend/sglm_cv.py
+backend/sglm_ez.py
+backend/sglm_plt.py
+backend/sglm_pp.py
+sGLM.egg-info/PKG-INFO
+sGLM.egg-info/SOURCES.txt
+sGLM.egg-info/dependency_links.txt
+sGLM.egg-info/requires.txt
+sGLM.egg-info/top_level.txt
