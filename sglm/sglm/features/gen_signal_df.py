@@ -10,12 +10,48 @@ from sglm.features import table_file as tbf
 
 # Generate AB Labels
 def set_first_prv_trial_letter(prv_wasRewarded_series, label_series, loc=0):
+    """
+    Sets the first letter of the rewarded / unrewarded (Aa) labels from the previous trial.
+
+    Parameters
+    ----------
+    prv_wasRewarded_series : Series
+        Boolean series representing whether or not previous trial was rewarded.
+    label_series : Series
+        Series of string labels in which to replace the previous trial letter.
+    loc : int
+        Location of the first letter of the label.
+    
+    Returns
+    -------
+    label : Series
+        Revised series of labels with the first letter of the label set based on the previous trial.
+    """
     label = label_series.copy()
     label.loc[prv_wasRewarded_series] = label.loc[prv_wasRewarded_series].str.slice_replace(loc, loc+1, 'A')
     label.loc[~prv_wasRewarded_series] = label.loc[~prv_wasRewarded_series].str.slice_replace(loc, loc+1, 'a')
     return label
 
 def set_current_trial_letter_switch(sameSide_series, wasRewarded_series, label_series, loc=1):
+    """
+    Sets a subsequent letter of the rewarded / unrewarded (Xx) / same / change side (Ab) labels from the previous trial.
+
+    Parameters
+    ----------
+    sameSide_series : Series
+        Boolean series representing whether or not the current trial is on the same side as the previous.
+    wasRewarded_series : Series
+        Boolean series representing whether or not current trial is rewarded.
+    label_series : Series
+        Series of string labels in which to replace the current trial letter.
+    loc : int
+        Location of the current letter of the label.
+
+    Returns
+    -------
+    label : Series
+        Revised series of labels with a later letter of the label set based on the trial.
+    """
     label = label_series.copy()
 
     label.loc[(sameSide_series&wasRewarded_series)] = label.loc[(sameSide_series&wasRewarded_series)].str.slice_replace(loc, loc+1, 'A')
@@ -26,6 +62,25 @@ def set_current_trial_letter_switch(sameSide_series, wasRewarded_series, label_s
     return label
 
 def set_current_trial_letter_side(choseRight, wasRewarded_series, label_series, loc=2):
+    """
+    Sets a letter of the right / left (Rl) labels from a trial.
+
+    Parameters
+    ----------
+    choseRight : Series
+        Boolean series representing whether or not the current trial is a right sided selection.
+    wasRewarded_series : Series
+        Boolean series representing whether or not current trial is rewarded.
+    label_series : Series
+        Series of string labels in which to replace the current trial letter.
+    loc : int
+        Location of the current letter of the label.
+
+    Returns
+    -------
+    label : Series
+        Revised series of labels with a later letter of the label set based on the trial.
+    """
     label = label_series.copy()
 
     label.loc[(choseRight&wasRewarded_series)] = label.loc[(choseRight&wasRewarded_series)].str.slice_replace(loc, loc+1, 'R')
@@ -36,6 +91,15 @@ def set_current_trial_letter_side(choseRight, wasRewarded_series, label_series, 
     return label
 
 def check_Ab_labels(df_t):
+    """
+    Sanity checks the Ab labels generated are in the correct format.
+    
+    Parameters
+    ----------
+    df_t : DataFrame
+        DataFrame that includes Ab values in label column. And values for 'prv_wasRewarded', 'wasRewarded', and 'sameSide'.
+    """
+
     df_t['pwR'] = df_t['prv_wasRewarded'].astype(int)
     df_t['wR'] = df_t['wasRewarded'].astype(int)
     df_t['sS'] = df_t['sameSide'].astype(int)
@@ -46,6 +110,19 @@ def check_Ab_labels(df_t):
     return
 
 def generate_Ab_labels(df_t):
+    """
+    Generates the Ab labels for a given DataFrame.
+
+    Parameters
+    ----------
+    df_t : DataFrame
+        DataFrame that includes values for 'wasRewarded', 'choseRight', 'choseLeft'.
+    
+    Returns
+    -------
+    df_t : DataFrame
+        DataFrame with Ab labels added to the label column.
+    """
     df_t = df_t.copy()
     
     df_t['wasRewarded'] = df_t['wasRewarded'].astype(bool)
@@ -63,6 +140,9 @@ def generate_Ab_labels(df_t):
     df_t['label_side'] = set_current_trial_letter_side(df_t['prv_choseRight'], df_t['prv_wasRewarded'], df_t['label_side'], loc=0)
     df_t['label_side'] = set_current_trial_letter_side(df_t['choseRight'], df_t['wasRewarded'], df_t['label_side'], loc=1)
 
+    df_t['label_rewarded'] = ' '
+    df_t['label_rewarded'] = set_first_prv_trial_letter(df_t['wasRewarded'], df_t['label_rewarded'], loc=0)
+
     df_t['wasRewarded'] = df_t['wasRewarded'].fillna(False)
     df_t['prv_wasRewarded'] = df_t['prv_wasRewarded'].fillna(False)
 
@@ -75,16 +155,24 @@ def generate_Ab_labels(df_t):
     return df_t
 
 def replace_missed_center_out_indexes(df_t, max_num_duplications=None, verbose=0):
-    df_t = df_t.copy()
+    """
+    Replaces the indexes of trials where the detector missed the center out behavior with the center in behavior.
 
-    # num_inx_vals = df_t.groupby('photometryCenterOutIndex')['hasAllPhotometryData'].count()
-    # if len(num_inx_vals) == 0:
-    #     return
-    # num_inx_vals = df_t.groupby('photometryCenterOutIndex')['hasAllPhotometryData'].transform(np.size)
-    # reps = df_t[num_inx_vals > 1].copy()
-    # reps['cin_out_delta'] = reps['photometryCenterOutIndex'] - reps['photometryCenterInIndex']
-    # overwrite_inx = reps[reps['cin_out_delta'] != reps.groupby('photometryCenterOutIndex')['cin_out_delta'].transform(lambda x: np.min(np.abs(x)))].index
-    # df_t.loc[overwrite_inx, 'photometryCenterOutIndex'] = df_t.loc[overwrite_inx, 'photometryCenterInIndex']
+    Parameters
+    ----------
+    df_t : DataFrame
+        DataFrame that includes values for 'hasAllPhotometryData', 'photometryCenterInIndex', 'photometryCenterOutIndex'.
+    max_num_duplications : int
+        Maximum number of times to check duplications after iterating back CenterInIndices = CenterOutIndices. None means no limit.
+    verbose : int
+        Verbosity level.
+
+    Returns
+    -------
+    df_t : DataFrame
+        DataFrame with the center out behavior indices replaced.
+    """
+    df_t = df_t.copy()
 
     i = 0
 
@@ -107,77 +195,74 @@ def replace_missed_center_out_indexes(df_t, max_num_duplications=None, verbose=0
     return df_t
 
 def get_is_relevant_trial(hasAllData_srs, index_event_srs):
+    """
+    Returns a Series of booleans indicating whether a trial is relevant (i.e. whether it has all data and has a non-zero-value).
+
+    Parameters
+    ----------
+    hasAllData_srs : Series
+        Series of booleans indicating whether a trial has all data.
+    index_event_srs : Series
+        Series of booleans indicating whether a trial has a non-zero-value for the index event.
+    """
     return (hasAllData_srs > 0)&(index_event_srs >= 0)
 
 def matlab_indexing_to_python(index_event_srs):
+    """
+    Converts a Series of matlab-indexed values to python-indexed values.
+
+    Parameters
+    ----------
+    index_event_srs : Series
+        Series of matlab-indexed (i.e. 1-indexed) values.
+
+    Returns
+    -------
+    index_event_srs : Series
+        Series of python-indexed values.
+    """
     return index_event_srs - 1
 
-
-
-# review = df_t[((df_t['photometryCenterOutIndex'].shift(1) == df_t['photometryCenterOutIndex'])|(df_t['photometryCenterOutIndex'].shift(-1) == df_t['photometryCenterOutIndex']))&(df_t['hasAllPhotometryData'] > 0)]
-# review
-# review_2 = df_t[((df_t['photometryCenterOutIndex'].shift(1) == df_t['photometryCenterOutIndex'])|(df_t['photometryCenterOutIndex'].shift(-1) == df_t['photometryCenterOutIndex']))&(df_t['hasAllPhotometryData'] > 0)]
-# review
-# (df_t.groupby('photometryCenterOutIndex')['hasAllPhotometryData'].count() >= 2).sum()
-# # tmp_a = df_t[((df_t['photometryCenterOutIndex'].shift(1) == df_t['photometryCenterOutIndex'])|(df_t['photometryCenterOutIndex'].shift(-1) == df_t['photometryCenterOutIndex']))&(df_t['hasAllPhotometryData'] > 0)]
-# tmp_inx = df_t[df_t['photometryCenterOutIndex'] > -1].copy()
-# num_inx_vals = tmp_inx.groupby('photometryCenterOutIndex')['hasAllPhotometryData'].transform(np.size)
-# resp = tmp_inx[num_inx_vals > 1].copy()
-# tmp_inx['cin_out_delta'] = tmp_inx['photometryCenterOutIndex'] - tmp_inx['photometryCenterInIndex']
-# overwrite_inx = tmp_inx[tmp_inx['cin_out_delta'] != tmp_inx.groupby('photometryCenterOutIndex')['cin_out_delta'].transform(np.min)].index
-# df_t.loc[overwrite_inx, 'photometryCenterOutIndex'] = df_t.loc[overwrite_inx, 'photometryCenterInIndex']
-# df_t[((df_t['photometryCenterOutIndex'].shift(1) == df_t['photometryCenterOutIndex'])|(df_t['photometryCenterOutIndex'].shift(-1) == df_t['photometryCenterOutIndex']))&(df_t['hasAllPhotometryData'] > 0)]
-# # tmp = df_t[(df_t['photometryCenterOutIndex'].shift(1) == df_t['photometryCenterOutIndex'])|(df_t['photometryCenterOutIndex'].shift(-1) == df_t['photometryCenterOutIndex'])]
-# tmp = df_t[df_t['photometryCenterOutIndex'] > -1].copy()
-
-# display(tmp)
-
-# num_inx_vals = tmp.groupby('photometryCenterOutIndex')['hasAllPhotometryData'].count()
-# print((num_inx_vals > 1).sum())
-# num_inx_vals = tmp.groupby('photometryCenterOutIndex')['hasAllPhotometryData'].transform(np.size)
-# reps = tmp[num_inx_vals > 1].copy()
-# reps['cin_out_delta'] = reps['photometryCenterOutIndex'] - reps['photometryCenterInIndex']
-# overwrite_inx = reps[reps['cin_out_delta'] != reps.groupby('photometryCenterOutIndex')['cin_out_delta'].transform(np.min)].index
-# tmp.loc[overwrite_inx, 'photometryCenterOutIndex'] = tmp.loc[overwrite_inx, 'photometryCenterInIndex']
-
-# num_inx_vals = tmp.groupby('photometryCenterOutIndex')['hasAllPhotometryData'].count()
-# print((num_inx_vals > 1).sum())
-
-# # display(tmp)
-
-# tmp[(tmp['photometryCenterOutIndex'].shift(1) == tmp['photometryCenterOutIndex'])|(tmp['photometryCenterOutIndex'].shift(-1) == tmp['photometryCenterOutIndex'])]
-# reps[reps['cin_out_delta'] != reps.groupby('photometryCenterOutIndex')['cin_out_delta'].transform(np.min)]
-# # tmp = df_t[(df_t['photometryCenterOutIndex'].shift(1) == df_t['photometryCenterOutIndex'])|(df_t['photometryCenterOutIndex'].shift(-1) == df_t['photometryCenterOutIndex'])]
-# tmp = tmp[tmp['photometryCenterOutIndex'] > -1]
-# tmp
-# # def check_srs_val_is_nan(srs):
-    # return srs.isna().any()
-
-# signal_df[col] = (df_t_tmp[df_t_tmp[col].isin(single_inx_vals)].set_index(col)['wasRewarded'] == df_t_tmp[df_t_tmp[col].isin(single_inx_vals)].set_index(col)['wasRewarded'])*1
-
-# for col in table_index_columns:
-#     print(((df_t.set_index(col)['wasRewarded'] == df_t.set_index(col)['wasRewarded'])*1).sum())
-# # df_t_tmp.columns
-# # df_t_tmp.set_index(col)['wasRewarded'] == df_t_tmp.set_index(col)['wasRewarded']
-# len(np.unique(signal_df.columns)), len(signal_df.columns)
-# (df_t_tmp.set_index(col)['wasRewarded'] == df_t_tmp.set_index(col)['wasRewarded'])*1
-# # len(np.unique(df_t_tmp.set_index('photometryCenterOutIndex')['wasRewarded'].index)), len((df_t_tmp.set_index('photometryCenterOutIndex')['wasRewarded'].index))
-# # df_t_tmp[(df_t_tmp['photometryCenterOutIndex'] == df_t_tmp['photometryCenterOutIndex'].shift(1))|(df_t_tmp['photometryCenterOutIndex'] == df_t_tmp['photometryCenterOutIndex'].shift(-1))]
-
 def get_is_not_iti(df):
-    '''
+    """
     Returns a boolean array of whether the trial is not ITI
     Args:
         df: dataframe with entry, exit, lick, reward, and dFF columns
     Returns:
         boolean array of whether the trial is not ITI
-    '''
+    """
     return df['nTrial'] != df['nEndTrial']
 
 def get_trial_start(center_in_srs):
+    """
+    Returns the index of the first center in event.
+
+    Parameters
+    ----------
+    center_in_srs : Series
+        Series of center in events.
+
+    Returns
+    -------
+    trial_start : int
+        Index of the first center in event where it is non-nan.
+    """
     return (((~center_in_srs.isna())&(center_in_srs==1))*1)
     
 def get_trial_end(center_out_srs):
+    """
+    Returns the index of the last center out event.
+
+    Parameters
+    ----------
+    center_out_srs : Series
+        Series of center out events.
+
+    Returns
+    -------
+    trial_end : int
+        Index of the last center out event where it is non-nan.
+    """
     return (((~center_out_srs.isna())&(center_out_srs==1))*1)
 
 # Rename Columns
@@ -224,48 +309,67 @@ def get_trial_end(center_out_srs):
 # Save Results
 
 
-def get_signal_df(signal_filename, table_filename,
+def generate_signal_df(signal_filename, table_filename,
+                  signal_filename_out=None, table_filename_out=None, 
                   table_index_columns = ['photometryCenterInIndex',
                                         'photometryCenterOutIndex',
                                         'photometrySideInIndex',
                                         'photometrySideOutIndex',
-                                        'photometryFirstLickIndex',],
+                                        'photometryFirstLickIndex'
+                                        ],
                   basis_Aa_cols = ['AA', 'Aa', 'aA', 'aa', 'AB', 'Ab', 'aB', 'ab'],
 
                   ):
-    # # Load Signal Data
-    # signal_file = glob.glob(f'../data/raw/GLM_SIGNALS_WT61_*')[0]
-    # signal_df = pd.read_csv(signal_file)
+    """
+    Generates a DataFrame from a signal and table file.
 
-    # # Load Table Data
-    # table_file = glob.glob(f'../data/raw/GLM_SIGNALS_WT61_*')[0].replace('GLM_SIGNALS', 'GLM_TABLE')
-    # table_df = pd.read_csv(table_file)
-
+    Parameters
+    ----------
+    signal_filename : str
+        Path to the signal file.
+    table_filename : str
+        Path to the table file.
+    signal_filename_out : str
+        Path to the interim output signal file.
+    table_filename_out : str
+        Path to the interim output table file.
+    table_index_columns : list of str
+        Index column names in the table file that are used to index the signal file and create the Ab columns.
+    basis_Aa_cols : list of str
+        Suffixes in the table file that are combined with the table_index_columns used to index the signal file.
+    
+    Returns
+    -------
+    signal_df : DataFrame
+        DataFrame with the signal data.
+    table_df : DataFrame
+        DataFrame with the table data.
+    """
     # Load Signal Data
     signal_df = pd.read_csv(signal_filename)
 
     # Load Table Data
     table_df = pd.read_csv(table_filename)
 
-    
+    # Generate Ab Labels
     df_t = generate_Ab_labels(table_df)
+
+    # Convert Ab Labels to Indicator Variables
     ab_dummies = pd.get_dummies(df_t['label'])
     for basis_col in basis_Aa_cols:
         if basis_col not in ab_dummies.columns:
             df_t[basis_col] = 0
     df_t[ab_dummies.columns] = ab_dummies
 
-
-    df_t = replace_missed_center_out_indexes(df_t, verbose=1)
+    # Convert MATLAB 1 indexing to python 0 indexing
     df_t[table_index_columns] = matlab_indexing_to_python(df_t[table_index_columns])
 
+    # Replace center outs that got transferred to the next timestep to be equal to center in value
+    df_t = replace_missed_center_out_indexes(df_t, verbose=1)
+
+    # 
     for col in table_index_columns:
         df_t_tmp = df_t[get_is_relevant_trial(df_t['hasAllPhotometryData'], df_t[col])].copy()
-        # relevant_inx = df_t_tmp[col]
-        
-        # single_inx_vals = num_inx_vals[num_inx_vals == 1].index
-        # signal_df[col] = (df_t_tmp[df_t_tmp[col].isin(single_inx_vals)].set_index(col)['wasRewarded'] == df_t_tmp[df_t_tmp[col].isin(single_inx_vals)].set_index(col)['wasRewarded'])*1
-        
         signal_df[col] = (df_t_tmp.set_index(col)['wasRewarded'] == df_t_tmp.set_index(col)['wasRewarded'])*1
         signal_df[f'{col}r'] = df_t_tmp.set_index(col)['wasRewarded']
         signal_df[f'{col}nr'] = (1 - signal_df[f'{col}r'])
@@ -273,13 +377,18 @@ def get_signal_df(signal_filename, table_filename,
         if col in ['photometrySideInIndex', 'photometrySideOutIndex']: #, 'photometryCenterInIndex']:
             for basis in basis_Aa_cols:
                 signal_df[col+basis] = df_t_tmp.set_index(col)[basis].fillna(0)
-
+    
     signal_df['nTrial'] = get_trial_start(signal_df['photometryCenterInIndex']).cumsum().shift(-5)
     signal_df['nEndTrial'] = get_trial_end(signal_df['photometrySideOutIndex']).cumsum().shift(5)
     signal_df['wi_trial_keep'] = get_is_not_iti(signal_df)
 
     signal_df = signal_df[signal_df['nTrial'] > 0].fillna(0)
-    # signal_df
+
+
+    if signal_filename_out:
+        signal_df.to_csv(signal_filename_out)
+    if table_filename_out:
+        table_df.to_csv(table_filename_out)
 
     return signal_df, table_df
 

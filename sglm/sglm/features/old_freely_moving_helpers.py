@@ -124,61 +124,6 @@ def set_reward_flags(df):
     df['nr_trial'] = (df.groupby('nTrial')['r'].transform(np.sum) <= 0) * 1.0
     return df
 
-def set_port_entry_exit_rewarded_unrewarded_indicators(df):
-    '''
-    Set port entry, exit, and intersecting reward / non-reward indicators
-    Args:
-        df: dataframe with right / left port entry / exit columns and reward/no_reward indicators
-    Returns:
-        dataframe with right / left, rewarded / unrewarded intersection indicators
-    '''
-    # Identify combined reward vs. non-rewarded / left vs. right / entries vs. exits
-    df = df.assign(**{
-        # 'rpxr':df['r_trial']*df['rpx'],
-        # 'rpxnr':df['nr_trial']*df['rpx'],
-        # 'lpxr':df['r_trial']*df['lpx'],
-        # 'lpxnr':df['nr_trial']*df['lpx'],
-
-        # 'rpnr':df['r_trial']*df['rpn'],
-        # 'rpnnr':df['nr_trial']*df['rpn'],
-        # 'lpnr':df['r_trial']*df['lpn'],
-        # 'lpnnr':df['nr_trial']*df['lpn'],
-
-        'rpxr':df['r']*df['rpx'],
-        'rpxnr':df['nr']*df['rpx'],
-        'lpxr':df['r']*df['lpx'],
-        'lpxnr':df['nr']*df['lpx'],
-
-        'rpnr':df['r']*df['rpn'],
-        'rpnnr':df['nr']*df['rpn'],
-        'lpnr':df['r']*df['lpn'],
-        'lpnnr':df['nr']*df['lpn'],
-
-    })
-    return df
-
-def define_side_agnostic_events(df):
-    '''
-    Define side agnostic events
-    Args:
-        df: dataframe with left / right entry / exit and rewarded / unrewarded indicators
-    Returns:
-        dataframe with added port entry/exit, and reward indicators
-    '''
-    df = df.assign(**{
-        'spn':df['rpn']+df['lpn'],
-        'spx':df['rpx']+df['lpx'],
-
-        'spnr':df['rpnr']+df['lpnr'],
-        'spnnr':df['rpnnr']+df['lpnnr'],
-        'spxr':df['rpxr']+df['lpxr'],
-        'spxnr':df['rpxnr']+df['lpxnr'],
-
-        'sl':df['rl']+df['ll'],
-    })
-
-    return df
-
 def get_first_time_events(dfrel):
     '''
     Returns a list of first time events
