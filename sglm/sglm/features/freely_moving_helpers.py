@@ -254,17 +254,6 @@ def detrend(df, y_col):
     df = df.dropna()
     return df
 
-def get_is_not_iti(df):
-    '''
-    Returns a boolean array of whether the trial is not ITI
-    Args:
-        df: dataframe with entry, exit, lick, reward, and dFF columns
-    Returns:
-        boolean array of whether the trial is not ITI
-    '''
-    return df['nTrial'] != df['nEndTrial']
-
-
 def timeshift_vals(dfrel, X_cols, neg_order=-7, pos_order=20):
     '''
     Timeshift values
