@@ -143,8 +143,10 @@ def generate_Ab_labels(df_t):
     df_t['label_rewarded'] = ' '
     df_t['label_rewarded'] = set_first_prv_trial_letter(df_t['wasRewarded'], df_t['label_rewarded'], loc=0)
 
-    df_t['wasRewarded'] = df_t['wasRewarded'].fillna(False)
-    df_t['prv_wasRewarded'] = df_t['prv_wasRewarded'].fillna(False)
+    df_t['wasRewarded'] = df_t['wasRewarded'].fillna(False).astype(int)
+    df_t['prv_wasRewarded'] = df_t['prv_wasRewarded'].fillna(False).astype(int)
+    df_t['prv_choseLeft'] = df_t['prv_choseLeft'].astype(int)
+    df_t['prv_choseRight'] = df_t['prv_choseRight'].astype(int)
 
     df_t.loc[df_t['prv_wasRewarded'].isna(), 'label'] = np.nan
     df_t.loc[df_t['prv_wasRewarded'].isna(), 'label'] = np.nan
@@ -310,7 +312,7 @@ def get_trial_end(center_out_srs):
 
 
 def generate_signal_df(signal_filename, table_filename,
-                  signal_filename_out=None, table_filename_out=None, 
+                #   signal_filename_out=None, table_filename_out=None, 
                   table_index_columns = ['photometryCenterInIndex',
                                         'photometryCenterOutIndex',
                                         'photometrySideInIndex',
@@ -318,6 +320,8 @@ def generate_signal_df(signal_filename, table_filename,
                                         'photometryFirstLickIndex'
                                         ],
                   basis_Aa_cols = ['AA', 'Aa', 'aA', 'aa', 'AB', 'Ab', 'aB', 'ab'],
+                  trial_bounds_before_center_in = -5,
+                  trial_bounds_after_side_out = 5,
 
                   ):
     """
@@ -337,6 +341,10 @@ def generate_signal_df(signal_filename, table_filename,
         Index column names in the table file that are used to index the signal file and create the Ab columns.
     basis_Aa_cols : list of str
         Suffixes in the table file that are combined with the table_index_columns used to index the signal file.
+    trial_bounds_before_center_in : int
+        Number of trial timesteps to include before the center in event as within trial.
+    trial_bounds_after_side_out : int
+        Number of trial timesteps to include after the side out event as within trial.
     
     Returns
     -------
@@ -378,17 +386,16 @@ def generate_signal_df(signal_filename, table_filename,
             for basis in basis_Aa_cols:
                 signal_df[col+basis] = df_t_tmp.set_index(col)[basis].fillna(0)
     
-    signal_df['nTrial'] = get_trial_start(signal_df['photometryCenterInIndex']).cumsum().shift(-5)
-    signal_df['nEndTrial'] = get_trial_end(signal_df['photometrySideOutIndex']).cumsum().shift(5)
+    # 
+    signal_df['nTrial'] = get_trial_start(signal_df['photometryCenterInIndex']).cumsum().shift(trial_bounds_before_center_in)
+    signal_df['nEndTrial'] = get_trial_end(signal_df['photometrySideOutIndex']).cumsum().shift(trial_bounds_after_side_out)
     signal_df['wi_trial_keep'] = get_is_not_iti(signal_df)
 
-    signal_df = signal_df[signal_df['nTrial'] > 0].fillna(0)
-
-
-    if signal_filename_out:
-        signal_df.to_csv(signal_filename_out)
-    if table_filename_out:
-        table_df.to_csv(table_filename_out)
+    # signal_df = signal_df[signal_df['nTrial'] > 0].fillna(0)
+    # if signal_filename_out:
+    #     signal_df.to_csv(signal_filename_out)
+    # if table_filename_out:
+    #     table_df.to_csv(table_filename_out)
 
     return signal_df, table_df
 

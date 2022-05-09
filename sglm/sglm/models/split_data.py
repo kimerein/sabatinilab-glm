@@ -93,6 +93,23 @@ def holdout_split_by_trial_id(X, y=None, id_cols=['nTrial', 'iBlock'], strat_col
 
     return holdout
 
+def holdout_splits(dfrel_setup, id_cols=['nTrial'], perc_holdout=0.2):
+    '''
+    Create holdout splits
+    Args:
+        dfrel_setup: full setup dataframe
+        id_cols: list of columns to use as trial identifiers
+        perc_holdout: percentage of data to holdout
+    Returns:
+        dfrel_setup: full setup dataframe
+        dfrel_holdout: full holdout dataframe
+    '''
+    # Create holdout splits
+    holdout = holdout_split_by_trial_id(dfrel_setup, id_cols=id_cols, perc_holdout=perc_holdout)
+    dfrel_holdout = dfrel_setup.loc[holdout]
+    dfrel_setup = dfrel_setup.loc[~holdout]
+    return dfrel_setup, dfrel_holdout
+
 
 def cv_idx_by_trial_id(X, y=None, trial_id_columns=[], num_folds=5, test_size=None):
     """

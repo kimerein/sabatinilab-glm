@@ -1,3 +1,5 @@
+import pandas as pd
+
 def get_x(df, x_cols, keep_rows=None):
     '''
     Get x values for fitting/scoring
@@ -26,22 +28,12 @@ def get_y(df, y_col, keep_rows=None):
         df = df[keep_rows]
     return df[y_col]
 
-def holdout_splits(dfrel_setup, id_cols=['nTrial'], perc_holdout=0.2):
-    '''
-    Create holdout splits
-    Args:
-        dfrel_setup: full setup dataframe
-        id_cols: list of columns to use as trial identifiers
-        perc_holdout: percentage of data to holdout
-    Returns:
-        dfrel_setup: full setup dataframe
-        dfrel_holdout: full holdout dataframe
-    '''
-    # Create holdout splits
-    holdout = sglm_ez.holdout_split_by_trial_id(dfrel_setup, id_cols=id_cols, perc_holdout=perc_holdout)
-    dfrel_holdout = dfrel_setup.loc[holdout]
-    dfrel_setup = dfrel_setup.loc[~holdout]
-    return dfrel_setup, dfrel_holdout
+def get_xy_all_noniti(dfrel, prediction_X_cols_sftd, y_col, noniticol='wi_trial_keep'):
+    X_setup = get_x(dfrel, prediction_X_cols_sftd, keep_rows=None)
+    y_setup = get_y(dfrel, y_col, keep_rows=None)
+    X_setup_noiti = get_x(dfrel, prediction_X_cols_sftd, keep_rows=dfrel[noniticol])
+    y_setup_noiti = get_y(dfrel, y_col, keep_rows=dfrel[noniticol])
+    return X_setup, y_setup, X_setup_noiti, y_setup_noiti
 
 def setup_glmsave(glmsave, prefix, filename, neg_order, pos_order, X_cols_all, folds, pholdout, pgss, gssid=None):
     glmsave.set_uid(prefix)

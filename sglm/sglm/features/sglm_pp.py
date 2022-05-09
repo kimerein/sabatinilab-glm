@@ -5,7 +5,6 @@ import scipy.signal
 from numba import njit, jit, prange
 
 from numpy.lib.function_base import append
-import sglm_pp
 import matplotlib.pyplot as plt
 import time
 import sys
@@ -65,7 +64,7 @@ def timeshift_cols_by_signal_length(X, cols_to_shift, neg_order=0, pos_order=1, 
     for col in cols_to_shift:
         min_num_ts[col] = X.query(f'{col} > 0').groupby([trial_id, col])[dummy_col].count().min()
 
-        col_nums = sglm_pp.get_column_nums(X, [col])
+        col_nums = get_column_nums(X, [col])
 
         shift_amt = min_num_ts[col] // shift_amt_ratio
         shift_amt = max(shift_amt, 1)
@@ -78,7 +77,7 @@ def timeshift_cols_by_signal_length(X, cols_to_shift, neg_order=0, pos_order=1, 
 
         sft_orders[col] = (neg_order_lst, pos_order_lst)
 
-        X = sglm_pp.timeshift_multiple(X, shift_inx=col_nums, shift_amt_list= [0] + neg_order_lst + pos_order_lst)
+        X = timeshift_multiple(X, shift_inx=col_nums, shift_amt_list= [0] + neg_order_lst + pos_order_lst)
 
     if created:
         X = X.drop(dummy_col, axis=1)
@@ -130,8 +129,8 @@ def timeshift_cols(X, cols_to_shift, neg_order=0, pos_order=1):
     
     Returns: New DataFrame with all shifted cols included in output
     """    
-    col_nums = sglm_pp.get_column_nums(X, cols_to_shift)
-    timeshifted = sglm_pp.timeshift_multiple(X, shift_inx=col_nums, shift_amt_list=[0]+list(range(neg_order, 0))+list(range(1, pos_order + 1)))
+    col_nums = get_column_nums(X, cols_to_shift)
+    timeshifted = timeshift_multiple(X, shift_inx=col_nums, shift_amt_list=[0]+list(range(neg_order, 0))+list(range(1, pos_order + 1)))
     return timeshifted
 
 
@@ -175,8 +174,8 @@ def diff_cols(X, cols, append_to_base=True):
     
     Returns: DataFrame X with expected diffs performed
     """
-    col_nums = sglm_pp.get_column_nums(X, cols)
-    X = sglm_pp.diff(X, col_nums, append_to_base=append_to_base)
+    col_nums = get_column_nums(X, cols)
+    X = diff(X, col_nums, append_to_base=append_to_base)
     return X
 
 

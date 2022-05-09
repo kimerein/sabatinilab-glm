@@ -6,6 +6,7 @@ import threading, queue
 from multiprocessing import Process, Pool
 import time
 from sglm.models import split_data
+from sglm import models
 
 # TODO: Multidimensional Array -- paramgrid and output grid
 # TODO: Add an OrderedDict implementation for the generate_mult_params version
@@ -182,7 +183,7 @@ def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, verbose=0, resp_l
         #     beta0_ = pca_glm.beta0_
         #     beta_ = pca_glm.beta_.copy()
     
-        glm = sglm.GLM(model_name, beta0_=beta0_, beta_=beta_, **glm_kwargs, score_method=score_method)
+        glm = models.sglm.GLM(model_name, beta0_=beta0_, beta_=beta_, **glm_kwargs, score_method=score_method)
         args = (X_train, y_train, X_test, y_test,
                 cv_coefs, cv_intercepts, cv_scores_train, cv_scores_test,
                 iter_cv,)
@@ -204,7 +205,7 @@ def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, verbose=0, resp_l
 
     #####################
 
-    glm = sglm.GLM(model_name, beta0_=beta0_, beta_=beta_, **glm_kwargs)
+    glm = models.sglm.GLM(model_name, beta0_=beta0_, beta_=beta_, **glm_kwargs)
     glm.fit(X, y)
 
     #####################
@@ -220,7 +221,7 @@ def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, verbose=0, resp_l
         'cv_mean_score_train': np.mean(cv_scores_train),
         'cv_mean_score': np.mean(cv_scores_test),
         'cv_std_score': np.std(cv_scores_test),
-        'cv_R2_score': sglm.calc_R2(np.concatenate(resids), np.concatenate(mean_resids)),
+        'cv_R2_score': models.sglm.calc_R2(np.concatenate(resids), np.concatenate(mean_resids)),
         'cv_mse_score': np.mean(np.square(np.concatenate(resids))),
         'glm_kwargs': glm_kwargs,
         'model': glm
@@ -276,7 +277,7 @@ def cv_glm_mult_params(X, y, cv_idx, model_name, glm_kwarg_lst, verbose=0, score
 
     start = time.time()
 
-    pca_glm = sglm.GLM('PCA Normal') if model_name in {'Normal', 'Gaussian'} else sglm.GLM(model_name)
+    pca_glm = models.sglm.GLM('PCA Normal') if model_name in {'Normal', 'Gaussian'} else models.sglm.GLM(model_name)
     pca_glm.pca_fit(X, y)
     print(f'> PCA GLM Built in {time.time() - start} seconds')
 
