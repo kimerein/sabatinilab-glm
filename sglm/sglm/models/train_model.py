@@ -28,12 +28,12 @@ def get_y(df, y_col, keep_rows=None):
         df = df[keep_rows]
     return df[y_col]
 
-def get_xy_all_noniti(dfrel, prediction_X_cols_sftd, y_col, noniticol='wi_trial_keep'):
-    X_setup = get_x(dfrel, prediction_X_cols_sftd, keep_rows=None)
-    y_setup = get_y(dfrel, y_col, keep_rows=None)
-    X_setup_noiti = get_x(dfrel, prediction_X_cols_sftd, keep_rows=dfrel[noniticol])
-    y_setup_noiti = get_y(dfrel, y_col, keep_rows=dfrel[noniticol])
-    return X_setup, y_setup, X_setup_noiti, y_setup_noiti
+def get_xy_all_noniti(df, prediction_X_cols_sftd, y_col, noniticol='wi_trial_keep'):
+    X = get_x(df, prediction_X_cols_sftd, keep_rows=None)
+    y = get_y(df, y_col, keep_rows=None)
+    X_noiti = get_x(df, prediction_X_cols_sftd, keep_rows=df[noniticol])
+    y_noiti = get_y(df, y_col, keep_rows=df[noniticol])
+    return X, y, X_noiti, y_noiti
 
 def setup_glmsave(glmsave, prefix, filename, neg_order, pos_order, X_cols_all, folds, pholdout, pgss, gssid=None):
     glmsave.set_uid(prefix)

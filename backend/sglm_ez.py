@@ -1,7 +1,7 @@
 import numpy as np
 from numpy.lib.function_base import append
 import pandas as pd
-import sglm
+import sglm_
 import sglm_pp
 import sglm_cv
 import matplotlib.pyplot as plt
@@ -166,7 +166,7 @@ def fit_GLM(X, y, model_name='Gaussian', *args, **kwargs):
     
     Returns: Fitted GLM model
     """
-    glm = sglm.GLM(model_name, *args, **kwargs)
+    glm = sglm_.GLM(model_name, *args, **kwargs)
     glm.fit(X.values, y.values)
     return glm
 

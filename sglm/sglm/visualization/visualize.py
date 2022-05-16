@@ -31,7 +31,8 @@ def get_coef_name_sets(coef_names, sftd_coef_names):
     return coef_cols
 
 def get_single_coef_set(names, lookup):
-    return [int(_.split('_')[-1]) for _ in names], [lookup[_.replace('_0', '')] for _ in names]
+    # return [int(_.split('_')[-1]) for _ in names], [lookup[_.replace('_0', '')] for _ in names]
+    return [int(_.split('_')[-1]) for _ in names], [lookup[_] for _ in names]
 
 
 def reconstruct_signal(glm, X, y_true=-1):

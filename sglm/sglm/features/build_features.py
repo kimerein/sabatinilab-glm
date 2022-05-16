@@ -139,8 +139,41 @@ def define_side_agnostic_events(df):
 
 
 
+def add_timeshifts_to_col_list(all_cols, shifted_cols, neg_order=0, pos_order=1):
+    """
+    Add a number of timeshifts to the shifted_cols name list provided for every column used. 
+
+    JZ 2021
+    
+    Args:
+        all_cols : list(str)
+            All column names prior to the addition of shifted column names
+        shifted_cols : list(str)
+            The list of columns that have been timeshifted
+        neg_order : int
+            Negative order i.e. number of shifts performed backwards (should be in range -inf to 0 (incl.))
+        pos_order : int
+            Positive order i.e. number of shifts performed forwards (should be in range 0 (incl.) to inf)
+    
+    Returns: List of all column names remaining after shifts in question
+    """ 
+    out_col_list = []
+    for shift_amt in list(range(neg_order, 0))+list(range(1, pos_order + 1)):
+        out_col_list.extend([_ + f'_{shift_amt}' for _ in shifted_cols])
+    return all_cols + out_col_list
 
 
+def col_shift_bounds_dict_to_col_list(X_cols_basis, X_cols_sftd):
+        X_cols_sftd_basis = []
+        for X_col_single in X_cols_basis:
+            col_bounds = X_cols_basis[X_col_single]
+            if col_bounds == (0,0):
+                cols = [_ for _ in X_cols_sftd if X_col_single+'_' in _ or X_col_single == _]
+                X_cols_sftd_basis += cols
+            else:
+                cols = add_timeshifts_to_col_list([X_col_single], [X_col_single], neg_order=col_bounds[0], pos_order=col_bounds[1])
+                X_cols_sftd_basis += [_ for _ in X_cols_sftd if _ in cols]
+        return X_cols_sftd_basis
 
 
 def generate_toy_data():

@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-import sglm
+import sglm_
 import itertools
 import threading, queue
 from multiprocessing import Process, Pool
@@ -119,7 +119,7 @@ def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, verbose=0, resp_l
         #     beta0_ = pca_glm.beta0_
         #     beta_ = pca_glm.beta_.copy()
     
-        glm = sglm.GLM(model_name, beta0_=beta0_, beta_=beta_, **glm_kwargs, score_method=score_method)
+        glm = sglm_.GLM(model_name, beta0_=beta0_, beta_=beta_, **glm_kwargs, score_method=score_method)
         # glm = sglm.GLM(model_name, **glm_kwargs)
         args = (X_train, y_train, X_test, y_test,
                 cv_coefs, cv_intercepts, cv_scores_train, cv_scores_test,
@@ -177,7 +177,7 @@ def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, verbose=0, resp_l
 
     #####################
 
-    glm = sglm.GLM(model_name, beta0_=beta0_, beta_=beta_, **glm_kwargs)
+    glm = sglm_.GLM(model_name, beta0_=beta0_, beta_=beta_, **glm_kwargs)
     glm.fit(X, y)
 
     #####################
@@ -193,7 +193,7 @@ def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, verbose=0, resp_l
         'cv_mean_score_train': np.mean(cv_scores_train),
         'cv_mean_score': np.mean(cv_scores_test),
         'cv_std_score': np.std(cv_scores_test),
-        'cv_R2_score': sglm.calc_R2(np.concatenate(resids), np.concatenate(mean_resids)),
+        'cv_R2_score': sglm_.calc_R2(np.concatenate(resids), np.concatenate(mean_resids)),
         'cv_mse_score': np.mean(np.square(np.concatenate(resids))),
         'glm_kwargs': glm_kwargs,
         'model': glm
@@ -272,7 +272,7 @@ def cv_glm_mult_params(X, y, cv_idx, model_name, glm_kwarg_lst, verbose=0, score
 
     start = time.time()
 
-    pca_glm = sglm.GLM('PCA Normal') if model_name in {'Normal', 'Gaussian'} else sglm.GLM(model_name)
+    pca_glm = sglm_.GLM('PCA Normal') if model_name in {'Normal', 'Gaussian'} else sglm_.GLM(model_name)
     pca_glm.pca_fit(X, y)
     print(f'> PCA GLM Built in {time.time() - start} seconds')
 
