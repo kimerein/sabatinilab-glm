@@ -383,7 +383,8 @@ def plot_avg_reconstructions_v2(df,
                                 # alignment_col_lst=['photometrySideInIndexr', 'photometryCenterInIndexr',
                                 #                    'photometrySideInIndexnr','photometryCenterInIndexnr'],
 
-                                alignment_col_lst=['photometrySideInIndexAA', 'photometrySideInIndexAa',
+                                alignment_col_lst=[
+                                                   'photometrySideInIndexAA', 'photometrySideInIndexAa',
                                                    'photometrySideInIndexaA','photometrySideInIndexaa',
                                                    'photometrySideInIndexAB', 'photometrySideInIndexAb',
                                                    'photometrySideInIndexaB','photometrySideInIndexab',
