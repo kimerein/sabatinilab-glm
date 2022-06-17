@@ -40,7 +40,7 @@ def timeshift_vals(dfrel, X_cols, neg_order=-20, pos_order=20, exclude_columns=N
 
 
 
-def timeshift_vals_by_dict(df, X_cols_dict):
+def timeshift_vals_by_dict(df, X_cols_dict, keep_nans=False):
     '''
     Timeshift values
     Args:
@@ -77,13 +77,19 @@ def timeshift_vals_by_dict(df, X_cols_dict):
             df[X_col + '_' + str(shift_amt)] = df[X_col].shift(shift_amt)
             X_cols_sftd += [X_col + '_' + str(shift_amt)]
 
+    if not keep_nans:
+        na_drop_cols = [X_col + '_' + str(neg_order) for X_col in X_cols_dict] + [X_col + '_' + str(pos_order) for X_col in X_cols_dict]
+        df = df.dropna(subset=na_drop_cols)
+    
     return df, X_cols_sftd
 
 def X_cols_dict_to_default(X_cols_dict, neg_order=-20, pos_order=20):
     X_cols_dict = X_cols_dict.copy()
     for X_col in X_cols_dict:
+        # print(X_cols_dict[X_col])
         if X_cols_dict[X_col] == (0,0) or X_cols_dict[X_col] is None:
             X_cols_dict[X_col] = (neg_order, pos_order)
+            
     return X_cols_dict
 
 
@@ -108,6 +114,7 @@ def xy_pairs_to_widest_orders(X_y_pairings):
                 most_pos_order = pos_order
             
             widest_shifts[X_col] = (most_neg_order, most_pos_order)
+            
     return widest_shifts
 
 
@@ -177,6 +184,7 @@ def single_file_analysis_prep(signal_files, X_cols_dict):
     #                         'nr_trial',
     #                         ]
     
+    X_cols_sftd_lst = []
     signal_df_lst = []
     signal_filenames = []
 
@@ -201,8 +209,8 @@ def single_file_analysis_prep(signal_files, X_cols_dict):
         #                                         )
         tmp_signal_df, X_cols_sftd = timeshift_vals_by_dict(tmp_signal_df, X_cols_dict)
 
-        
+        X_cols_sftd_lst += [_ for _ in X_cols_sftd if _ not in X_cols_sftd_lst]
         signal_df_lst.append(tmp_signal_df)
         signal_filenames.append(signal_files[file_num].split('/')[-1].split('.')[0].replace('GLM_SIGNALS_', '').replace('INTERIM_', ''))
 
-    return signal_df_lst, X_cols_sftd, signal_filenames
+    return signal_df_lst, X_cols_sftd_lst, signal_filenames
