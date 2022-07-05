@@ -79,6 +79,9 @@ def timeshift_vals_by_dict(df, X_cols_dict, keep_nans=False):
 
     if not keep_nans:
         na_drop_cols = [X_col + '_' + str(neg_order) for X_col in X_cols_dict] + [X_col + '_' + str(pos_order) for X_col in X_cols_dict]
+        
+        # print(df.isna().sum(axis=0))
+        
         df = df.dropna(subset=na_drop_cols)
     
     return df, X_cols_sftd
@@ -156,6 +159,7 @@ def multi_file_analysis_prep(signal_files, X_cols_dict):
         X_cols_sftd_lst += [_ for _ in X_cols_sftd if _ not in X_cols_sftd_lst]
     
     signal_df = pd.concat(signal_df_lst, axis=0)
+
 
     signal_df['nTrial'] = signal_df['nTrial'].astype(int)
     signal_df['nEndTrial'] = signal_df['nEndTrial'].astype(int)

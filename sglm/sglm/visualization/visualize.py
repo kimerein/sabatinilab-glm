@@ -105,7 +105,7 @@ def plot_single_coef_set(name, timeshifts, coefs, ax=None, y_lims=None, binsize=
     ax.grid(True)
     return
 
-def plot_all_beta_coefs(coeffs, coef_names, sftd_coef_names, plot_width=4, y_lims=None, filename='', plot_name='', binsize=None, fig=None, axs=None, label=None):
+def plot_all_beta_coefs(coeffs, coef_names, sftd_coef_names, plot_width=4, y_lims=None, filename='', plot_name='', binsize=None, fig=None, axs=None, label=None, plot_rows=6):
     """
     Plot all beta coefficients for a given model
     Args:
@@ -145,7 +145,9 @@ def plot_all_beta_coefs(coeffs, coef_names, sftd_coef_names, plot_width=4, y_lim
     coef_cols = get_coef_name_sets(coef_names, sftd_coef_names)
     
     if fig is None or axs is None:
-        fig, axs = plt.subplots(len(coef_cols)//plot_width + (len(coef_cols)%plot_width > 0)*1, plot_width)
+        num_rows = max(len(coef_cols)//plot_width + (len(coef_cols)%plot_width > 0)*1, plot_rows)
+
+        fig, axs = plt.subplots(num_rows, plot_width)
         fig.set_figheight(20)
         fig.set_figwidth(20)
 
@@ -165,6 +167,8 @@ def plot_all_beta_coefs(coeffs, coef_names, sftd_coef_names, plot_width=4, y_lim
 
         plot_single_coef_set(coef_name, timeshifts, coefs, axs_tmp, y_lims, binsize=binsize, label=label)
     
+
+
     fig.patch.set_facecolor('white')
     fig.tight_layout()
     

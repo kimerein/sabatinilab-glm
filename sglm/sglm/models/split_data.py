@@ -29,6 +29,8 @@ def holdout_split_by_trial_id(X, y=None, id_cols=['nTrial', 'iBlock'], strat_col
     
     Returns: pd.Series of True values if it should be heldout, False if it should be part of training/validation
     """
+
+    assert len(X) > 0
     
     for i, idc in enumerate(id_cols):
         if i == 0:
@@ -40,6 +42,10 @@ def holdout_split_by_trial_id(X, y=None, id_cols=['nTrial', 'iBlock'], strat_col
     #print('bucket_ids', bucket_ids)
     #print('bucket_ids max+  ', bucket_ids.max() + 1)
     #print('bucket_ids.astype("category").cat.codes', bucket_ids.astype("category").cat.codesucket_ids)
+
+    # print(X[idc])
+    # print(bucket_ids)
+
     num_bucket_ids = int(bucket_ids.max() + 1)
 
     if strat_col is not None:
@@ -103,12 +109,13 @@ def holdout_splits(dfrel_setup, id_cols=['nTrial'], perc_holdout=0.2):
     Returns:
         dfrel_setup: full setup dataframe
         dfrel_holdout: full holdout dataframe
+        holdout: true/false series — true if datapoint should be in holdout, false if should be in training
     '''
     # Create holdout splits
     holdout = holdout_split_by_trial_id(dfrel_setup, id_cols=id_cols, perc_holdout=perc_holdout)
     dfrel_holdout = dfrel_setup.loc[holdout]
     dfrel_setup = dfrel_setup.loc[~holdout]
-    return dfrel_setup, dfrel_holdout
+    return dfrel_setup, dfrel_holdout, holdout
 
 
 def cv_idx_by_trial_id(X, y=None, trial_id_columns=[], num_folds=5, test_size=None):

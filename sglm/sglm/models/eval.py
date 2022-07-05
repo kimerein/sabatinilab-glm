@@ -9,7 +9,7 @@ def calc_l2(coeffs):
     return np.sum(np.square(coeffs))
 
 
-def print_best_model_info(X_setup, best_score, best_params, best_model, start):
+def print_best_model_info(X_setup, best_score, best_params, best_model, start, show_non_zero_coefs=False):
     """
     Print best model info
     Args:
@@ -24,12 +24,13 @@ def print_best_model_info(X_setup, best_score, best_params, best_model, start):
     print('---')
     print()
 
-    # Print out all non-zero coefficients
-    print('Non-Zero Coeffs:')
-    epsilon = 1e-10
-    for ic, coef in enumerate(best_model.coef_):
-        if np.abs(coef) > epsilon:
-            print(f'> {coef}: {X_setup.columns[ic]}')
+    if show_non_zero_coefs:
+        # Print out all non-zero coefficients
+        print('Non-Zero Coeffs:')
+        epsilon = 1e-10
+        for ic, coef in enumerate(best_model.coef_):
+            if np.abs(coef) > epsilon:
+                print(f'> {coef}: {X_setup.columns[ic]}')
 
     # Print out information related to the best model
     print(f'Best Score: {best_score}')
