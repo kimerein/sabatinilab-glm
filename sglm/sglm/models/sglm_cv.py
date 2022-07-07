@@ -98,22 +98,35 @@ class SGLM_worker():
         while True:
             if self.verbose > 1:
                 print('Running single')
-            glm, args, kwargs = self.queue.get()
+            # if self.queue.empty():
+            #     return
+            try:
+                glm, args, kwargs = self.queue.get(block=True, timeout=3)
+            except queue.Empty as qe:
+                if self.verbose > 1:
+                    print('Single run queue completed')
+                return
             glm.fit_set(*args, **kwargs)
             self.queue.task_done()
-            if self.queue.empty():
-                return
+            # if self.queue.empty():
+            #     return
     
     def run_multi(self):
         while True:
-            print('initiating single_run')
-            if self.verbose > 1:
-                print('Running multi')
-            args, kwargs = self.queue.get()
+            # if self.verbose > 1:
+            print('Running multi')
+            # if self.queue.empty():
+            #     return
+            try:
+                args, kwargs = self.queue.get(block=True, timeout=3)
+            except queue.Empty as qe:
+                # if self.verbose > 1:
+                print('Multirun queue completed')
+                return
             cv_glm_single_params(*args, **kwargs)
             self.queue.task_done()
-            if self.queue.empty():
-                return
+            # if self.queue.empty():
+            #     return
 
 def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, verbose=0, resp_list=[], beta_=None, beta0_=None, score_method='mse'):
     """
@@ -195,7 +208,7 @@ def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, verbose=0, resp_l
         q.put((glm, args, kwargs))
     
     num_workers = 4
-    workers = [SGLM_worker(q, verbose=1) for _ in range(num_workers)]
+    workers = [SGLM_worker(q) for _ in range(num_workers)]
     threads = [threading.Thread(target=worker.run_single, daemon=True) for worker in workers]
     for thread in threads:
         thread.start()
@@ -266,7 +279,6 @@ def cv_glm_mult_params(X, y, cv_idx, model_name, glm_kwarg_lst, verbose=0, score
     
     Returns: dict of information relevant to the best model identified and overall fit information
     """
-    print('In multi')
     q2 = queue.Queue()
 
     final_results = {}
@@ -303,19 +315,13 @@ def cv_glm_mult_params(X, y, cv_idx, model_name, glm_kwarg_lst, verbose=0, score
         q2.put((args, kwargs))
         
     num_workers = 1
-    print('kicking off worker')
-    workers = [SGLM_worker(q2, verbose=1) for _ in range(num_workers)]
-    print('kicking off thread')
+    workers = [SGLM_worker(q2) for _ in range(num_workers)]
     threads = [threading.Thread(target=worker.run_multi, daemon=True) for worker in workers]
-    print('done off thread')
     for thread in threads:
         thread.start()
-    print('start done')
     q2.join()
-    print('join done')
     for thread in threads:
         thread.join()
-    print('join2 done')
 
     if len(resp) == 0:
         print('len resp', len(resp))
