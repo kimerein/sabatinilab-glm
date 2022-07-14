@@ -1,5 +1,6 @@
 import os
 import sys
+from pathlib import Path
 dir_path = '/'.join(os.path.realpath(__file__).split('/')[:-1])
 sys.path.append(f'{dir_path}/sabatinilab-glm/backend')
 sys.path.append(f'{dir_path}/..')
@@ -353,11 +354,14 @@ def get_triplicated_data_for_time_alignment(df, alignment_col):
 def plot_single_avg_reconstruction_v2(df, alignment_col, channel,
                                       title=None, trial_num=None, x_label=None, y_label=None,
                                       inx_bounds=(-40, 60), signal_bounds=(-1, 2.5),
-                                      fig=None, ax=None):
+                                      ic=None, color_lst=['b', 'g', 'y', 'k'],
+                                      fig=None, ax=None, show_pred=True):
     """
     
     """
 
+    color = color_lst[ic]
+    
     relative_df = get_triplicated_data_for_time_alignment(df, alignment_col)
 
     df_filt_to_bounds = relative_df[relative_df['index'].between(*inx_bounds)].copy()
@@ -367,9 +371,14 @@ def plot_single_avg_reconstruction_v2(df, alignment_col, channel,
     rmse = np.sqrt((df_filt_to_bounds['resids']**2).mean())
 
     alignment_name = alignment_col.split('_')[-1]
-    sns.lineplot(x='index', y=channel, data=df_filt_to_bounds, label=f'{alignment_col} — {channel} — True', ax=ax, color='b')
-    sns.lineplot(x='index', y='pred', data=df_filt_to_bounds, label=f'{alignment_col} — {channel} — Pred', ax=ax, color='r')
+    sns.lineplot(x='index', y=channel, data=df_filt_to_bounds, label=f'{alignment_col} — {channel} — True', ax=ax, color=color)
+    # print('channel', channel, 'alignment_col', alignment_col, 'show_pred', show_pred)
+    # print('channel', channel)
+    if show_pred:
+        sns.lineplot(x='index', y='pred', data=df_filt_to_bounds, label=f'{alignment_col} — {channel} — Pred', ax=ax, color='r')
     
+    
+
     # fig.suptitle(f'{alignment_name} — {channel}')
     
     # ax.title.set_text(f'{title} — {trial_num} Trials')
@@ -379,7 +388,7 @@ def plot_single_avg_reconstruction_v2(df, alignment_col, channel,
     ax.set_ylabel(y_label)
 
     ax.set_ylim(*signal_bounds)
-    ax.grid()
+    ax.grid(visible=True)
     
     return
 
@@ -400,12 +409,15 @@ def plot_avg_reconstructions_v2(df,
                                                    ],
                                 
                                 channel='zsgdFF',
+                                channels=None,
                                 plot_width=4,
                                 binsize = 54,
                                 min_time = -40, max_time = 60,
                                 min_signal = -3.0, max_signal = 3.0,
                                 title='Average Photometry Response Aligned to Side Port Entry — Holdout Data Only',
-                                file_name=None):
+                                file_name=None,
+                                save_data=None
+                                ):
     """
     
     """
@@ -430,19 +442,40 @@ def plot_avg_reconstructions_v2(df,
     fig.set_figheight(20)
     fig.set_figwidth(40)
 
+    if channels is None:
+        channels = [channel]
+    for ic, channel in enumerate(channels):
+        for ialignment_col, alignment_col in enumerate(alignment_col_lst):
 
-    for ialignment_col, alignment_col in enumerate(alignment_col_lst):
+            show_pred = channels[channel] if len(channels) > 1 else True
+            
+            i,j = ialignment_col//plot_width, ialignment_col%plot_width
+            plot_single_avg_reconstruction_v2(df, alignment_col, channel,
+                                            #   title=f'{alignment_col} — ',
+                                            title=f'{channel} - {alignment_col} Trials',
+                                            inx_bounds=inx_bounds, signal_bounds=signal_bounds, fig=fig, ax=ax[i,j],
+                                            ic=ic,
+                                            show_pred=show_pred)
 
-        i,j = ialignment_col//plot_width, ialignment_col%plot_width
-        plot_single_avg_reconstruction_v2(df, alignment_col, channel,
-                                        #   title=f'{alignment_col} — ',
-                                          title=f'{alignment_col} Trials',
-                                          inx_bounds=inx_bounds, signal_bounds=signal_bounds, fig=fig, ax=ax[i,j])
+
+    
+    if save_data is not None:
+        for ialignment_col, alignment_col in enumerate(alignment_col_lst):
+            i,j = ialignment_col//plot_width, ialignment_col%plot_width
+            for line in ax[i, j].lines:
+                lbl = line.get_label()
+                print('i',i,'j',j,'—',lbl)
+                save_fn = str(Path(save_data) / f'XY--{i}_{j}--{lbl}.npy')
+                xy_dat = line.get_xydata()
+                print(xy_dat)
+                print(f'{save_fn}')
+                with open(save_fn, 'wb') as save_obj:
+                    np.save(save_obj, xy_dat)
 
 
-    # ax[i, j].legend(['Mean Photometry Response',
-    #                 'Predicted Photometry Response',
-    #                 '95% SEM Confidence Interval'])
+        # ax[i, j].legend(['Mean Photometry Response',
+        #                 'Predicted Photometry Response',
+        #                 '95% SEM Confidence Interval'])
     ax[i, j].legend()
     fig.show()
     
