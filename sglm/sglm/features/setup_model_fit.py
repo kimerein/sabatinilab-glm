@@ -3,7 +3,7 @@ import glob
 import numpy as np
 import pandas as pd
 import numpy as np
-from tqdm.notebook import tqdm, trange
+from tqdm import tqdm, trange
 from sglm.models import sglm
 from sglm.features import table_file as tbf
 from sglm.features import sglm_pp
@@ -82,6 +82,7 @@ def timeshift_vals_by_dict(df, X_cols_dict, keep_nans=False):
         
         # print(df.isna().sum(axis=0))
         
+        na_drop_cols = [_ for _ in na_drop_cols if _ in df.columns]
         df = df.dropna(subset=na_drop_cols)
     
     return df, X_cols_sftd
@@ -141,7 +142,8 @@ def multi_file_analysis_prep(signal_files, X_cols_dict):
 
     signal_df_lst = []
     X_cols_sftd_lst = []
-    for file_num in trange(len(signal_files)):
+    for file_num in range(len(signal_files)):
+    # for file_num in trange(len(signal_files)):
         signal_fn = signal_files[file_num]
         tmp_signal_df = pd.read_csv(signal_fn, index_col='index').copy()
         tmp_signal_df['file_num'] = file_num
@@ -192,7 +194,8 @@ def single_file_analysis_prep(signal_files, X_cols_dict):
     signal_df_lst = []
     signal_filenames = []
 
-    for file_num in trange(len(signal_files)):
+    for file_num in range(len(signal_files)):
+    # for file_num in trange(len(signal_files)):
         signal_fn = signal_files[file_num]
         tmp_signal_df = pd.read_csv(signal_fn, index_col='index').copy()
         tmp_signal_df['file_num'] = file_num

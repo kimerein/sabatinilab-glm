@@ -61,7 +61,7 @@ def training_fit_holdout_score(X_setup, y_setup, X_holdout, y_holdout, best_para
     '''
     # Refit the best model on the full setup (training) data
     glm = sglm.fit_GLM(X_setup, y_setup, **best_params)
-
+    
     # Get the R^2 and MSE scores for the best model on the holdout (test) data
     holdout_score = glm.r2_score(X_holdout, y_holdout)
     holdout_neg_mse_score = glm.neg_mse_score(X_holdout, y_holdout)

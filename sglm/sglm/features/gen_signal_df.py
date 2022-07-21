@@ -361,6 +361,8 @@ def generate_signal_df(signal_filename, table_filename,
 
     # Generate Ab Labels
     df_t = generate_Ab_labels(table_df)
+    assert np.all(df_t['label'].dropna() == df_t['word'].dropna())
+    print(df_t[['label', 'word']])
 
     # Convert Ab Labels to Indicator Variables
     ab_dummies = pd.get_dummies(df_t['label'])
