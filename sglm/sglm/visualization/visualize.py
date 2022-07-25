@@ -341,6 +341,7 @@ def get_triplicated_data_for_time_alignment(df, alignment_col):
     
     for idx, nTrial, nEndTrial in identifiers:
         extended_trial = df[(df['nTrial'] == nTrial) | (df['nEndTrial'] == nEndTrial)].reset_index().copy()
+        extended_trial = extended_trial[(extended_trial['nTrial'] - extended_trial['nEndTrial']) == extended_trial['diffTrialNums']]
         extended_trial['index'] -= idx
 
         # print('extended_trial')

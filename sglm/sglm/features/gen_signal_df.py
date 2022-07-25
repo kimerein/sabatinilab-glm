@@ -362,7 +362,7 @@ def generate_signal_df(signal_filename, table_filename,
     # Generate Ab Labels
     df_t = generate_Ab_labels(table_df)
     assert np.all(df_t['label'].dropna() == df_t['word'].dropna())
-    print(df_t[['label', 'word']])
+    # print(df_t[['label', 'word']])
 
     # Convert Ab Labels to Indicator Variables
     ab_dummies = pd.get_dummies(df_t['label'])
@@ -391,6 +391,33 @@ def generate_signal_df(signal_filename, table_filename,
     # 
     signal_df['nTrial'] = get_trial_start(signal_df['photometryCenterInIndex']).cumsum().shift(trial_bounds_before_center_in)
     signal_df['nEndTrial'] = get_trial_end(signal_df['photometrySideOutIndex']).cumsum().shift(trial_bounds_after_side_out)
+    signal_df['diffTrialNums'] = signal_df['nTrial'] - signal_df['nEndTrial']
+
+
+    signal_df_with_dupes = []
+
+    for nTrial_num in signal_df['nTrial'].unique():
+        setup_df_nT = signal_df[signal_df['nTrial'] == nTrial_num]
+        dupe_data = setup_df_nT[setup_df_nT['diffTrialNums'] > 1]
+
+        if len(dupe_data) > 0:
+            dupe_data = dupe_data.copy()
+            dupe_data['nTrial'] = dupe_data['nTrial'] - 1
+            signal_df_with_dupes.append(dupe_data)
+
+        signal_df_with_dupes.append(setup_df_nT)
+
+
+        # if len(dupe_data) > 0:
+        #     with pd.option_context('display.max_rows', 1000):
+        #         tsd = pd.concat(signal_df_with_dupes, axis=0)
+        #         display(tsd[tsd['diffTrialNums'] >= 1].tail(1000))
+        #     return None
+
+    signal_df = pd.concat(signal_df_with_dupes, axis=0)
+
+
+
     signal_df['wi_trial_keep'] = get_is_not_iti(signal_df)
 
     # signal_df = signal_df[signal_df['nTrial'] > 0].fillna(0)
