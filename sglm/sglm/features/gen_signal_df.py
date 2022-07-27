@@ -380,6 +380,25 @@ def generate_signal_df(signal_filename, table_filename,
     # 
     for col in table_index_columns:
         df_t_tmp = df_t[get_is_relevant_trial(df_t['hasAllPhotometryData'], df_t[col])].copy()
+        assert len([_ for _ in df_t_tmp.columns if col == _]) == 1, f"Error: Duplicate entries for {col}"
+        assert signal_df.index.nunique() == len(signal_df.index), f"Error: Duplicate entries in signal_df.index"
+        # assert signal_df.index.nunique() == len(signal_df.index), f"Error: Duplicate entries in signal_df.index"
+
+        # print(col)
+        # print('>', (df_t_tmp.set_index(col)['wasRewarded'] == df_t_tmp.set_index(col)['wasRewarded']*1).index)
+        # print('> len', len(signal_df.index))
+        # print('> nunique', signal_df.index.nunique())
+        # print('> len b', len((df_t_tmp.set_index(col)['wasRewarded'] == df_t_tmp.set_index(col)['wasRewarded']*1).index))
+        # print('> nu b', )
+
+        # stop_flg = False
+
+        # eq = (df_t_tmp.set_index(col)['wasRewarded'] == df_t_tmp.set_index(col)['wasRewarded']*1)
+        # for e in eq.index:
+        #     if len(eq.loc[[e]]) > 1:
+        #         display(eq.loc[e])
+        #         stop_flg = True
+
         signal_df[col] = (df_t_tmp.set_index(col)['wasRewarded'] == df_t_tmp.set_index(col)['wasRewarded'])*1
         signal_df[f'{col}r'] = df_t_tmp.set_index(col)['wasRewarded']
         signal_df[f'{col}nr'] = (1 - signal_df[f'{col}r'])
@@ -392,7 +411,7 @@ def generate_signal_df(signal_filename, table_filename,
     signal_df['nTrial'] = get_trial_start(signal_df['photometryCenterInIndex']).cumsum().shift(trial_bounds_before_center_in)
     signal_df['nEndTrial'] = get_trial_end(signal_df['photometrySideOutIndex']).cumsum().shift(trial_bounds_after_side_out)
     signal_df['diffTrialNums'] = signal_df['nTrial'] - signal_df['nEndTrial']
-
+    signal_df['dupe'] = False
 
     signal_df_with_dupes = []
 
@@ -403,6 +422,7 @@ def generate_signal_df(signal_filename, table_filename,
         if len(dupe_data) > 0:
             dupe_data = dupe_data.copy()
             dupe_data['nTrial'] = dupe_data['nTrial'] - 1
+            dupe_data['dupe'] = True
             signal_df_with_dupes.append(dupe_data)
 
         signal_df_with_dupes.append(setup_df_nT)
