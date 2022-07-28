@@ -80,6 +80,7 @@ target/
 
 # exclude reports from source control by default
 /reports/
+/outputs/
 
 # exclude models from source control by default
 /models/
