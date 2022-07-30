@@ -14,7 +14,6 @@ from sklearn.decomposition import PCA
 from numba import njit, jit, prange
 
 import copy
-import scipy
 
 # TODO: Potentially add additional alternatives for different GLM API implementations (SKLearn, etc.)
 # TODO: Potentially add switching it to also allowing pandas DataFrames as the fitting function
@@ -89,11 +88,6 @@ class GLM():
 
         """
 
-        self.closed_form = False
-        
-        if 'fit_intercept' in kwargs:
-            self.fit_intercept = kwargs['fit_intercept']
-
         if 'warm_start' not in kwargs and (beta0_ is not None or isinstance(beta_, np.ndarray)):
             kwargs['warm_start'] = True
 
@@ -105,7 +99,6 @@ class GLM():
                 kwargs.pop('max_iter')
                 kwargs.pop('warm_start', None)
                 Base = LinearRegression
-                self.closed_form = True
             elif 'l1_ratio' in kwargs and kwargs['l1_ratio'] == 0:
                 del kwargs['l1_ratio']
                 kwargs.pop('warm_start', None)
@@ -245,53 +238,18 @@ class GLM():
         
         Returns: N/A
         """
+        self.model.fit(X, y, *args)
+        # print('> self.kwargs', self.kwargs, self.model)
 
-        if not self.closed_form:
+        # print('coef B:', self.model.coef_)
 
-            self.model.fit(X, y, *args)
-            # print('> self.kwargs', self.kwargs, self.model)
+        self.coef_ = self.model.coef_ if self.model_name in {'Logistic', 'Multinomial', 'Gaussian', 'Normal',
+                                                             'PCA Gaussian', 'PCA Normal'} else self.model.beta_
+        self.beta_ = self.coef_
+        self.intercept_ = self.model.intercept_ if self.model_name in {'Logistic', 'Multinomial', 'Gaussian', 'Normal',
+                                                                       'PCA Gaussian', 'PCA Normal'} else self.model.beta0_
+        self.beta0_ = self.intercept_
 
-            # print('coef B:', self.model.coef_)
-
-            self.coef_ = self.model.coef_ if self.model_name in {'Logistic', 'Multinomial', 'Gaussian', 'Normal',
-                                                                'PCA Gaussian', 'PCA Normal'} else self.model.beta_
-            self.beta_ = self.coef_
-            self.intercept_ = self.model.intercept_ if self.model_name in {'Logistic', 'Multinomial', 'Gaussian', 'Normal',
-                                                                        'PCA Gaussian', 'PCA Normal'} else self.model.beta0_
-            self.beta0_ = self.intercept_
-        else:
-            X_ = X.values if type(X) == pd.DataFrame else X
-            y_ = y.values if type(y) == pd.DataFrame or type(y) == pd.Series else y
-            assert type(X_) == np.ndarray and type(y_) == np.ndarray
-            
-            X_ = np.concatenate([X_, np.ones((X_.shape[0], 1))], axis=1) if self.fit_intercept else np.concatenate([X_], axis=1)
-
-            # self.full_betas_ = np.linalg.pinv(X_.T @ X_) @ X_.T @ y_
-
-            self.full_betas_, _, self.rank_, self.singular_  = np.linalg.lstsq(X_, y_, rcond=-1)
-            # self.full_betas_, _, self.rank_, self.singular_ = scipy.linalg.lstsq(X_, y_, rcond=-1)
-            self.full_betas_ = self.full_betas_.T
-            
-            self.coef_ = self.full_betas_[:-1] if self.fit_intercept else self.full_betas_
-            self.beta_ = self.coef_
-            
-            self.intercept_ = self.full_betas_[-1] if self.fit_intercept else 0.0
-            self.beta0_ = self.intercept_
-
-            # self.model.fit(X, y)
-
-            # print(self.model.coef_.shape)
-            # print(self.coef_.shape)
-            # assert np.allclose(self.model.coef_, self.coef_)
-            # assert np.allclose(self.model.intercept_, self.intercept_)
-
-
-            if self.beta0_ is not None:
-                self.model.intercept_ = self.beta0_
-            if isinstance(self.beta_, np.ndarray):
-                self.model.coef_ = self.beta_
-
-            # print('X_ >', X_.shape, 'X >', X.shape, 'fb >', self.full_betas_.shape, 'cs >', self.coef_.shape)
 
     def fit_set(self, X, y, X_test, y_test, cv_coefs,
                 cv_intercepts, cv_scores_train, cv_scores_test,
@@ -344,8 +302,6 @@ class GLM():
         if verbose > 1:
             print(f'Done with: {self.kwargs} — {id_fit} — in {time.time() - start}')
         
-        # print('cvc' , cv_coefs.shape)
-
         cv_coefs[:, iter_cv] = self.coef_
         cv_intercepts[iter_cv] = self.intercept_
         cv_scores_train[iter_cv] = self.score(X, y)
@@ -386,14 +342,9 @@ class GLM():
 
         Returns: np.ndarray of predicted responses
         """
-        X_ = X.values if type(X) == pd.DataFrame else X
-        assert type(X_) == np.ndarray
-
-        if not self.closed_form:
-            return self.model.predict(X_)
-        else:
-            X_ = np.concatenate([X_, np.ones((X_.shape[0], 1))], axis=1) if self.fit_intercept else np.concatenate([X_], axis=1)
-            return X_ @ self.full_betas_
+        if type(X) == pd.DataFrame:
+            X = X.values
+        return self.model.predict(X)
 
     def log_likelihood(self, prediction: Union[np.ndarray, pd.Series], truth: Union[np.ndarray, pd.Series]) -> float:
         """
