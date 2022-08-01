@@ -65,6 +65,8 @@ def timeshift_vals_by_dict(df, X_cols_dict, keep_nans=False):
     X_cols_sftd = []
 
     df = df.copy()
+    combined_df_lst = []
+    combined_df_lst.append(df.copy())
     for X_col in X_cols_dict:
         # X_cols_lst = list(X_cols_dict.keys())
         # col_nums = [df.columns.get_loc(_) for _ in X_cols_lst]
@@ -74,8 +76,14 @@ def timeshift_vals_by_dict(df, X_cols_dict, keep_nans=False):
         
         shift_amt_list = list(range(neg_order, pos_order + 1))
         for shift_amt in shift_amt_list:
-            df[X_col + '_' + str(shift_amt)] = df[X_col].shift(shift_amt)
+#             df[X_col + '_' + str(shift_amt)] = df[X_col].shift(shift_amt)
+            df_x_sftd = df[[X_col]].shift(shift_amt).copy().rename({X_col: X_col + '_' + str(shift_amt)}, axis=1)
+            combined_df_lst.append(df_x_sftd)
             X_cols_sftd += [X_col + '_' + str(shift_amt)]
+            
+    df = pd.concat(combined_df_lst, axis=1)
+#     assert np.all(df.dropna()==df2.dropna())
+#     print('Final columns', list(df2.columns))
 
     if not keep_nans:
         na_drop_cols = [X_col + '_' + str(neg_order) for X_col in X_cols_dict] + [X_col + '_' + str(pos_order) for X_col in X_cols_dict]
