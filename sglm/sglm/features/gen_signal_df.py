@@ -312,16 +312,16 @@ def get_trial_end(center_out_srs):
 
 
 def generate_signal_df(signal_filename, table_filename,
-                #   signal_filename_out=None, table_filename_out=None, 
-                  table_index_columns = ['photometryCenterInIndex',
-                                        'photometryCenterOutIndex',
-                                        'photometrySideInIndex',
-                                        'photometrySideOutIndex',
-                                        'photometryFirstLickIndex'
-                                        ],
-                  basis_Aa_cols = ['AA', 'Aa', 'aA', 'aa', 'AB', 'Ab', 'aB', 'ab'],
-                  trial_bounds_before_center_in = -5,
-                  trial_bounds_after_side_out = 5,
+                        #   signal_filename_out=None, table_filename_out=None, 
+                        table_index_columns = ['photometryCenterInIndex',
+                                                'photometryCenterOutIndex',
+                                                'photometrySideInIndex',
+                                                'photometrySideOutIndex',
+                                                'photometryFirstLickIndex'
+                                                ],
+                        basis_Aa_cols = ['AA', 'Aa', 'aA', 'aa', 'AB', 'Ab', 'aB', 'ab'],
+                        trial_bounds_before_center_in = -20,
+                        trial_bounds_after_side_out = 20,
 
                   ):
     """
@@ -399,17 +399,25 @@ def generate_signal_df(signal_filename, table_filename,
         #         display(eq.loc[e])
         #         stop_flg = True
 
+        # If it's not nan and it shows up in the table set it to 1 in signal df, else 0.
         signal_df[col] = (df_t_tmp.set_index(col)['wasRewarded'] == df_t_tmp.set_index(col)['wasRewarded'])*1
+
+        # Set r to if it was rewarded.
         signal_df[f'{col}r'] = df_t_tmp.set_index(col)['wasRewarded']
+
+        # Set nr to 1 - r
         signal_df[f'{col}nr'] = (1 - signal_df[f'{col}r'])
 
+        # Set side in / side out word values in signal to associated values in table. Else 0 if not in table.
         if col in ['photometrySideInIndex', 'photometrySideOutIndex']: #, 'photometryCenterInIndex']:
             for basis in basis_Aa_cols:
                 signal_df[col+basis] = df_t_tmp.set_index(col)[basis].fillna(0)
     
-    # 
+    # Trial number is the number of Center In values that have been observed shifted backwards by trial_bounds_before_center_in
     signal_df['nTrial'] = get_trial_start(signal_df['photometryCenterInIndex']).cumsum().shift(trial_bounds_before_center_in)
+    # Trial end number is the number of Side Out values that have been observed shifted forwards by trial_bounds_after_side_out
     signal_df['nEndTrial'] = get_trial_end(signal_df['photometrySideOutIndex']).cumsum().shift(trial_bounds_after_side_out)
+    # Difference between these two is used to indicate trial overlaps by time shifts
     signal_df['diffTrialNums'] = signal_df['nTrial'] - signal_df['nEndTrial']
     signal_df['dupe'] = False
 
