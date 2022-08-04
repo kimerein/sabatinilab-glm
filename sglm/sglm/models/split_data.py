@@ -2,7 +2,8 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import GroupShuffleSplit
 
-def holdout_split_by_trial_id(X, y=None, id_cols=['nTrial', 'iBlock'], strat_col=None, strat_mode=None, perc_holdout=0.2):
+def holdout_split_by_trial_id(X, y=None, id_cols=['nTrial_filenum', 'iBlock'], strat_col=None, strat_mode=None, perc_holdout=0.2):
+# def holdout_split_by_trial_id(X, y=None, id_cols=['nTrial', 'iBlock'], strat_col=None, strat_mode=None, perc_holdout=0.2):
     """
     Create a True/False pd.Series using Group ID columns to identify the holdout data to
     be used via GroupShuffleSplit.
@@ -36,7 +37,7 @@ def holdout_split_by_trial_id(X, y=None, id_cols=['nTrial', 'iBlock'], strat_col
         if i == 0:
             bucket_ids = X[idc].astype(str).str.len().astype(str) + ':' + X[idc].astype(str)
         else:
-            bucket_ids = bucket_ids + '_' + X[idc].astype(str)
+            bucket_ids = bucket_ids + '_' + X[idc].astype(str).str.len().astype(str) + ':' + X[idc].astype(str)
     bucket_ids = bucket_ids.astype("category").cat.codes
 
     #print('bucket_ids', bucket_ids)
@@ -99,7 +100,8 @@ def holdout_split_by_trial_id(X, y=None, id_cols=['nTrial', 'iBlock'], strat_col
 
     return holdout
 
-def holdout_splits(dfrel_setup, id_cols=['nTrial'], perc_holdout=0.2):
+def holdout_splits(dfrel_setup, id_cols=['nTrial_filenum'], perc_holdout=0.2):
+# def holdout_splits(dfrel_setup, id_cols=['nTrial'], perc_holdout=0.2):
     '''
     Create holdout splits
     Args:
