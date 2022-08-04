@@ -168,7 +168,7 @@ def multi_file_analysis_prep(signal_files, X_cols_dict):
         signal_df_lst.append(tmp_signal_df)
         X_cols_sftd_lst += [_ for _ in X_cols_sftd if _ not in X_cols_sftd_lst]
     
-    signal_df = pd.concat(signal_df_lst, axis=0)
+    signal_df = pd.concat(signal_df_lst, axis=0).copy()
 
 
     signal_df['nTrial'] = signal_df['nTrial'].astype(int)
