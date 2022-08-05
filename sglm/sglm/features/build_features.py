@@ -12,6 +12,7 @@ from sklearn.model_selection import GroupShuffleSplit
 # from sglm.features import sglm_pp
 # import freely_moving_helpers as lpp
 from tqdm import tqdm, trange
+from pathlib import Path
 
 def get_rename_columns_by_file(files_list, channel_definitions, verbose=0):
     """
@@ -46,7 +47,7 @@ def get_rename_columns_by_file(files_list, channel_definitions, verbose=0):
         channel_renamings = channel_definitions[file_lookup]
         relevant_files = [f for f in files_list if all(x in f for x in file_lookup)]
         for relevant_file in relevant_files:
-            relevant_file = relevant_file.split('/')[-1]
+            relevant_file = Path(relevant_file).parts[-1]
             print('>', relevant_file)
             channel_assignments[relevant_file] = channel_renamings
     

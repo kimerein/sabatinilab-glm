@@ -37,7 +37,7 @@ def holdout_split_by_trial_id(X, y=None, id_cols=['nTrial_filenum', 'iBlock'], s
         if i == 0:
             bucket_ids = X[idc].astype(str).str.len().astype(str) + ':' + X[idc].astype(str)
         else:
-            bucket_ids = bucket_ids + '_' + X[idc].astype(str).str.len().astype(str) + ':' + X[idc].astype(str)
+            bucket_ids = bucket_ids + '__' + X[idc].astype(str).str.len().astype(str) + ':' + X[idc].astype(str)
     bucket_ids = bucket_ids.astype("category").cat.codes
 
     #print('bucket_ids', bucket_ids)
