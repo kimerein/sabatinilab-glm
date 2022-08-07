@@ -291,9 +291,9 @@ def cv_glm_mult_params(X, y, cv_idx, model_name, glm_kwarg_lst, verbose=0, score
 
     start = time.time()
 
-    pca_glm = models.sglm.GLM('PCA Normal') if model_name in {'Normal', 'Gaussian'} else models.sglm.GLM(model_name)
-    pca_glm.pca_fit(X, y)
-    print(f'> PCA GLM Built in {time.time() - start} seconds')
+#     pca_glm = models.sglm.GLM('PCA Normal') if model_name in {'Normal', 'Gaussian'} else models.sglm.GLM(model_name)
+#     pca_glm.pca_fit(X, y)
+#     print(f'> PCA GLM Built in {time.time() - start} seconds')
 
     beta0_ = None
     beta_ = None
@@ -314,7 +314,7 @@ def cv_glm_mult_params(X, y, cv_idx, model_name, glm_kwarg_lst, verbose=0, score
 
         q2.put((args, kwargs))
         
-    num_workers = 1
+    num_workers = 4
     workers = [SGLM_worker(q2) for _ in range(num_workers)]
     threads = [threading.Thread(target=worker.run_multi, daemon=True) for worker in workers]
     for thread in threads:
