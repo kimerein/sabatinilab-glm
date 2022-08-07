@@ -34,10 +34,11 @@ def holdout_split_by_trial_id(X, y=None, id_cols=['nTrial_filenum', 'iBlock'], s
     assert len(X) > 0
     
     for i, idc in enumerate(id_cols):
+        srs_x_idc_str = X[idc].apply(str)
         if i == 0:
-            bucket_ids = X[idc].astype(str).str.len().astype(str) + ':' + X[idc].astype(str)
+            bucket_ids = srs_x_idc_str.str.len().apply(str) + ':' + srs_x_idc_str
         else:
-            bucket_ids = bucket_ids + '__' + X[idc].astype(str).str.len().astype(str) + ':' + X[idc].astype(str)
+            bucket_ids = bucket_ids + '__' + srs_x_idc_str.str.len().apply(str) + ':' + srs_x_idc_str
     bucket_ids = bucket_ids.astype("category").cat.codes
 
     #print('bucket_ids', bucket_ids)
@@ -144,10 +145,11 @@ def cv_idx_by_trial_id(X, y=None, trial_id_columns=[], num_folds=5, test_size=No
     X = pd.DataFrame(X)
 
     for i, idc in enumerate(trial_id_columns):
+        srs_x_idc_str = X[idc].apply(str)
         if i == 0:
-            bucket_ids = X[idc].astype(str).str.len().astype(str) + ':' + X[idc].astype(str)
+            bucket_ids = srs_x_idc_str.str.len().apply(str) + ':' + srs_x_idc_str
         else:
-            bucket_ids = bucket_ids + '_' + X[idc].astype(str)
+            bucket_ids = bucket_ids + '__' + srs_x_idc_str.str.len().apply(str) + ':' + srs_x_idc_str
     
     bucket_ids = bucket_ids.astype("category").cat.codes
     
