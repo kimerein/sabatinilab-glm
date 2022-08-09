@@ -105,7 +105,6 @@ class GLM():
                 kwargs.pop('max_iter')
                 kwargs.pop('warm_start', None)
                 Base = LinearRegression
-                self.closed_form = True
             elif 'l1_ratio' in kwargs and kwargs['l1_ratio'] == 0:
                 del kwargs['l1_ratio']
                 kwargs.pop('warm_start', None)
@@ -386,12 +385,12 @@ class GLM():
 
         Returns: np.ndarray of predicted responses
         """
-        X_ = X.values if type(X) == pd.DataFrame else X
-        assert type(X_) == np.ndarray
 
         if not self.closed_form:
-            return self.model.predict(X_)
+            return self.model.predict(X)
         else:
+            X_ = X.values if type(X) == pd.DataFrame else X
+            assert type(X_) == np.ndarray
             X_ = np.concatenate([X_, np.ones((X_.shape[0], 1))], axis=1) if self.fit_intercept else np.concatenate([X_], axis=1)
             return X_ @ self.full_betas_
 
@@ -479,6 +478,7 @@ def fit_GLM(X, y, model_name='Gaussian', *args, **kwargs):
     """
     glm = GLM(model_name, *args, **kwargs)
     glm.fit(X, y)
+    
     return glm
 
 if __name__ == '__main__':
