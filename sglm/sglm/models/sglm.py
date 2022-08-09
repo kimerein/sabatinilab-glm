@@ -478,7 +478,7 @@ def fit_GLM(X, y, model_name='Gaussian', *args, **kwargs):
     Returns: Fitted GLM model
     """
     glm = GLM(model_name, *args, **kwargs)
-    glm.fit(X.values, y.values)
+    glm.fit(X, y)
     return glm
 
 if __name__ == '__main__':
