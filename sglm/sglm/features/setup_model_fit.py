@@ -132,7 +132,7 @@ def xy_pairs_to_widest_orders(X_y_pairings):
 
 
 
-def multi_file_analysis_prep(signal_files, X_cols_dict):
+def multi_file_analysis_prep(signal_files, X_cols_dict, file_ids=None):
     '''
     
     Args:
@@ -155,6 +155,7 @@ def multi_file_analysis_prep(signal_files, X_cols_dict):
         signal_fn = signal_files[file_num]
         tmp_signal_df = pd.read_csv(signal_fn, index_col='index').copy()
         tmp_signal_df['file_num'] = file_num
+        tmp_signal_df['signal_file'] = None if file_ids is None else file_ids[file_num]
 
 
         # tmp_signal_df, X_cols_sftd = timeshift_vals(tmp_signal_df,
@@ -182,7 +183,7 @@ def multi_file_analysis_prep(signal_files, X_cols_dict):
     
     return [signal_df], X_cols_sftd_lst, None
 
-def single_file_analysis_prep(signal_files, X_cols_dict):
+def single_file_analysis_prep(signal_files, X_cols_dict, file_ids=None):
     '''
     
     Args:
@@ -207,6 +208,7 @@ def single_file_analysis_prep(signal_files, X_cols_dict):
         signal_fn = signal_files[file_num]
         tmp_signal_df = pd.read_csv(signal_fn, index_col='index').copy()
         tmp_signal_df['file_num'] = file_num
+        tmp_signal_df['signal_file'] = None if file_ids is None else file_ids[file_num]
 
         tmp_signal_df['nTrial'] = tmp_signal_df['nTrial'].astype(int)
         tmp_signal_df['nEndTrial'] = tmp_signal_df['nEndTrial'].astype(int)

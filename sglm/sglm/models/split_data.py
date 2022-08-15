@@ -95,7 +95,7 @@ def holdout_split_by_trial_id(X, y=None, id_cols=['nTrial_filenum', 'iBlock'], s
             raise ValueError(f'Invalid strat_mode: {strat_mode}')
     else:
         num_buckets_for_test = int(num_bucket_ids * perc_holdout)
-        test_ids = np.random.choice(num_bucket_ids, size=num_buckets_for_test)
+        test_ids = np.random.choice(num_bucket_ids, size=num_buckets_for_test, replace=False)
     
     holdout = bucket_ids.isin(test_ids)
 

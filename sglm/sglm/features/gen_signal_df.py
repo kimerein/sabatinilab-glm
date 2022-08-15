@@ -182,11 +182,24 @@ def replace_missed_center_out_indexes(df_t, max_num_duplications=None, verbose=0
         
         num_inx_vals = df_t[df_t['photometryCenterOutIndex'] > 0].groupby('photometryCenterOutIndex')['hasAllPhotometryData'].count()
         # print(_, num_inx_vals.max())
-        if num_inx_vals.max() == 1:
-            break
-        duplicated_CO_inx = df_t['photometryCenterOutIndex'] == df_t['photometryCenterOutIndex'].shift(-1)
-        df_t.loc[duplicated_CO_inx, 'photometryCenterOutIndex'] = df_t.loc[duplicated_CO_inx, 'photometryCenterInIndex']
 
+        duplicated_CO_inx = (df_t['photometryCenterOutIndex'] == df_t['photometryCenterOutIndex'].shift(-1))&(df_t['photometryCenterOutIndex'].shift(-1) > 0)&(df_t['photometryCenterOutIndex'] > 0)
+        duplicated_CO_inx2 = (df_t['photometryCenterOutIndex'] > df_t['photometryCenterOutIndex'].shift(-1))&(df_t['photometryCenterOutIndex'].shift(-1) > 0)&(df_t['photometryCenterOutIndex'] > 0)
+        
+        # if (duplicated_CO_inx|duplicated_CO_inx2).sum() > 0:
+        #     key = df_t.loc[duplicated_CO_inx|duplicated_CO_inx2].index[0]
+        #     print(key)
+        #     lb, ub = key-5, key+5
+        #     display(df_t.loc[lb:ub])
+        
+        #     if i > 10:
+        #         raise ValueError('test')
+
+        df_t.loc[duplicated_CO_inx, 'photometryCenterOutIndex'] = df_t.loc[duplicated_CO_inx, 'photometryCenterInIndex']
+        df_t.loc[duplicated_CO_inx2, 'photometryCenterOutIndex'] = df_t.loc[duplicated_CO_inx2, 'photometryCenterInIndex']
+        
+        if num_inx_vals.max() == 1 and (duplicated_CO_inx|duplicated_CO_inx2).sum() == 0:
+            break
         if max_num_duplications and i > max_num_duplications:
             break
         i += 1
