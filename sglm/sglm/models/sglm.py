@@ -106,12 +106,14 @@ class GLM():
                 kwargs.pop('warm_start', None)
                 Base = LinearRegression
             elif 'l1_ratio' in kwargs and kwargs['l1_ratio'] == 0:
-                del kwargs['l1_ratio']
-                kwargs.pop('warm_start', None)
-                Base = Ridge
+                # del kwargs['l1_ratio']
+                # kwargs.pop('warm_start', None)
+                # Base = Ridge
+                Base = ElasticNet
             elif 'l1_ratio' in kwargs and kwargs['l1_ratio'] == 1:
-                del kwargs['l1_ratio']
-                Base = Lasso
+                # del kwargs['l1_ratio']
+                # Base = Lasso
+                Base = ElasticNet
             else:
                 Base = ElasticNet
             
