@@ -218,7 +218,12 @@ def cv_glm_single_params(X, y, cv_idx, model_name, glm_kwargs, verbose=0, resp_l
         thread.join()
 
     #####################
-
+    
+#     # L2 1/(2N) Ratio Fix
+#     if 'l1_ratio' in glm_kwargs and glm_kwargs['l1_ratio'] == 0.0:
+#         glm_kwargs['alpha'] = glm_kwargs['alpha']
+        
+        
     glm = models.sglm.GLM(model_name, beta0_=beta0_, beta_=beta_, **glm_kwargs)
     glm.fit(X, y)
 
